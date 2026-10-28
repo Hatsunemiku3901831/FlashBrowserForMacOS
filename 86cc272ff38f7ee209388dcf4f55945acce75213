@@ -1,0 +1,39 @@
+{
+  "taskId": "W03",
+  "status": "PASS",
+  "reviewedAt": "2026-10-28T13:40:00.281562+00:00",
+  "checks": {
+    "W02FrozenArtifacts": 5506,
+    "W02HashMismatches": 0,
+    "W03FrozenArtifactsBeforeThisReview": 4714,
+    "W03HashMismatches": 0,
+    "formalInputsCurrentAndTested": 392,
+    "projectStatusRowsSynchronized": 28,
+    "doneTasks": 16,
+    "orderedHandoffShaAndGzipRoundTrip": true,
+    "localDocumentLinksValid": true,
+    "remainingAppsOrRunners": 0,
+    "gitDiffWhitespaceCheckExitCode": 0
+  },
+  "git": {
+    "head": "05c89d2726c4fbcdeb914bf659e99f0433679d3a",
+    "status": " M HANDOFF.md\n M HANDOFF2.md\n M HRNESS.md\n M Project.md\n M README.md\n M docs/task-status.zh-CN.md\n M src/FlashMacOS.Application/Flash/RufflePlayerCoordinator.cs\n M src/FlashMacOS.Flash.Ruffle/Hosting/LoopbackContentHost.cs\n M tests/FlashMacOS.IntegrationTests/LoopbackContentHostTests.cs\n M tests/FlashMacOS.IntegrationTests/RuffleDocumentStartScriptBuilderTests.cs\n?? docs/adr/0004-ruffle-completion-and-product-resources.zh-CN.md\n?? docs/evidence/W03/\n?? docs/handoffs/\n?? docs/provenance/W03-changes.json\n?? docs/provenance/W03-prototype-test-map.json\n?? docs/provenance/W04-before.json\n"
+  },
+  "notes": "Final documentation map spelling updated after these checks; index refreshed with this review and final living-document snapshots. No formal source changed after the accepted tests/packages. Existing commits preserved; no commit/push/release performed in this run.",
+  "handoffMaintenanceClarification": {
+    "status": "PASS",
+    "reviewedAt": "2026-10-28T13:42:09.581632+00:00",
+    "condensedOriginalBaseRetainedInHANDOFF": true,
+    "currentBriefAndNavigationAppended": true,
+    "permanentMaintenanceInstructionRecorded": true,
+    "additionalOrderedAuditSteps": [
+      5,
+      6,
+      7
+    ],
+    "currentHandoffHashes": {
+      "HANDOFF.md": "fcd7e0c113d254a6aa7f24b7d1a93524d7a24986cff75114537755012215cc2a",
+      "HANDOFF2.md": "89ab82cc0f50bc8e48d5ca93864efe8529ff8a08ad7fc4f07ef6d59f513fe561"
+    }
+  }
+}

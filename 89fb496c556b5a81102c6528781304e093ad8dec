@@ -1,0 +1,75 @@
+{
+  "taskId": "W03",
+  "backupDirectory": "docs/handoffs/2026-10-29-w02-w03",
+  "events": [
+    {
+      "step": 1,
+      "action": "Back up both original handoff documents byte for byte, before changing either",
+      "finishedAt": "2026-10-28T13:36:11.284837+00:00"
+    },
+    {
+      "step": 2,
+      "action": "Compress old HANDOFF losslessly to gzip and condense its narrative for the new detailed handoff",
+      "finishedAt": "2026-10-28T13:36:11.286179+00:00",
+      "gzipSha256": "38090ca1a10d3564196668b02b622d3e8d3bf2bce977e2dba6a416f67fc9dddb",
+      "roundTripOriginalSha256": "c55337b5d129029c95dc66822e320c3bde5693e5aea9a722ff135cec9c142bcb",
+      "condensedSha256": "775c8413020623744f57f9b7a710bf8f8995cc138dd15a0d0f3b9afc1f13d918"
+    },
+    {
+      "step": 3,
+      "action": "Overwrite HANDOFF2.md with detailed current handoff and condensed historical context",
+      "finishedAt": "2026-10-28T13:38:24.855220+00:00",
+      "sha256": "2e98e87d84c773a44d02d71415555c2985fe58fda07ab667388a96e7a65441ab"
+    },
+    {
+      "step": 4,
+      "action": "Write concise HANDOFF.md with guidance to detailed HANDOFF2.md",
+      "finishedAt": "2026-10-28T13:38:45.465157+00:00",
+      "sha256": "d20927d9cbd7a0a380b1045da33534bef7e3f56f8914010104de733945342eec"
+    },
+    {
+      "step": 5,
+      "action": "Preserve both first-pass handoffs before applying the user clarification: HANDOFF.md must retain the condensed original as its continuing base",
+      "finishedAt": "2026-10-28T13:41:41.518896+00:00"
+    },
+    {
+      "step": 6,
+      "action": "Clarify the detailed handoff contract: HANDOFF.md remains the continuously maintained condensed historical base plus current brief handoff/navigation",
+      "finishedAt": "2026-10-28T13:41:41.520165+00:00",
+      "sha256": "89ab82cc0f50bc8e48d5ca93864efe8529ff8a08ad7fc4f07ef6d59f513fe561"
+    },
+    {
+      "step": 7,
+      "action": "Maintain HANDOFF.md on the condensed original HANDOFF base, append current W02/W03 brief handoff and detailed navigation, and persist the user permanent-maintenance instruction",
+      "finishedAt": "2026-10-28T13:41:41.556311+00:00",
+      "sha256": "fcd7e0c113d254a6aa7f24b7d1a93524d7a24986cff75114537755012215cc2a"
+    }
+  ],
+  "originals": {
+    "HANDOFF.md": {
+      "sha256": "c55337b5d129029c95dc66822e320c3bde5693e5aea9a722ff135cec9c142bcb",
+      "bytes": 22009
+    },
+    "HANDOFF2.md": {
+      "sha256": "7145437f9044ec96f124668cdaa2240f74e4d5c06d3d1813fc46b848ee5758d2",
+      "bytes": 9122
+    }
+  },
+  "gitBeforeHandoff": {
+    "head": "05c89d2726c4fbcdeb914bf659e99f0433679d3a",
+    "status": " M HRNESS.md\n M Project.md\n M README.md\n M docs/task-status.zh-CN.md\n M src/FlashMacOS.Application/Flash/RufflePlayerCoordinator.cs\n M src/FlashMacOS.Flash.Ruffle/Hosting/LoopbackContentHost.cs\n M tests/FlashMacOS.IntegrationTests/LoopbackContentHostTests.cs\n M tests/FlashMacOS.IntegrationTests/RuffleDocumentStartScriptBuilderTests.cs\n?? docs/adr/0004-ruffle-completion-and-product-resources.zh-CN.md\n?? docs/evidence/W03/\n?? docs/handoffs/\n?? docs/provenance/W03-changes.json\n?? docs/provenance/W03-prototype-test-map.json\n?? docs/provenance/W04-before.json\n"
+  },
+  "status": "PASS",
+  "finalHashes": {
+    "HANDOFF.md": "fcd7e0c113d254a6aa7f24b7d1a93524d7a24986cff75114537755012215cc2a",
+    "HANDOFF2.md": "89ab82cc0f50bc8e48d5ca93864efe8529ff8a08ad7fc4f07ef6d59f513fe561"
+  },
+  "gzipRoundTripVerified": true,
+  "orderVerified": true,
+  "continuousMaintenance": {
+    "requestedByUser": true,
+    "condensedOriginalRetainedIn": "HANDOFF.md",
+    "detailedCurrentHandoff": "HANDOFF2.md",
+    "firstFourOrderedStepsPreserved": true
+  }
+}
