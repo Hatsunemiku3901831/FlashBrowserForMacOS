@@ -1,0 +1,13 @@
+# S03 AMF3 和完整引用
+
+状态 DONE。依据两个固定 Adobe PDF、Legacy core/CLI 和原测试；路径/SHA 在 provenance/S03-source-inputs.json。只涉及 Managed/Domain/Application codec 和最近回归，没有 GUI 或发行的新声明。
+
+标准 marker 00—11 均实现，字符串/对象/trait 三张会话表互相独立；所有复杂对象先登记身份，String 空值不入池，trait 结构等价含 sealed 顺序。循环、共享身份、Vector 类型/fixed/对象别名及 Dictionary weakKeys/任意类型键均保持。AMF0 AVM+ 真实调用 AMF3，跨多次委派维持独立池。拒绝 Int32 溢出、越界/类型不符引用、无法无损跨池共享及空 AMF3 属性名。Date/Externalizable 未使用 header 位按规范忽略，不把保留位当声明长度。
+
+Externalizable 使用明确 alias + CodecId 登记；默认产品表为空。测试 T 为单 AMF 值，B 为 A5/U32/原字节自定义布局，分别验证自引用/trait 复用、原始端口/逻辑节点和匹配 writer；不将它们冒充真实未知类支持。未知类在 marker 偏移停止，不读取随机自定义尾部。注册类读/写故障均保留 cause、offset 和 marker，失败不返回部分字节。合同见 contracts/amf-codec.zh-CN.md。
+
+最终命令 `sh scripts/verify.sh --task S03 --run-id amf3-managed-20261028-03 --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser`，M1 Pro/arm64/macOS 26.5.1、SDK 10.0.301/runtime 10.0.9：exit 0，334 托管+18 工具，0 失败/跳过/警告，锁与 104 固定资产不变。59 个新增案例，包括 14 份标准类型规范 golden、12 个 signed U29 手工边界及所有截断前缀、mixed/sealed/dynamic、共享二进制/vector、任意 dictionary key、未知类/marker、非法池/长度/flag/UTF、并发 32 独立会话和资源/取消。
+
+amf3-red-external-20261028-01 先复现 registered raw length overflow 泄漏 OverflowException（只有该用例失败）；修复成带原始 cause 的格式诊断后 -02/-03 全通过。原始失败保留。源码/所有正式输入完整归档 source-inputs.tar.gz；hash/原路径映射见 acceptance-index.json 与 provenance/S03-changes.json。源仓库 332 文件/HEAD/dirty、四个旧数据根保持，未提交/推送/发布。
+
+下一任务 S04：SOL 头/条目尾字节/完整文件共享会话、五份内容级预期、编辑与原子保存/冲突/撤销重做。
