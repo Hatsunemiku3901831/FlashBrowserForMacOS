@@ -1,0 +1,140 @@
+"""Freeze reviewed W01 native runs; no app launch or UI automation is performed here."""
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
+import hashlib
+import json
+import shutil
+import subprocess
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[3]
+OUT = ROOT / 'artifacts/evidence/W01/final-native-20261028-01'
+DOC = ROOT / 'docs/evidence/W01/2026-10-28'
+PACKAGE = ROOT / 'artifacts/evidence/W01/browser-package-20261028-04'
+RUNS = ('browser-native-20261028-04', 'browser-native-restart-20261028-01', 'browser-mole-native-20261028-01')
+
+def sha(path):
+    return hashlib.file_digest(path.open('rb'), 'sha256').hexdigest()
+
+def read(path):
+    return json.loads(path.read_text())
+
+def save(path, value):
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+require(not OUT.exists(), 'Use a fresh freeze directory; never overwrite evidence')
+OUT.mkdir(parents=True)
+package = read(PACKAGE / 'result.json')
+require(package['status'] == 'PASS', 'Package did not pass')
+archive = ROOT / package['archive']
+app = ROOT / package['app']
+require(sha(archive) == package['artifactHashes']['archive'], 'Archive changed')
+bundle = {str(p.relative_to(app)): sha(p) for p in sorted(app.rglob('*')) if p.is_file()}
+with zipfile.ZipFile(archive) as stream:
+    prefix = app.name + '/'
+    archived = {name[len(prefix):]: hashlib.sha256(stream.read(name)).hexdigest()
+                for name in stream.namelist() if name.startswith(prefix) and not name.endswith('/')}
+require(bundle == archived == package['bundleFiles'], 'Bundle changed after native use')
+with (OUT / 'codesign-after-all-runs.log').open('wb') as log:
+    subprocess.run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app)],
+                   stdout=log, stderr=subprocess.STDOUT, check=True)
+managed = read(ROOT / 'artifacts/evidence/W01/browser-final-managed-20261028-01/inputs.json')['before']
+require(managed == read(PACKAGE / 'code-inputs.json')['before'], 'Package and final tests used different inputs')
+require(all(sha(ROOT / path) == digest for path, digest in managed.items()), 'Final source inputs changed')
+
+sessions = []
+for run in RUNS:
+    result = read(ROOT / 'artifacts/evidence/W01' / run / 'process-result.json')
+    require(result['exitCode'] == 0, f'{run}: abnormal exit')
+    require(result['artifactHashes']['bundleFiles'] == bundle, f'{run}: different bundle')
+    profile = Path(result['profile'])
+    journal = profile / 'logs'
+    logs = [p for p in journal.glob('*.jsonl') if f"-{result['pid']}-" in p.name]
+    require(len(logs) == 1, f'{run}: missing unambiguous process journal')
+    rows = [json.loads(x) for x in logs[0].read_text().splitlines()]
+    require(any(x['name'] == 'composition.stopped' and x['detail'] == 'failures=0' for x in rows), f'{run}: cleanup failed')
+    require(sum(x['name'] == 'browser.adapter.destroyed' for x in rows) == 2, f'{run}: two adapters not destroyed')
+    require(any(x['name'] == 'browser.applicationQuit.requested' for x in rows), f'{run}: native-focus Quit not observed')
+    require(not any(x['name'] in ('browser.native.failed', 'compatibility.evidence.failed', 'composition.startup.failed')
+                    or x['name'].endswith('.dispose.failed') for x in rows), f'{run}: unexpected fault')
+    sessions.append({'runId': run, 'pid': result['pid'], 'startedAt': result['startedAt'], 'finishedAt': result['finishedAt'],
+                     'exitCode': 0, 'cleanupFailures': 0, 'nativeAdaptersDestroyed': 2,
+                     'profileId': profile.name, 'journal': str(logs[0].relative_to(ROOT)), 'journalSha256': sha(logs[0])})
+
+profile = ROOT / 'artifacts/profiles/browser-native-20261028-04'
+reports = [read(p) for p in profile.glob('browser-verification/*.json') if p.name != 'cookie-baseline.json']
+require({x['process'] for x in reports} == {33184, 52620}, 'Missing first/restart reports')
+for report in reports:
+    require(report['status'] == 'PASS' and report['failures'] == 0 and len(report['checks']) == 12, 'Native checks failed')
+    require(all(x['status'] == 'PASS' for x in report['checks']), 'Native check failed')
+    pdf = Path(next(x for x in report['checks'] if x['name'] == 'native-pdf-export')['actual']['path'])
+    text = subprocess.check_output(['pdftotext', str(pdf), '-'], text=True)
+    require('LocateNeedleK7' in text and 'W01 Browser main' in text, 'PDF expected rendered content missing')
+    (OUT / f"pdf-text-{report['process']}.txt").write_text(text)
+restart = next(x for x in reports if x['process'] == 52620)
+cookie = next(x for x in restart['checks'] if x['name'] == 'cookie-purpose-isolation-and-restart')['actual']
+require(cookie['restart'] and cookie['beforeWeb'] == 'W01-Shared=web' and cookie['beforeLocal'] == 'W01-Shared=local', 'Cookie restart failed')
+
+native_rows = []
+for path in profile.glob('compatibility*'):
+    native_rows.extend(json.loads(x['nativeEvent']) for x in map(json.loads, path.read_text().splitlines()) if 'nativeEvent' in x)
+require(not any(x['Kind'] == 10 for x in native_rows), 'Native callback fault')
+inspection = [x['Payload'] for x in native_rows if x['Kind'] == 12]
+require(inspection == ['false', 'false', 'true', 'false', 'false', 'false'], 'Inspection default/toggles unexpected')
+require(any(x['Kind'] == 5 and x['Payload'] == 'flashmacos-never://must-stay-in-app' for x in native_rows), 'Missing blocked protocol')
+forged = [x for x in native_rows if x['Kind'] == 4 and 'W01_FORGED_SUBFRAME' in x['Payload']]
+require(forged and all(not x['IsMainFrame'] for x in forged), 'Forged frame not identified by native frameInfo')
+for path in profile.glob('logs/*.jsonl'):
+    rows = [json.loads(x) for x in path.read_text().splitlines()]
+    require(sum(x['name'] == 'browser.bridge.frame.rejected' for x in rows) > 0, 'No frame rejections')
+
+# Explicitly reviewed CUA results, not a claim derived from an exit code or screenshot filename.
+first = ROOT / 'artifacts/evidence/W01/browser-native-20261028-04'
+second = ROOT / 'artifacts/evidence/W01/browser-native-restart-20261028-01'
+mole = ROOT / 'artifacts/evidence/W01/browser-mole-native-20261028-01'
+for name, needle in [('alert-result', '"alert": "closed"'), ('confirm-ok', '"confirm": true'),
+                     ('confirm-cancel', '"confirm": false'), ('prompt-unicode-result', '"prompt": "中文W01"'),
+                     ('prompt-null-result', '"prompt": null'), ('print-sheet', 'button Cancel'),
+                     ('inspection-on', 'Safari’s Develop menu'), ('inspection-off', 'inspection disabled')]:
+    require(needle in (first / f'{name}.txt').read_text(), f'Missing reviewed result: {name}')
+require('"fullscreen": true' in (second / 'fullscreen-fresh-process.txt').read_text(), 'Fullscreen not entered')
+require('standard window' in (second / 'same-document-pushstate.txt').read_text(), 'Main window not restored after Escape')
+require('button Reload' in (second / 'same-document-back.txt').read_text(), 'Same-document back still loading')
+require('button Reload' in (second / 'same-document-forward.txt').read_text(), 'Same-document forward still loading')
+require('SWF trace: Hello world!' in (second / 'local-player-loaded.txt').read_text(), 'Local SWF trace missing')
+for name in ('mole-login-field-focused.png', 'mole-login-field-focused.txt', 'official-start-click.png'):
+    require((mole / name).is_file(), f'Missing Mole evidence: {name}')
+shutil.copyfile(mole / 'mole-login-field-focused.png', DOC / 'mole-login-native.png')
+
+# Snapshot whole isolated profiles only after all their processes closed. Failures remain alongside successes.
+snapshots = {}
+for profile in sorted((ROOT / 'artifacts/profiles').glob('browser-*')):
+    before = {str(p.relative_to(profile)): sha(p) for p in profile.rglob('*') if p.is_file()}
+    destination = OUT / 'profiles' / profile.name
+    shutil.copytree(profile, destination)
+    after = {str(p.relative_to(destination)): sha(p) for p in destination.rglob('*') if p.is_file()}
+    require(before == after, f'Profile snapshot mismatch: {profile.name}')
+    snapshots[profile.name] = before
+save(OUT / 'profile-snapshots.json', snapshots)
+save(OUT / 'result.json', {'taskId': 'W01', 'caseId': 'reviewed-final-native-gate', 'runId': OUT.name,
+    'profileId': [x['profileId'] for x in sessions], 'status': 'PASS',
+    'expected': 'Same final package: 12 native checks in two processes, manual sheets/fullscreen/frame/scheme/inspection, local SWF, Mole login and native-focus Quit',
+    'actual': {'sessions': sessions, 'nativeChecksPerBrowserProcess': 12, 'forgedFrameSamples': len(forged),
+               'nativeKinds': dict(Counter(x['Kind'] for x in native_rows)), 'inspection': inspection,
+               'cookieRestart': cookie, 'allCurrentBundleFilesEqualArchive': True,
+               'sameInputsAsFinalReleaseVerification': True,
+               'limitations': ['Safari Inspector window workflow not verified; public isInspectable readback only',
+                   'Long wall-clock idle includes interrupted/suspended time; not Q02 sustained workload acceptance',
+                   'Foreground real user gesture fullscreen passed on the identical package; background AX-only hidden-document attempt retained as failure',
+                   'Unicode prompt setValue is not an IME acceptance test', 'No login credentials entered or submitted']},
+    'startedAt': sessions[0]['startedAt'], 'finishedAt': datetime.now(timezone.utc).isoformat(),
+    'environment': read(ROOT / 'artifacts/evidence/W01/browser-native-20261028-04/launch.json')['environment'],
+    'artifactHashes': {'archive': sha(archive), 'sourceInputs': managed, 'bundleFiles': bundle},
+    'evidencePaths': [str(p.relative_to(ROOT)) for p in (OUT, DOC / 'native-checklist.json', DOC / 'mole-login-native.png')],
+    'productComplete': False})
+print(json.dumps({'status': 'PASS', 'nativeChecks': '12 x 2', 'sessions': len(sessions), 'profilesFrozen': len(snapshots)}, ensure_ascii=False))

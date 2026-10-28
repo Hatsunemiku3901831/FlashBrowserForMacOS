@@ -1,0 +1,44 @@
+{
+  "taskId": "W02",
+  "caseId": "real-save-panel-and-auth",
+  "runId": "w02-manual-20261028-02",
+  "status": "PASS",
+  "folder": "/Users/umisonoda/PycharmProjects/flash/flashMacOS/artifacts/profiles/w02-manual-20261028-02/manual-downloads",
+  "longDownloadName": "w02-slow.bin",
+  "steps": [
+    {
+      "operation": "Attachment link → native Save → isolated folder → Replace confirmation → Replace",
+      "expected": "old replaced only by the completed attachment",
+      "actual": "Native panel/confirmation observed; app showed Download saved; full content hash checked by final gate"
+    },
+    {
+      "operation": "Unsupported MIME → native Save → Cancel",
+      "expected": "Cancelled; no binary file",
+      "actual": "Native cancel returned Download cancelled; no binary target"
+    },
+    {
+      "operation": "HTTP Basic page → w02-user/w02-pass fixed loopback values → Sign In → protected file → Save",
+      "expected": "authenticated file preserves request credentials",
+      "actual": "Signed in as w02-user; file saved as w02-basic.txt; full content checked by final gate"
+    },
+    {
+      "operation": "Back → Long download → Save → status 2% → main red close button",
+      "expected": "cancel active WKDownload, clean staging, exit 0",
+      "actual": "App exited 0; no w02-slow.bin or staging; keep-original.txt unchanged"
+    }
+  ],
+  "files": {
+    "w02-attachment.txt": {
+      "length": 262144,
+      "sha256": "866122246c09788ed5c19dcdd8179d66b4bdfc6c147fecdaa5df099dbb6b4ba0"
+    },
+    "keep-original.txt": {
+      "length": 24,
+      "sha256": "253576eb41c1d4252a92734bb45375e3b1552a9942903def8dd11440f2293f71"
+    },
+    "w02-basic.txt": {
+      "length": 4116,
+      "sha256": "68b8a95bbaa6b700ccb7c1cf2fe7fe0be5864ff19eaaa738003bb818c38fb3b6"
+    }
+  }
+}

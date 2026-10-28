@@ -1,0 +1,57 @@
+{
+  "taskId": "W02",
+  "runId": "w02-native-20261028-01",
+  "status": "FAIL",
+  "retained": true,
+  "package": "artifacts/evidence/W02/w02-package-20261028-01",
+  "managedRun": "artifacts/evidence/W02/w02-managed-20261028-01 (PASS, 452 managed + 21 tooling)",
+  "process": {
+    "pid": 68538,
+    "exitCode": 1,
+    "cleanup": "composition.stopped failures=2 (native callback failure recorded by both surfaces)"
+  },
+  "checks": {
+    "surfaces-ready": "PASS",
+    "attachment-response-download": "PASS",
+    "unsupported-mime-download": "PASS",
+    "download-attribute": "PASS",
+    "blob-download": "PASS",
+    "data-url-download": "PASS",
+    "post-response-download": "PASS",
+    "cookie-authenticated-download": "PASS",
+    "cross-origin-redirect-download": "PASS",
+    "one-time-url-download": "PASS",
+    "concurrent-downloads": "FAIL",
+    "replace-existing-target": "PASS",
+    "cancel-keeps-old-target": "PASS",
+    "network-failure-keeps-old-target": "PASS",
+    "disk-error-keeps-old-target": "PASS",
+    "decline-download": "PASS",
+    "popup-window-open-web-profile": "FAIL",
+    "popup-target-blank-and-nested": "FAIL",
+    "popup-post-preserves-body": "FAIL",
+    "popup-attachment-window": "FAIL",
+    "popup-download-and-close-cancels": "FAIL",
+    "popup-local-player-profile": "FAIL",
+    "no-staging-residue": "PASS",
+    "quit-check-prepared": "FAIL"
+  },
+  "rootCauses": [
+    {
+      "symptom": "All 7 popup checks timed out; browser.native.failed per new-window request; exit 1",
+      "cause": "Native kind-13 payload encoded streamedBody as @(int comparison) -> JSON number 0; NativeBrowserPayloads.GetBoolean threw InvalidOperationException outside the session catch list, so MacBrowserBridge recorded a callback failure",
+      "evidence": "process.log stack (JsonElement.GetBoolean); compatibility nativeEvent kind 13 rows show \"streamedBody\":0 together with correct URL/method/body/contentType",
+      "fix": "Cast to BOOL in FlashMacOSWebKit.m; session treats malformed popup payloads as a rejected popup fault (InvalidOperationException/KeyNotFoundException); strict-type regression test PopupPayloadTypesAreStrictSoANativeShapeErrorIsRejectedVisibly"
+    },
+    {
+      "symptom": "concurrent-downloads: three files completed but no observation found (Sequence contains no elements)",
+      "cause": "Deterministic site recorded the slow/whole-body observation after the last bytes and a trailing delay; WebKit finished first",
+      "fix": "Observe before sending the final bytes (WriteAsync and slow endpoint)"
+    }
+  ],
+  "artifacts": {
+    "artifacts/profiles/w02-native-20261028-01/download-verification/20261028T113908553Z-68538-fcfa78c81ae944eaa01f58b09dab351b.json": "9582d87025d4e5f4c8212b4374dc5e019e8d8bbeacb75e47b70aaee312fbc658",
+    "artifacts/evidence/W02/w02-native-20261028-01/process.log": "7b22ae4f193b9ea90e27e59634edfb9816e7a3c0bc6d88decb26b4d0a34e3777",
+    "artifacts/evidence/W02/w02-native-20261028-01/process-result.json": "7888a8cc11a8ced3646b36b94da30cf0c5bb79c4a9cec4caf252489b8176e70a"
+  }
+}

@@ -1,0 +1,35 @@
+# W02 完整下载与弹出窗口
+
+状态：DONE。任务日期以 Australia/Sydney 为准；无提交的 main，原有未跟踪文件保留。
+
+## 实现与输入
+
+原生 WKDownload 保留原请求/响应，处理 attachment、download 属性、blob/data、POST、HttpOnly Cookie、认证、跨源重定向和一次性 URL；删除复制 Cookie 后重新 GET 的旧实现。保存通过同目录隐藏暂存、flush 和原子替换完成，失败/取消保留旧目标。popup 保留 GET/POST body/Content-Type，继承发起用途的稳定数据区，支持嵌套、页面关闭、下载页自动关闭和主窗退出排空。
+
+实现地图见 ADR 0003、browser.zh-CN.md 和 W02-changes.json；固定第三方资产、依赖版本与锁没有修改。两用途主 surface 与所有 popup 由 composition root 持有；下载状态属于 Application 的 DownloadManager。
+
+## 验证与失败保留
+
+- 历史 run 01 的原生 bool 载荷问题，02 的慢下载过早完成，03 的 WebKit 空闲超时，04/05 的窗口壳疑问均保留；最初 24 项下载/请求/文件内容检查已逐项通过。
+- 新增直接读取 NSApplication 窗口、记录 popup NSWindow ID 与托管 WeakReference 的检查。06 的观测函数缺少局部 autoreleasepool，导致观测本身暂留多个窗口，已修复。07—11 证明托管对象全部回收，但仍有最后已关的原生壳；清焦点尝试未改变结果，已撤回。没有修改固定 Avalonia 二进制。
+- 用系统 leaks 保存完整 4.81 MiB 内存图与 reference-tree，定位 NSApplication 的 previous-key-window 系统缓存；12 的快速循环还明确观测 currentEvent.window。验收因此按生命周期所有权和连续循环是否累积判断，记录系统缓存的原始数量和精确 ID；不以私有 API 清空系统状态，也不宣称所有原生壳立即消失。
+- 13 为最终候选：增加 50 个真实 popup 开关循环，要求没有可见残留、托管窗口回收、surface 回到基线，AppKit 仅暂留最近最多两个已关窗口。完整逐次清单写入第 25 项原生结果。
+
+所有运行在本机 M1 Pro、macOS 26.5.1/ARM64、SDK 10.0.301、.NET 10.0.9；Release self-contained app 在禁止读取原仓库/reference/bootstrap、无 DOTNET_ROOT、仅系统 PATH 的条件下启动。Debug/Release 与包要求正式输入逐文件相同，最终索引、命令、退出码、TRX、日志、文件 hash 和 profile 副本由 finalize-w02.py 冻结。
+
+## 边界
+
+window.opener 仍不支持（ADR 0003）；下载随所属窗口关闭取消，全应用下载列表属于 U02。Basic/Digest 凭据仅在 WebKit 会话内存中；人工测试只使用 loopback 固定测试值。当前已实现产品用例及开发外壳，完整 UI、其他系统/设备和正式发行仍待对应任务。
+
+下一任务 W03；完成 W02 原生/人工最终核验、证据冻结和清单同步后进入。
+
+
+## 最终同一输入验收
+
+`w02-managed-20261028-13`（Debug）与 `w02-managed-release-20261028-13`（Release）均为 454 托管 + 21 工具回归通过、0 跳过，固定资产/锁/正式输入不变。`w02-package-20261028-13` 的 self-contained app 含 19 个纯 ARM64 Mach-O，开发签名严格验证通过。
+
+`w02-native-20261028-13` 的 25/25 全 PASS，含 50 次真实 popup 开关、完整下载落盘/hash、POST/认证/重定向/一次性链接、并发、取消、磁盘错误保原目标、嵌套及用途隔离。最后一个 popup 长下载期间真实 Command-Q；`w02-manual-20261028-02` 完成真实原生保存/同名 Replace、取消、loopback Basic sheet 与 4116-byte 保护文件下载、长下载 2% 时红色关闭主窗。两进程均 exit 0、composition.stopped failures=0，adapter 创建/销毁数与 popup 开启/ownership 释放数一致；没有暂存残留或伪完成文件。
+
+人工 attachment 为 262144 bytes，SHA-256 `866122246c09788ed5c19dcdd8179d66b4bdfc6c147fecdaa5df099dbb6b4ba0`；Basic 文件为 4116 bytes，SHA-256 `68b8a95bbaa6b700ccb7c1cf2fe7fe0be5864ff19eaaa738003bb818c38fb3b6`。完整步骤、画面、原始进程日志、闭合 profile、精确命令与代码输入见最终 gate 和 acceptance-index.json。
+
+命令入口：`scripts/verify.sh --task W02 --run-id <上述运行>`（Release 加 `--configuration Release`）；`scripts/package-development.py --task W02 --run-id w02-package-20261028-13`；`scripts/run-native.py --task W02 --package-task W02 --package-run w02-package-20261028-13 --case downloads|downloads-manual --run-id <上述原生运行>`。所有命令均加原仓库 `--deny-read`。结果与源码归档、来源/旧数据复核和下一任务基线由 `docs/evidence/W02/finalize-w02.py` 生成。
