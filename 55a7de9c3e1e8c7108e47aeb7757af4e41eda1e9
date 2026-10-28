@@ -1,0 +1,37 @@
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle;
+
+namespace CefFlashBrowser.MacOS.Spike.Tests;
+
+[TestClass]
+public sealed class RuffleDocumentStartScriptBuilderTests
+{
+    [TestMethod]
+    public void BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode()
+    {
+        const string runtime = "globalThis.__ruffleRuntimeFixture = true;";
+        var publicPath = new Uri("http://127.0.0.1:12345/token/assets/ruffle/");
+
+        var script = RuffleDocumentStartScriptBuilder.Build(runtime, publicPath);
+
+        StringAssert.Contains(script, runtime);
+        StringAssert.Contains(script, publicPath.AbsoluteUri);
+        StringAssert.Contains(script, RuffleAssetManifest.Version);
+        StringAssert.Contains(script, "Storage.prototype.setItem");
+        StringAssert.Contains(script, "new Proxy(nativeLocalStorage");
+        StringAssert.Contains(script, "setTimeout(scanStorage");
+        StringAssert.Contains(script, "downloadRequested");
+        StringAssert.Contains(script, "__cefFlashBrowserDocumentStart");
+        Assert.IsTrue(script.IndexOf("window.RufflePlayer.config", StringComparison.Ordinal)
+            < script.IndexOf(runtime, StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void BuildPageBootstrapUsesValidComputedBridgeMemberAccess()
+    {
+        var script = RuffleDocumentStartScriptBuilder.BuildPageBootstrap(
+            new Uri("http://127.0.0.1:12345/token/assets/ruffle/"));
+
+        StringAssert.Contains(script, "messageHandlers?.[\"cefFlashBrowserBridge\"]");
+        Assert.DoesNotContain("messageHandlers?.\"", script);
+    }
+}

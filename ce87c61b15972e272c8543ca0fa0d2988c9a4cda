@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MSTest.TestAdapter" />
+    <PackageReference Include="MSTest.TestFramework" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="../../../../../../test-assets/flash/p02-project/**"
+             Link="CompatibilityFixtures/p02-project/%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../../../../../test-assets/flash/ruffle-v0.4.1/**"
+             Link="CompatibilityFixtures/ruffle-v0.4.1/%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../../../CefFlashBrowser.Tests/TestData/*.sol"
+             Link="TestData/%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/RuffleTest.sol"
+             Link="TestData/RuffleTest.sol"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/shared-object-avm1.swf"
+             Link="TestData/shared-object-avm1.swf"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/Test.as"
+             Link="TestData/avm2-hello-world/Test.as"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/output.txt"
+             Link="TestData/avm2-hello-world/output.txt"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf"
+             Link="TestData/avm2-hello-world/test.swf"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.toml"
+             Link="TestData/avm2-hello-world/test.toml"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/**"
+             Link="TestData/avm2-external-interface/%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/**"
+             Link="Assets/Ruffle/%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

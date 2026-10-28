@@ -1,0 +1,77 @@
+# P02 固定 Flash 兼容语料与摩尔庄园
+
+状态：DONE（P02 固定必需语料验收完成）；P03 可行性门禁待单独验收。实际日期：2026-10-28，Australia/Sydney。目标 main 无提交；来源、依赖与固定运行时仍按 P00/P01 冻结。
+
+用户已明确最终项目独立运行，原项目只作资源与参考；必要目标已由赛尔号更正为**摩尔庄园官方页游，进入游戏登录界面**。不需要完成账号登录。更正前的赛尔号原始记录保留，不计入目标验收。
+
+## 输入与实现
+
+- 新的官方语料来自 Ruffle v0.4.1 / a1ac4ce8647352ad03044031cad0454a636427b8。10 组新 fixture、54 文件及原有 Hello World 的 4 文件保持原始字节，源码、FLA、SWF、期望、图片/声音/数据文件均完整保留。逐文件来源、hash、许可与目标见 test-assets/flash/ruffle-v0.4.1/manifest.json。
+- 新增 CompatibilityContentHost：只绑定两个随机 127.0.0.1 端口，随机 token、精确固定资产、启动 hash 校验、有界生命周期、Range/MIME/CSP、固定重定向、Cookie 与允许/拒绝的策略文件端点；不是代理。
+- 新增嵌入式 runner 和完整证据 recorder。自动 trace oracle、输入子集、定时容差与浏览器网络矩阵分别给出结果。声音 API trace 与真实有声输出分别验收；WK fetch 网络与 AS3 网络分别验收。
+- 原始 Ruffle JS/WASM 未改，未升级依赖。Scoped HTTP transport exceptions 只包含实际观察到的 mole.61.com、webres.61.com、game-res.61.com；全局 ATS 放宽项保持关闭。显式 HTTP URL 不再被宿主自行升级，Ruffle 仅在 HTTPS 页保留升级行为。
+- 新增 NativePageProbe，用专用 profile 保留指定目标的完整 DOM、插件状态、资源列表和可取得的 renderer 数据。测试启动器记录 cwd、主程序 hash、环境、profile、退出码；实际进程继承禁止读取原仓库的系统规则。
+
+## 已执行的回归
+
+`python3 scripts/verify-bootstrap.py --task P02 --run-id p02-corpus-20261028-03`：locked restore/build/test 均退出 0，107/107、0 跳过、0 warning/error，三份锁不变。前两次运行保留在 artifacts/evidence/P01/p02-corpus-20261028-01 与 artifacts/evidence/P02/p02-corpus-20261028-02：取消断言误用了精确基类类型；.NET SemaphoreSlim 合法抛出的 TaskCanceledException 是 OperationCanceledException 子类。断言改为契约要求的取消异常家族，不改变实现或跳过测试。
+
+新增五项托管测试覆盖固定字节/Range、第二 origin 与 CORS、真实重定向位置、Cookie 成败、策略文件、损坏资产拒绝、取消重试及并发关闭。
+
+工具测试 7/7：导入保护、限定 transport policy，以及完整原始网站脚本的四组静态回归。静态脚本测试不作为浏览器或游戏通过证据。JS 语法检查已执行。
+
+P02 开发包 p02-package-20261028-01：18 个 Mach-O 全 ARM64、codesign 严格验证退出 0，非法 RID 退出 2，锁不变；归档为 artifacts/evidence/P02/p02-package-20261028-01/CefFlashBrowser-prototype.zip。它只覆盖当时的开发包检查。P01 原开发 app 已单独冻结归档，后续重打包不替换旧证据。
+
+## 摩尔庄园实际探测
+
+Playwright MCP 确认 `https://mole.61.com/` 返回到 `http://mole.61.com/`。匿名网页包含 Client.swf 的 SWFObject 1.5 嵌入链；未修改官方资源。官方 Client.swf 20,695 字节可读（CWS），HTTP/HTTPS 取回的原始内容及响应头完整保存在 artifacts/evidence/P02/mole-network-baseline-20261028-01。
+
+第一次真实新 app 会话 mole-native-initial-20261028-01 停在导航加载；正常关闭退出 0。限定 transport 策略后，第二次真实 app 会话 mole-native-transport-20261028-01 成功加载官方页面、注入 Ruffle，实际插件元数据仍为上游 Shockwave Flash 32.0 r0 / ruffle.js；页面却主动将游戏替换为 upgrade.html。该会话正常关闭退出 0。完整 journal、DOM 和资源记录分别在对应 artifacts/evidence/P02 与 artifacts/profiles 目录；没有登录界面 PASS 结论。
+
+原始官方检测脚本明确拒绝 major=32；其他版本还检查原生 .dll/.plugin。已保存 MIT 原脚本与来源/hash（test-assets/web/mole/provenance.json），新增仅限 mole.61.com、且仅在 Ruffle 已存在时的构造器兼容规则：保留原 SWF 和参数，跳过失去适用性的原生 Flash 安装提示。没有改动上游 Ruffle 或网站脚本、插件版本/文件名。静态负控/正控/其他域/无运行时四组通过。真实 Client.swf 与登录界面需要下一次新包复验。
+
+## 待完成
+
+真实 WKWebView 官方语料、键鼠、renderer golden、冷/热/两种 reload、精确 ExternalInterface、AS3 绝对请求/重定向/Cookie/策略执行、音频加载/失败/控制/手势/实际输出均还需要完整结果。当前自动 runner 中 browser-network 只声称浏览器 transport 和策略资源可达，不冒充 Flash 安全策略实现。
+
+P02 维持 IN_PROGRESS；P03 与正式迁移尚未验收。下一步先完成当前回归，再用新 ARM64 包复验真实目标和固定 runner。没有将受阻或未测项目记为通过。
+
+## 真实目标阶段结果与首轮矩阵
+
+新包 p02-package-20261028-02 的真实会话 mole-native-shim-20261028-01 已达到指定目标：在官方 http://mole.61.com/ 保留 Client.swf 后加载 version、LoginHome.swf、Login.swf 和依赖；用原生鼠标点击“开始”，实际显示“淘米账号”“密码”“登录”界面，未输入凭据或提交登录。会话继承原仓库读取拒绝规则，关闭退出 0。此为目标场景通过，仍不是全产品通过。原始 CUA 画面保存在本聊天工具记录；完整 DOM、资源、SOL 与 journal 在对应专用 profile 中，WebGL toDataURL 的黑色采样保留为失败采集样本，不用于画面通过断言。
+
+随后已实现 WKWebView 原生 compositor snapshot（不是 WebGL 已清空的绘图缓冲），在 p02-suite-native-20261028-01 实际保存 PNG。首轮结果：Hello World、bitmap clone、bitmap pixels、timer events、timer finished、sound play、sound stop 通过；browser fetch 两 origin 矩阵通过。原始 url-loader 失败已定位为 runner 未显式设置 SWF 的资源 base，错误请求落到 /case/data.txt。项目网络样例暴露跨源预检/安全错误事件处理缺口，项目音频同受资源 base 影响；这些首轮失败完整保留，尚未外推为引擎能力结论。
+
+新增项目自有 AS3 网络/音频 fixture 与 440 Hz PCM/MP3，位于 test-assets/flash/p02-project，源码、预编译 SWF、hash 与可选再生成工具版本均落盘。编译工具只用于再生成测试资产，不进入应用或日常构建依赖。Apache SDK 原始归档已核对官方 MD5 并保存 SHA-256；Adobe README 的旧 API 地址现返回 EOL HTML，原始响应保留，API 定义改用已冻结 commit 和 Git blob hash 校验的维护者镜像，仅作编译期输入。
+
+音频采样 runner 在真实 WebAudio destination 前建立静音旁路分析 tap，准备以原生可信点击解锁后采集 PCM，检查 440 Hz、静音 RMS 和音量比；尚未采集成功前不计为有声输出通过。原生截图 helper 已在真实 app 保存画面；后续将补上官方登录 UI 的磁盘截图和渲染 golden 比对。
+
+## 登录界面落盘与第二轮诊断
+
+`mole-native-login-evidence-20261028-01` 使用 p02-package-20261028-04，真实 ARM64 app 在原仓库读取被拒、无系统 dotnet 的条件下再次打开官方入口。原生点击“开始”后显示账号、密码和登录按钮；WK compositor 截图已保存为 [mole-login-native.png](mole-login-native.png)，逐项结果、环境和完整证据 hash 见 [mole-login-result.json](mole-login-result.json)。正常关闭退出 0。只验收到指定登录界面，不外推到账号认证或后续玩法。
+
+`p02-suite-native-20261028-02` 的原始 url-loader 已通过，相对资源 base 修复有效。项目自有网络与音频的异步回调仍超时；完整请求证明网络已经运行到允许/拒绝两 origin。原因是固定测试文档只允许 WASM eval，但 Ruffle 0.4.1 的 ExternalInterface.call 通过 JS Function 实现，受 CSP 阻断并在上游返回 undefined。源码依据和诊断保存在该运行目录，原始失败不删除。仅固定 loopback 测试文档增加对应 JS eval 权限，外部网站 CSP 不变；新 107/107 回归通过，待下一真实会话确认。
+
+## 输入与网络细化
+
+真实会话 `p02-suite-native-20261028-03` 用原生鼠标点击 A，mouseDown/up/click 的目标、冒泡阶段和顺序与官方预期子集逐行一致，PASS，关闭退出 0。
+
+`p02-suite-native-20261028-04` 记录原始 DOM 事件发现当前组合输入源先产生 composition/beforeinput，Ruffle 再产生一对非 trusted 合成键事件，随后又处理真实 keyCode=229/65，从而两次触发 AS3 字母事件。失败原样保留。临时切换到普通输入源后，runId `30e37be1-25a5-4537-b6e5-00c919ea0fad` 的 a/Enter 完整 16 行精确通过，测试后恢复原输入源。只记 ASCII 样例 PASS；组合输入缺陷登记给 W01/U04，不能声称中文 IME 已验收。
+
+同一会话的项目网络 summary 已保留七个实际 AS3 请求的完整成功/失败值，全部满足预期；但测试总结果仍 FAIL，因为 Flex Release 默认移除 trace，缺少机器要求的 P02_NETWORK_COMPLETE。再生成入口现显式设置 compiler.omit-trace-statements=false，重编两份自有 SWF；官方语料与固定运行时不变。音频 PCM 测试尚有旧播放器异步关闭上下文问题；tap 改按页面 fixture runId 归属，保留错误与 stack，等待新包复验。
+
+## P02 最终验收
+
+最终机器矩阵为 [compatibility-matrix.json](../../../compatibility-matrix.json)，索引为 [acceptance-index.json](acceptance-index.json)，修改映射为 docs/provenance/P02-changes.json。最终新语料含 12 个完整官方目录、64 原始文件，另有独立自有网络/声音 fixture；所有上游文件及 Ruffle 运行时保持字节不变。
+
+真实完整会话 `p02-suite-native-20261028-06` 在 M1 Pro / macOS 26.5.1 运行 p02-package-20261028-09，启动器先核对 app 全部文件与冻结 zip 逐字节一致，再在禁止原仓库读取、无系统 dotnet 的环境启动。23 个固定记录全部 PASS；含非空彩色渲染、programmatic event（明确不是原生键盘）、七个 AS3 网络、实际音频输出等。音频约 440 Hz、静音 RMS=0、音量幅度比约 0.4；完整 PCM 样本保留于原始 JSONL。正常关闭退出 0。
+
+独立彩色 renderer golden 使用官方 bitmapdata_fillrect 的 low quality、550×400 oracle，含 1200 个非白像素，WK compositor crop 后逐像素零容差，差异 0。此前纯白 clone golden 只保留为 smoke，不用它替代实际绘制验收。完整数值见 [renderer-golden-result.json](renderer-golden-result.json)。
+
+Hello World 四个明确模式各有唯一 runId 和唯一精确 trace；固定非重入 ExternalInterface 的 available=true、jsToAs=123.4、asToJs=true、structured=true 精确通过。原生鼠标和普通输入源的 a/Enter 完整断言通过。摩尔庄园从官方入口进入真实登录页的原生截图已落盘。
+
+最终 locked restore/build/test 107/107、0 跳过、0 warning/error，源码与固定内容输入 hash 在测试前后相同；工具测试 7/7、JS 语法通过。原仓库 332 份业务文件、HEAD 和 dirty 状态保持原状。原始失败、已取消的赛尔号探索、旧包和黑色 renderer buffer 均完整保留。
+
+明确限制：Security.loadPolicyFile 的 Adobe 策略解释器与同步重入仍属固定上游未实现范围；网络 PASS 精确指实际 AS3 请求/CORS 成败、Cookie、重定向、404 及策略资源，不虚构策略解释能力。组合输入重复事件为已复现额外缺陷，保留 FAIL 并交给 W01/U04；不能把普通键盘 PASS 扩写为所有 IME 通过。P03 将据此冻结支持范围。
+
+下一任务为 P03：真实浏览、SharedObject 捕获/导回/跨进程、popup、Open panel、下载落盘及支持/预算/ADR。正式工程和发行尚未通过。

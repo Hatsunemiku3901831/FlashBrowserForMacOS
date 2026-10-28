@@ -1,0 +1,92 @@
+using System.Diagnostics;
+using System.Text.Json;
+using System.Threading.Channels;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Diagnostics;
+
+public sealed class GateZeroSessionJournal : IAsyncDisposable
+{
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    private readonly Channel<Entry> _entries = Channel.CreateBounded<Entry>(new BoundedChannelOptions(512)
+    {
+        FullMode = BoundedChannelFullMode.DropOldest,
+        SingleReader = true,
+        SingleWriter = false,
+    });
+    private readonly long _startedAt = Stopwatch.GetTimestamp();
+    private readonly Task _writerTask;
+    private bool _disposed;
+
+    public GateZeroSessionJournal(string logDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(logDirectory);
+        Directory.CreateDirectory(logDirectory);
+        FilePath = Path.Combine(
+            Path.GetFullPath(logDirectory),
+            $"gate0-{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfffZ}-{Environment.ProcessId}.jsonl");
+        _writerTask = Task.Run(WriteEntriesAsync);
+        Record("process.started", $"pid={Environment.ProcessId}");
+        Console.WriteLine($"Gate 0 journal: {FilePath}");
+    }
+
+    public string FilePath { get; }
+
+    public void Record(string name, string? detail = null)
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        _entries.Writer.TryWrite(new Entry(
+            DateTimeOffset.UtcNow,
+            Stopwatch.GetElapsedTime(_startedAt).TotalMilliseconds,
+            name,
+            detail));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        Record("process.stopping");
+        _disposed = true;
+        _entries.Writer.TryComplete();
+        await _writerTask.ConfigureAwait(false);
+    }
+
+    private async Task WriteEntriesAsync()
+    {
+        try
+        {
+            await using var stream = new FileStream(
+                FilePath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.ReadWrite,
+                bufferSize: 16 * 1024,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+            await using var writer = new StreamWriter(stream);
+            await foreach (var entry in _entries.Reader.ReadAllAsync())
+            {
+                await writer.WriteLineAsync(JsonSerializer.Serialize(entry, JsonOptions)).ConfigureAwait(false);
+                await writer.FlushAsync().ConfigureAwait(false);
+            }
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            Console.Error.WriteLine($"Gate 0 journal failed: {exception.Message}");
+        }
+    }
+
+    private sealed record Entry(
+        DateTimeOffset Timestamp,
+        double ElapsedMilliseconds,
+        string Name,
+        string? Detail);
+}

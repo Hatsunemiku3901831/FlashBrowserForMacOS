@@ -1,0 +1,15 @@
+# P02 固定内容与证据契约
+
+官方语料固定在 Ruffle v0.4.1 commit a1ac4ce8647352ad03044031cad0454a636427b8。`test-assets/flash/ruffle-v0.4.1/manifest.json` 登记每个原文件的路径、来源、SHA-256 和许可；这些文件不得手改。项目自有 AS3 样例位于相邻 `p02-project`，有独立源码、预编译 SWF、声音及 manifest，不混入官方语料。
+
+普通构建直接使用仓库内预编译资源，不要求 ActionScript 编译器。可选 `scripts/regenerate-p02-fixtures.py` 接收显式的 Apache Flex 4.16.1 SDK 和 hash 固定的 playerglobal API 定义，输出到新的 review 目录，保留编译命令、日志、工具 hash 和与原资产的差异。它不替换资产、不改 manifest。SDK、Java 和 ffmpeg 只用于资产再生成；日期等编译元数据可能导致 SWF 字节不同，必须审查后显式更新。
+
+CompatibilityContentHost 仅服务 token 保护的固定回环语料与两个 origin，无任意 URL 或文件代理。逐文件启动校验；响应禁止缓存。固定文档的 CSP 允许明确的本地 Ruffle origin、第二个测试 origin、WASM，以及 Ruffle ExternalInterface 所需的 JS Function；这不改变外部网页自己的 CSP。允许/拒绝的跨源请求保留浏览器 CORS 语义，不从宿主代发。
+
+Ruffle 0.4.1 的 `Security.loadPolicyFile` 是 stub。策略资源、调用、浏览器跨源成功/拒绝须分别记录，不能宣称已实现 Adobe Flash 的策略解释器。同步重入的 ExternalInterface 不属于已支持范围；固定非重入数值/结构化往返必须仍精确通过。
+
+每项机器结果包含 taskId、fixtureId/caseId、页面唯一 runId、预期、实际、开始/结束和 URL。原生 recorder 在专用 profile 的 JSONL 内保存完整原始 payload，并包裹进程 run/profile 与接收时间。最终证据索引另保存源码、fixture、包和原始文件 hash。页面结果本身不是退出、硬件或签名证明，须关联启动器、包校验及进程退出记录。
+
+键鼠必须从真实应用输入。定时器 oracle 保留完整事件顺序和数量，间隔使用固定容差。渲染比较使用真实 WKWebView compositor PNG 与原始 upstream golden；WebGL 清空后的 toDataURL 不可作为画面证明。音频 API、加载失败、可信手势、输出 PCM 分开判定；PCM 从实际 WebAudio destination 输入采样，保留完整 samples，标明未覆盖硬件混音之后的信号。
+
+摩尔庄园的必要流程为官方入口 → 原生点击开始 → 显示游戏账号/密码/登录。原始资源和账号登录流程保持由官方提供；无需输入凭据。只对该已观察流程给出内容等级，不外推所有 Flash 内容或后续游戏功能。

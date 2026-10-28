@@ -1,0 +1,137 @@
+"""Freeze the completed A04 managed and native evidence, retaining all original failures."""
+from pathlib import Path
+from datetime import datetime, timezone
+import collections
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[4]
+OUT = Path(__file__).resolve().parent
+BASE = ROOT / 'artifacts/evidence/A04'
+def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def save(path, value): path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
+def now(): return datetime.now(timezone.utc).isoformat()
+
+final = json.loads((BASE / 'configuration-managed-20261028-07/result.json').read_text())
+inputs = json.loads((BASE / 'configuration-managed-20261028-07/inputs.json').read_text())['before']
+assert final['status'] == 'PASS' and final['actual']['testCount'] == 222
+assert all(sha(ROOT / path) == digest for path, digest in inputs.items())
+package = json.loads((BASE / 'configuration-package-20261028-01/result.json').read_text())
+package_inputs = json.loads((BASE / 'configuration-package-20261028-01/code-inputs.json').read_text())['before']
+differences = {path: {'package': package_inputs.get(path), 'finalManaged': inputs.get(path)}
+               for path in inputs.keys() | package_inputs.keys() if inputs.get(path) != package_inputs.get(path)}
+assert set(differences) == {'tests/FlashMacOS.IntegrationTests/ConfigurationUseCaseTests.cs'}
+save(OUT / 'native-source-equivalence.json', {'taskId': 'A04', 'status': 'PASS', 'allProductAndToolInputsEqual': True,
+    'differences': differences, 'reason': 'Only additional assertions in one test file; no product/runtime/dependency/resource/tool changes'})
+runs = ['configuration-valid-native-20261028-01', 'configuration-damaged-native-20261028-01']
+for run in runs:
+    path = BASE / run
+    process = json.loads((path / 'process-result.json').read_text())
+    profile = Path(process['profile'])
+    logs = list((profile / 'logs').glob('session-*.jsonl'))
+    entries = [json.loads(line) for log in logs for line in log.read_text().splitlines()]
+    counts = collections.Counter(entry['name'] for entry in entries)
+    bad = 'damaged' in run
+    assert process['exitCode'] == (1 if bad else 0)
+    assert counts['configuration.loaded'] == (0 if bad else 1)
+    assert counts['browser.adapter.created'] == (0 if bad else 1)
+    assert counts['browser.adapter.destroyed'] == (0 if bad else 1)
+    assert counts['browser.bridge.stopped'] == 1
+    assert any(entry['name'] == 'composition.stopped' and entry['detail'] == 'failures=0' for entry in entries)
+    if bad: assert counts['composition.startup.failed'] == 1
+    seed_hashes = {}
+    for name, seed in process['profileSeeds'].items():
+        destination = Path(seed['destination'])
+        assert sha(ROOT / seed['source']) == seed['sha256'] == sha(destination)
+        seed_hashes[str(destination.relative_to(ROOT))] = sha(destination)
+        assert not Path(str(destination) + '.bak').exists(), 'Read-only initialization must not perform an implicit migration'
+    observation = ('Native window displayed InvalidDataException: Configuration JSON is malformed; native close button used'
+                   if bad else 'Native title test.swf — FlashMacOS and SWF trace: Hello world! visible; native address focus then Command-Q')
+    result = {'taskId': 'A04', 'caseId': 'malformed-configuration-safe-exit' if bad else 'legacy-configuration-native-load',
+        'runId': run, 'profileId': process['profileId'], 'status': 'PASS',
+        'expected': 'Reject damaged configuration and preserve exact input before safe exit 1' if bad else 'Load old settings/favorites without rewriting and run local SWF; exit 0',
+        'actual': {'exitCode': process['exitCode'], 'counts': dict(counts), 'seedFilesUnchanged': True,
+                   'nativeObservation': observation, 'uiPreferencesNotYetApplied': 'U02/W01/U04'},
+        'startedAt': process['startedAt'], 'finishedAt': process['finishedAt'], 'environment': process['environment'],
+        'artifactHashes': {**seed_hashes, **{str(log.relative_to(ROOT)): sha(log) for log in logs}}, 'evidencePaths': [str(path.relative_to(ROOT)), str(profile.relative_to(ROOT))]}
+    save(path / 'native-result.json', result)
+# Preserve the CUA-created extra process log without counting it as a source-denied run.
+logs = Path.home() / 'Library/Logs/local.flashmacos.app/profiles/default'
+extra = BASE / 'incidental-product-native-79446'
+extra.mkdir(exist_ok=True)
+for path in logs.glob('session-*-79446-*.jsonl'):
+    shutil.copy2(path, extra / path.name)
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    assert rows[-1]['name'] == 'process.stopping'
+save(extra / 'classification.json', {'taskId': 'A04', 'status': 'NOT_APPLICABLE',
+    'condition': 'CUA status query after the instrumented process exited launched another normal Product process',
+    'actual': 'Observed default diagnostic page, native address focus and Command-Q; final process log retained',
+    'scope': 'Not counted as sandbox/source-denied acceptance'})
+app = ROOT / package['app']
+bundle = {str(path.relative_to(app)): sha(path) for path in app.rglob('*') if path.is_file()}
+assert bundle == package['bundleFiles']
+with (OUT / 'codesign-after-native.log').open('wb') as log:
+    result = subprocess.run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app)], stdout=log, stderr=subprocess.STDOUT)
+assert result.returncode == 0
+save(OUT / 'bundle-preserved.json', {'taskId': 'A04', 'status': 'PASS', 'allFilesUnchanged': True,
+    'strictSignatureExitCode': 0, 'archiveSha256': package['artifactHashes']['archive'], 'bundleFiles': bundle})
+source = Path('/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser')
+original = json.loads((ROOT / 'docs/evidence/P00/2026-10-28/source-state-before.json').read_text())
+diff = {path: digest for path, digest in original['businessFiles'].items() if sha(source / path) != digest}
+environment = {**os.environ, 'GIT_OPTIONAL_LOCKS': '0'}
+head = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], env=environment, text=True).strip()
+dirty = subprocess.check_output(['git', '-C', str(source), 'status', '--short'], env=environment, text=True)
+assert not diff and head == original['head'] and dirty == original['worktreeStatus']
+save(OUT / 'source-preserved.json', {'taskId': 'A04', 'status': 'PASS', 'checkedFiles': 332, 'head': head,
+    'worktreeStatus': dirty, 'headUnchanged': True, 'statusUnchanged': True, 'changes': diff})
+old = json.loads((ROOT / 'docs/evidence/P03/2026-10-28/legacy-data-preserved.json').read_text())
+actual = {}
+for text in old['roots']:
+    path = Path(text)
+    actual[text] = {'exists': path.exists(), 'files': {str(file.relative_to(path)): sha(file) for file in path.rglob('*') if file.is_file()}}
+assert actual == old['actual']
+save(OUT / 'legacy-data-preserved.json', {'taskId': 'A04', 'status': 'PASS', 'roots': old['roots'], 'changes': {}, 'actual': actual})
+fixtures = json.loads((ROOT / 'docs/provenance/A04-fixtures.json').read_text())['files']
+assert all(sha(ROOT / entry['path']) == entry['sha256'] for entry in fixtures)
+prior = {entry['targetPath']: entry for name in ['A01-changes.json', 'A02-changes.json', 'A03-changes.json']
+         for entry in json.loads((ROOT / 'docs/provenance' / name).read_text())['changes']}
+source_rows = json.loads((ROOT / 'docs/provenance/A04-source-inputs.json').read_text())['inputs']
+before = json.loads((ROOT / 'docs/provenance/A04-before.json').read_text())['files']
+changes = []
+for path, digest in inputs.items():
+    if before.get(path) == digest: continue
+    entry = {'targetPath': path, 'beforeSha256': before.get(path), 'targetSha256': digest,
+        'reason': 'A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions'}
+    sources = [row for row in source_rows if path in row['targetPaths']]
+    if sources: entry['originalSources'] = [{'path': row['originalSourcePath'], 'sha256': row['originalSourceSha256']} for row in sources]
+    else:
+        for field in ['originalSourcePath', 'originalSourceSha256', 'bootstrapSourcePath', 'bootstrapSourceSha256']:
+            if field in prior.get(path, {}): entry[field] = prior[path][field]
+    if not sources and 'originalSourcePath' not in entry: entry['origin'] = 'Project-authored implementation or synthetic fixture; no new external source copy'
+    changes.append(entry)
+save(ROOT / 'docs/provenance/A04-changes.json', {'schemaVersion': 1, 'capturedAt': now(), 'changes': changes})
+test_map = json.loads((ROOT / 'docs/provenance/A01-test-map.json').read_text())
+lookup = {case['testName']: case for case in final['actual']['tests']}
+for case in test_map['tests']:
+    case['formal'] = lookup[case['formal']['testName']]
+    assert case['formal']['outcome'] == 'Passed'
+test_map.update({'destinationRun': 'configuration-managed-20261028-07', 'formalTotal': 222, 'newA04Tests': 37})
+save(ROOT / 'docs/provenance/A04-test-map.json', test_map)
+save(ROOT / 'docs/provenance/S01-before.json', {'schemaVersion': 1, 'files': inputs})
+paths = []
+for path in [BASE, OUT, *[path for path in (ROOT / 'docs/provenance').glob('A04-*.json')],
+             ROOT / 'docs/contracts/configuration.zh-CN.md', ROOT / 'docs/contracts/settings-field-map.json',
+             ROOT / 'docs/contracts/interfaces.zh-CN.md', ROOT / 'README.md', ROOT / 'HRNESS.md']:
+    paths.extend([item for item in path.rglob('*') if item.is_file()] if path.is_dir() else [path])
+for run in runs:
+    paths.extend(path for path in (ROOT / 'artifacts/profiles' / run).rglob('*') if path.is_file())
+index = {str(path.relative_to(ROOT)): sha(path) for path in paths if path.name != 'acceptance-index.json'}
+save(OUT / 'acceptance-index.json', {'taskId': 'A04', 'status': 'PASS', 'capturedAt': now(),
+    'managedRun': 'configuration-managed-20261028-07', 'formalTests': 222, 'toolingTests': 18,
+    'artifactHashes': index, 'codeInputs': inputs, 'nativeRuns': runs, 'fixedAssets': 104,
+    'note': 'A04 storage/use-case gate; actual UI/browser setting application remains U02/W01/U04; no release completion'})
+print(json.dumps({'changes': len(changes), 'artifacts': len(index), 'managed': 222, 'tooling': 18,
+    'sourceUnchanged': True, 'oldDataUnchanged': True, 'bundleUnchanged': True}))

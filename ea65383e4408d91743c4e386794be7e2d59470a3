@@ -1,0 +1,24 @@
+# P00 初始化与冻结来源
+
+状态：DONE。日期：2026-10-28（Australia/Sydney）。目标 HEAD：新建 main，UNBORN；所有实现未提交。
+
+输入为根任务包与原工作树 `CefFlashBrowser`，来源 HEAD 为 `7cfbe01596168aca6326db7a68ca1c15d1b55638`。原始输入清单 `docs/source-baseline.json` 原字节保留。实际来源 manifest、逐文件 SHA-256 和完整 Git 状态见 `docs/provenance/source-import.json`。
+
+环境：Apple Silicon arm64，macOS 26.5.1 (25F80)，.NET SDK 10.0.301；此任务不运行应用，不读写旧用户数据。
+
+## 实施与验证
+
+- 确认两目录 realpath 不同且互不包含；目标不在其他 Git 仓库中，原有六份任务文件保留。初始化独立 main，无 commit。配置 legacy-source 指向实测来源根，push URL 为 `no-push://read-only`；未 fetch、merge 或 push。
+- `python3 scripts/import-source.py --source /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser --report docs/provenance/P00-dry-run.json`：退出 0。296 文件、30,793,859 字节，与编制清单的路径、大小、hash、执行位全部一致，无冲突。完整实际 Git 状态比编制清单多 `.DS_Store`、`Docs/.DS_Store`、任务包 zip；它们位于白名单外或属于生成元数据，未导入。
+- 同一命令追加 `--apply --report docs/provenance/P00-apply.json`：退出 0。导入 296 文件，复制前后逐文件 hash 一致。包含所有未提交 spike 源码、三份锁、Ruffle 两个 WASM、三个 JS、许可、五份 SOL 及固定 SWF。
+- 再次 apply，报告 `docs/provenance/P00-repeat.json`：退出 0，复制 0、no-op 296，全部快照与 manifest 的字节和 mtime 不变。
+- `python3 -m unittest discover -s tests/tooling -v`：退出 0，5 通过、0 失败。覆盖 dry-run、重复执行、Unicode/空格路径、执行位、整批冲突预检不覆盖、源/目标符号链接、嵌套目录、路径逃逸及冻结后来源变化。
+- 对来源非忽略文件建立额外完整 hash 清单并复核，业务文件与 Git 状态均不变。未运行源 restore/build/package，也未清理来源任何文件。
+
+原始记录为本目录的 `apply.log`、`repeat.log`、`importer-tests.log`、`source-state-before.json`、`source-dirty.patch` 与 `verification.json`。生成物/缓存目录的排除原因逐项见 manifest；未递归跟随符号链接，未导入 CEF/Flash 压缩二进制。
+
+## 变更与范围
+
+新增导入器、工具测试、.gitignore、本机来源配置、README.md、HRNESS.md；来源原文件保持只读参考，MIT 与 Ruffle 许可完整。没有删除失败样本或缩减原始数据。来源路径只作溯源配置，不是构建输入。
+
+此任务没有 GUI、产品测试或发行能力结论。下一任务 P01：从冻结快照建立 bootstrap，复现 97 项逐名称基线，再加入强制隔离 profile 并回归。来源不可见的独立构建完整门禁仍属于 Q01。

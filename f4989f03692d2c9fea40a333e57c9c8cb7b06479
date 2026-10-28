@@ -1,0 +1,8 @@
+using Avalonia.Platform;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Browser;
+
+public interface IDocumentStartInjector
+{
+    void Inject(IPlatformHandle platformHandle, string script);
+}

@@ -1,0 +1,109 @@
+"""Freeze A03 evidence after the explicitly recorded managed and native sessions."""
+from pathlib import Path
+import base64
+import collections
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[4]
+OUT = Path(__file__).resolve().parent
+BASE = ROOT / 'artifacts/evidence/A03'
+def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def save(path, value): path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
+def now(): return datetime.now(timezone.utc).isoformat()
+
+final = json.loads((BASE / 'persistence-managed-20261028-04/result.json').read_text())
+inputs = json.loads((BASE / 'persistence-managed-20261028-04/inputs.json').read_text())['before']
+package = json.loads((BASE / 'product-package-20261028-02/result.json').read_text())
+assert final['status'] == 'PASS' and final['actual']['testCount'] == 185
+assert all(sha(ROOT / path) == digest for path, digest in inputs.items())
+assert json.loads((BASE / 'product-package-20261028-02/code-inputs.json').read_text())['before'] == inputs
+runs = ['product-default-native-20261028-01', 'product-default-native-20261028-02',
+        'product-default-native-20261028-03', 'product-default-native-20261028-04',
+        'product-isolated-native-20261028-01']
+for run in runs:
+    assert json.loads((BASE / run / 'native-result.json').read_text())['status'] == 'PASS'
+product_store = Path.home() / 'Library/Application Support/local.flashmacos.app/profiles/default/ruffle-saves.v1.json'
+state = json.loads(product_store.read_text())
+assert list(state['saves']) == ['127.0.0.1/gate0/settings']
+payload = base64.b64decode(state['saves']['127.0.0.1/gate0/settings']['base64Data'])
+assert hashlib.sha256(payload).hexdigest() == sha(ROOT / 'test-assets/legacy-sol/settings.sol')
+shutil.copy2(product_store, OUT / 'product-fixture-store.json')
+first = json.loads((BASE / 'product-default-native-20261028-03/default-data-after.json').read_text())
+last = json.loads((BASE / 'product-default-native-20261028-04/default-data-after.json').read_text())
+key = str(product_store.parent)
+assert first[key]['ruffle-saves.v1.json'] == last[key]['ruffle-saves.v1.json'] == sha(product_store)
+app = ROOT / package['app']
+bundle = {str(path.relative_to(app)): sha(path) for path in app.rglob('*') if path.is_file()}
+assert bundle == package['bundleFiles']
+with (OUT / 'codesign-after-native.log').open('wb') as log:
+    result = subprocess.run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app)], stdout=log, stderr=subprocess.STDOUT)
+assert result.returncode == 0
+save(OUT / 'bundle-preserved.json', {'taskId': 'A03', 'status': 'PASS', 'packageRun': 'product-package-20261028-02',
+    'allFilesUnchanged': True, 'strictSignatureExitCode': 0, 'archiveSha256': package['artifactHashes']['archive'], 'bundleFiles': bundle})
+source = Path('/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser')
+original = json.loads((ROOT / 'docs/evidence/P00/2026-10-28/source-state-before.json').read_text())
+diff = {path: digest for path, digest in original['businessFiles'].items() if sha(source / path) != digest}
+environment = {**os.environ, 'GIT_OPTIONAL_LOCKS': '0'}
+head = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], env=environment, text=True).strip()
+dirty = subprocess.check_output(['git', '-C', str(source), 'status', '--short'], env=environment, text=True)
+assert not diff and head == original['head'] and dirty == original['worktreeStatus']
+save(OUT / 'source-preserved.json', {'taskId': 'A03', 'status': 'PASS', 'checkedAt': now(), 'checkedFiles': 332,
+    'head': head, 'worktreeStatus': dirty, 'headUnchanged': True, 'statusUnchanged': True, 'changes': diff})
+old = json.loads((ROOT / 'docs/evidence/P03/2026-10-28/legacy-data-preserved.json').read_text())
+actual = {}
+for text in old['roots']:
+    path = Path(text)
+    actual[text] = {'exists': path.exists(), 'files': {str(file.relative_to(path)): sha(file) for file in path.rglob('*') if file.is_file()}}
+assert actual == old['actual']
+save(OUT / 'legacy-data-preserved.json', {'taskId': 'A03', 'status': 'PASS', 'roots': old['roots'], 'changes': {}, 'actual': actual})
+prior = {entry['targetPath']: entry for name in ['A01-changes.json', 'A02-changes.json']
+         for entry in json.loads((ROOT / 'docs/provenance' / name).read_text())['changes']}
+before = json.loads((ROOT / 'docs/provenance/A03-before.json').read_text())['files']
+old_info = json.loads((ROOT / 'artifacts/evidence/A02/lifecycle-package-20261028-04/result.json').read_text())['bundleFiles']['Contents/Info.plist']
+changes = []
+for path, digest in inputs.items():
+    previous = before.get(path, old_info if path == 'packaging/macos/Info.plist' else None)
+    if previous == digest: continue
+    entry = {'targetPath': path, 'beforeSha256': previous, 'targetSha256': digest,
+             'reason': 'A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification'}
+    for field in ['originalSourcePath', 'originalSourceSha256', 'bootstrapSourcePath', 'bootstrapSourceSha256']:
+        if field in prior.get(path, {}): entry[field] = prior[path][field]
+    if 'originalSourcePath' not in entry: entry['origin'] = 'Project authored; no new external source copy'
+    changes.append(entry)
+save(ROOT / 'docs/provenance/A03-changes.json', {'schemaVersion': 1, 'capturedAt': now(),
+    'baseline': 'docs/provenance/A03-before.json', 'packagingBaseline': 'A02 package-04 Info.plist source bytes; packaging was outside the older input collector', 'changes': changes})
+test_map = json.loads((ROOT / 'docs/provenance/A01-test-map.json').read_text())
+lookup = {case['testName']: case for case in final['actual']['tests']}
+for case in test_map['tests']:
+    case['formal'] = lookup[case['formal']['testName']]
+    assert case['formal']['outcome'] == 'Passed'
+test_map.update({'destinationRun': 'persistence-managed-20261028-04', 'formalTotal': 185, 'newA03Tests': 40})
+save(ROOT / 'docs/provenance/A03-test-map.json', test_map)
+for name in ['persistence-red-20261028-01', 'journal-red-20261028-01']:
+    path = BASE / name
+    raw = json.loads((path / 'result.json').read_text())
+    save(path / 'classification.json', {'taskId': 'A03', 'caseId': 'intentional-pre-fix-failure', 'runId': name,
+        'profileId': 'managed-tests-only', 'status': 'FAIL', 'expected': 'Pre-fix regression must fail; raw helper classification retained unchanged',
+        'actual': {'exitCode': raw['exitCode'], 'expectedFailure': True},
+        'startedAt': datetime.fromtimestamp((path / 'test.log').stat().st_mtime, timezone.utc).isoformat(), 'finishedAt': now(),
+        'environment': final['environment'], 'artifactHashes': {str((path / 'test.log').relative_to(ROOT)): sha(path / 'test.log')}, 'evidencePaths': [str(path.relative_to(ROOT))]})
+save(ROOT / 'docs/provenance/A04-before.json', {'schemaVersion': 1, 'files': inputs})
+paths = []
+for path in [BASE, OUT, ROOT / 'docs/provenance/A03-before.json', ROOT / 'docs/provenance/A03-changes.json',
+             ROOT / 'docs/provenance/A03-test-map.json', ROOT / 'docs/contracts/storage.zh-CN.md',
+             ROOT / 'docs/contracts/variables.zh-CN.md', ROOT / 'docs/contracts/interfaces.zh-CN.md', ROOT / 'README.md', ROOT / 'HRNESS.md']:
+    paths.extend([item for item in path.rglob('*') if item.is_file()] if path.is_dir() else [path])
+profile = ROOT / 'artifacts/profiles/product-isolated-native-20261028-01'
+paths.extend(path for path in profile.rglob('*') if path.is_file())
+index = {str(path.relative_to(ROOT)): sha(path) for path in paths if path.name != 'acceptance-index.json'}
+save(OUT / 'acceptance-index.json', {'taskId': 'A03', 'status': 'PASS', 'capturedAt': now(),
+    'managedRun': 'persistence-managed-20261028-04', 'formalTests': 185, 'toolingTests': 16,
+    'artifactHashes': index, 'codeInputs': inputs, 'nativeRuns': runs, 'fixedAssets': 104,
+    'note': 'Dedicated A03 gate; outstanding A02 UI failures remain failures; no product/release completion claim'})
+print(json.dumps({'changedFormalInputs': len(changes), 'indexedArtifacts': len(index), 'managed': 185, 'tooling': 16,
+    'sourceUnchanged': True, 'oldDataUnchanged': True, 'finalBundleUnchanged': True, 'productFixtureBytes': len(payload)}))

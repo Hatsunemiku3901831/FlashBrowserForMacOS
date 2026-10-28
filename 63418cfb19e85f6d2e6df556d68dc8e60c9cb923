@@ -1,0 +1,31 @@
+using Avalonia;
+using CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Paths;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop;
+
+internal static class Program
+{
+    [STAThread]
+    public static int Main(string[] args)
+    {
+        try
+        {
+            _ = TestProfile.FromEnvironment();
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 3;
+        }
+
+        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
+
+    public static AppBuilder BuildAvaloniaApp()
+    {
+        return AppBuilder
+            .Configure<App>()
+            .UsePlatformDetect()
+            .LogToTrace();
+    }
+}

@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Windows are composition-root-only and intentionally have no invalid parameterless constructor. -->
+    <NoWarn>$(NoWarn);AVLN3001</NoWarn>
+    <ApplicationTitle>FlashMacOS Prototype</ApplicationTitle>
+    <ApplicationId>local.flashmacos.prototype</ApplicationId>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Controls.WebView" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="../../../../../../test-assets/flash/p02-project/**"
+             Link="CompatibilityFixtures/p02-project/%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../../../../../test-assets/flash/ruffle-v0.4.1/**"
+             Link="CompatibilityFixtures/ruffle-v0.4.1/%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets/Ruffle/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Assets/Fixtures/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../../../CefFlashBrowser.Tests/TestData/settings.sol"
+             Link="Assets/Fixtures/settings.sol"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

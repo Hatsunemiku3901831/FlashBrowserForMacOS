@@ -1,0 +1,104 @@
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using Avalonia.Platform;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Platform.MacOS;
+
+/// <summary>Test evidence from WKWebView's compositor, including the rendered Flash canvas.</summary>
+[SupportedOSPlatform("macos")]
+public static unsafe partial class MacWebViewSnapshot
+{
+    private const string ObjC = "/usr/lib/libobjc.A.dylib";
+    private static readonly nint StackBlockClass = NativeLibrary.GetExport(NativeLibrary.Load("/usr/lib/libSystem.B.dylib"), "_NSConcreteStackBlock");
+    private static readonly nint Descriptor = CreateDescriptor();
+
+    public static Task<byte[]> CaptureAsync(IPlatformHandle handle)
+    {
+        if (handle is not IAppleWKWebViewPlatformHandle apple)
+            throw new PlatformNotSupportedException("A real WKWebView handle is required for a native snapshot.");
+        var completion = new TaskCompletionSource<byte[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var context = GCHandle.Alloc(completion);
+        var block = Marshal.AllocHGlobal(Marshal.SizeOf<Block>());
+        try
+        {
+            Marshal.StructureToPtr(new Block
+            {
+                Isa = StackBlockClass, Invoke = (nint)(delegate* unmanaged<nint, nint, nint, void>)&OnSnapshot,
+                Descriptor = Descriptor, Context = GCHandle.ToIntPtr(context),
+            }, block, false);
+            // WebKit copies this stack-style completion block before returning.
+            SendSnapshot(apple.WKWebView, Selector("takeSnapshotWithConfiguration:completionHandler:"), 0, block);
+        }
+        catch
+        {
+            context.Free();
+            throw;
+        }
+        finally { Marshal.FreeHGlobal(block); }
+        return completion.Task;
+    }
+
+    [UnmanagedCallersOnly]
+    private static void OnSnapshot(nint block, nint image, nint error)
+    {
+        var context = GCHandle.FromIntPtr(Marshal.ReadIntPtr(block, Marshal.OffsetOf<Block>(nameof(Block.Context)).ToInt32()));
+        var completion = (TaskCompletionSource<byte[]>)context.Target!;
+        try
+        {
+            if (error != 0 || image == 0)
+            {
+                var description = error == 0 ? 0 : Send(error, Selector("localizedDescription"));
+                var text = description == 0 ? "WKWebView returned no image" : Marshal.PtrToStringUTF8(Send(description, Selector("UTF8String")));
+                completion.TrySetException(new IOException(text));
+                return;
+            }
+            var tiff = Send(image, Selector("TIFFRepresentation"));
+            var bitmap = SendObject(GetClass("NSBitmapImageRep"), Selector("imageRepWithData:"), tiff);
+            var properties = Send(GetClass("NSDictionary"), Selector("dictionary"));
+            var png = SendRepresentation(bitmap, Selector("representationUsingType:properties:"), 4, properties);
+            var length = (long)Send(png, Selector("length"));
+            if (length <= 8 || length > 64 * 1024 * 1024)
+                throw new InvalidDataException("The native snapshot exceeded its bounded size or was empty.");
+            var bytes = new byte[checked((int)length)];
+            Marshal.Copy(Send(png, Selector("bytes")), bytes, 0, bytes.Length);
+            if (!bytes.AsSpan(0, 8).SequenceEqual(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }))
+                throw new InvalidDataException("WKWebView snapshot encoding was not PNG.");
+            completion.TrySetResult(bytes);
+        }
+        catch (Exception exception) { completion.TrySetException(exception); }
+        finally { context.Free(); }
+    }
+
+    private static nint CreateDescriptor()
+    {
+        var result = Marshal.AllocHGlobal(2 * IntPtr.Size);
+        Marshal.WriteIntPtr(result, 0);
+        Marshal.WriteIntPtr(result, IntPtr.Size, Marshal.SizeOf<Block>());
+        return result;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Block
+    {
+        public nint Isa;
+        public int Flags;
+        public int Reserved;
+        public nint Invoke;
+        public nint Descriptor;
+        public nint Context;
+    }
+
+    [LibraryImport(ObjC, EntryPoint = "objc_getClass", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial nint GetClass(string name);
+    [LibraryImport(ObjC, EntryPoint = "sel_registerName", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial nint Selector(string name);
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")]
+    private static extern nint Send(nint receiver, nint selector);
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")]
+    private static extern nint SendObject(nint receiver, nint selector, nint value);
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")]
+    private static extern nint SendRepresentation(nint receiver, nint selector, long type, nint properties);
+    [DllImport(ObjC, EntryPoint = "objc_msgSend")]
+    private static extern void SendSnapshot(nint receiver, nint selector, nint configuration, nint completion);
+}

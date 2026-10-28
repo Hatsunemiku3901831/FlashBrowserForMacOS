@@ -1,0 +1,463 @@
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.Windows.Input;
+using Avalonia.Threading;
+using CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+using CefFlashBrowser.MacOS.Spike.Core.Application.Navigation;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Storage;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.ViewModels;
+
+public sealed class MainWindowViewModel : ObservableObject, IAsyncDisposable
+{
+    private readonly IBrowserSession _browser;
+    private readonly ILocalContentHost _contentHost;
+    private readonly RufflePlayerCoordinator _ruffle;
+    private readonly List<IDisposable> _commands = [];
+    private string _address = string.Empty;
+    private string _title = "CefFlashBrowser — macOS Gate 0";
+    private string _status = "Initializing macOS host…";
+    private bool _isLoading;
+    private bool _canGoBack;
+    private bool _canGoForward;
+    private bool _isPlayerPage;
+    private double _volume = 1d;
+    private RuffleSaveEntry? _selectedSave;
+    private CancellationTokenSource? _volumeCancellation;
+
+    public MainWindowViewModel(
+        IBrowserSession browser,
+        ILocalContentHost contentHost,
+        RufflePlayerCoordinator ruffle)
+    {
+        ArgumentNullException.ThrowIfNull(browser);
+        ArgumentNullException.ThrowIfNull(contentHost);
+        ArgumentNullException.ThrowIfNull(ruffle);
+        _browser = browser;
+        _contentHost = contentHost;
+        _ruffle = ruffle;
+
+        NavigateCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(NavigateAsync, token)));
+        BackCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(_browser.GoBackAsync, token), () => CanGoBack));
+        ForwardCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(_browser.GoForwardAsync, token), () => CanGoForward));
+        ReloadOrStopCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(ReloadOrStopAsync, token)));
+        PauseCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(_ruffle.PauseAsync, token), () => IsPlayerPage));
+        ResumeCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(_ruffle.ResumeAsync, token), () => IsPlayerPage));
+        ReloadPlayerCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(_ruffle.ReloadAsync, token), () => IsPlayerPage));
+        FullscreenCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(_ruffle.RequestFullscreenAsync, token), () => IsPlayerPage));
+        RefreshSavesCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(RefreshSavesAndPageAsync, token)));
+        DeleteSaveCommand = Track(new AsyncCommand(token => ExecuteGuardedAsync(DeleteSelectedSaveAsync, token), () => SelectedSave is not null));
+
+        _browser.StateChanged += OnBrowserStateChanged;
+        _browser.PopupRequested += OnPopupRequested;
+        _browser.DownloadRequested += OnDownloadRequested;
+        _browser.Faulted += OnFaulted;
+        _ruffle.SaveChanged += OnSaveChanged;
+        _ruffle.SaveDeleted += OnSaveDeleted;
+        _ruffle.TraceReceived += OnTraceReceived;
+        _ruffle.StatusChanged += OnStatusChanged;
+        _ruffle.Faulted += OnFaulted;
+    }
+
+    public string Address
+    {
+        get => _address;
+        set => SetProperty(ref _address, value);
+    }
+
+    public string Title
+    {
+        get => _title;
+        private set => SetProperty(ref _title, value);
+    }
+
+    public string Status
+    {
+        get => _status;
+        private set => SetProperty(ref _status, value);
+    }
+
+    public bool IsLoading
+    {
+        get => _isLoading;
+        private set
+        {
+            if (SetProperty(ref _isLoading, value))
+            {
+                OnPropertyChanged(nameof(ReloadOrStopLabel));
+            }
+        }
+    }
+
+    public string ReloadOrStopLabel => IsLoading ? "Stop" : "Reload";
+
+    public bool CanGoBack
+    {
+        get => _canGoBack;
+        private set
+        {
+            if (SetProperty(ref _canGoBack, value))
+            {
+                ((AsyncCommand)BackCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool CanGoForward
+    {
+        get => _canGoForward;
+        private set
+        {
+            if (SetProperty(ref _canGoForward, value))
+            {
+                ((AsyncCommand)ForwardCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public bool IsPlayerPage
+    {
+        get => _isPlayerPage;
+        private set
+        {
+            if (!SetProperty(ref _isPlayerPage, value))
+            {
+                return;
+            }
+
+            ((AsyncCommand)PauseCommand).RaiseCanExecuteChanged();
+            ((AsyncCommand)ResumeCommand).RaiseCanExecuteChanged();
+            ((AsyncCommand)ReloadPlayerCommand).RaiseCanExecuteChanged();
+            ((AsyncCommand)FullscreenCommand).RaiseCanExecuteChanged();
+        }
+    }
+
+    public double Volume
+    {
+        get => _volume;
+        set
+        {
+            if (!SetProperty(ref _volume, Math.Clamp(value, 0d, 1d)))
+            {
+                return;
+            }
+
+            ScheduleVolumeUpdate();
+        }
+    }
+
+    public ObservableCollection<RuffleSaveEntry> Saves { get; } = [];
+
+    public RuffleSaveEntry? SelectedSave
+    {
+        get => _selectedSave;
+        set
+        {
+            if (SetProperty(ref _selectedSave, value))
+            {
+                ((AsyncCommand)DeleteSaveCommand).RaiseCanExecuteChanged();
+            }
+        }
+    }
+
+    public ICommand NavigateCommand { get; }
+
+    public ICommand BackCommand { get; }
+
+    public ICommand ForwardCommand { get; }
+
+    public ICommand ReloadOrStopCommand { get; }
+
+    public ICommand PauseCommand { get; }
+
+    public ICommand ResumeCommand { get; }
+
+    public ICommand ReloadPlayerCommand { get; }
+
+    public ICommand FullscreenCommand { get; }
+
+    public ICommand RefreshSavesCommand { get; }
+
+    public ICommand DeleteSaveCommand { get; }
+
+    public event Action<Uri>? PopupRequested;
+
+    public event Action<BrowserDownloadRequest>? DownloadRequested;
+
+    public async ValueTask InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        await _contentHost.StartAsync(cancellationToken).ConfigureAwait(false);
+        await RefreshSavesAsync(cancellationToken).ConfigureAwait(false);
+        SetStatusOnUiThread($"Loopback content host ready at {_contentHost.BaseUri}.");
+    }
+
+    public async ValueTask OpenInitialTargetAsync(
+        IReadOnlyList<string> arguments,
+        CancellationToken cancellationToken = default)
+    {
+        await _browser.Ready.WaitAsync(cancellationToken).ConfigureAwait(false);
+        var argument = arguments.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        if (argument is not null
+            && NavigationResolver.IsLocalFileWithExtension(argument, ".swf"))
+        {
+            await OpenSwfAsync(argument, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        if (argument is not null)
+        {
+            Address = argument;
+            await NavigateAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var diagnostics = _contentHost.DiagnosticsUri
+            ?? throw new InvalidOperationException("The diagnostics URI is unavailable.");
+        await _browser.NavigateAsync(diagnostics, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask OpenSwfAsync(string path, CancellationToken cancellationToken = default)
+    {
+        await _ruffle.OpenSwfAsync(path, cancellationToken).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            Address = _ruffle.CurrentSource?.PlayerUri.AbsoluteUri ?? path;
+            IsPlayerPage = true;
+        });
+    }
+
+    public async ValueTask ImportSaveAsync(string path, CancellationToken cancellationToken = default)
+    {
+        var entry = await _ruffle.ImportAsync(path, SelectedSave?.Key, cancellationToken).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() => UpsertSave(entry));
+    }
+
+    public async ValueTask ExportSelectedSaveAsync(
+        string destinationPath,
+        CancellationToken cancellationToken = default)
+    {
+        var selected = SelectedSave
+            ?? throw new InvalidOperationException("Select a SharedObject before exporting.");
+        await _ruffle.ExportAsync(selected, destinationPath, cancellationToken).ConfigureAwait(false);
+    }
+
+    public ValueTask DownloadAsync(
+        BrowserDownloadRequest request,
+        string destinationPath,
+        CancellationToken cancellationToken = default)
+    {
+        return _browser.DownloadAsync(request, destinationPath, cancellationToken);
+    }
+
+    public void ReportError(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        OnFaulted(exception);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _browser.StateChanged -= OnBrowserStateChanged;
+        _browser.PopupRequested -= OnPopupRequested;
+        _browser.DownloadRequested -= OnDownloadRequested;
+        _browser.Faulted -= OnFaulted;
+        _ruffle.SaveChanged -= OnSaveChanged;
+        _ruffle.SaveDeleted -= OnSaveDeleted;
+        _ruffle.TraceReceived -= OnTraceReceived;
+        _ruffle.StatusChanged -= OnStatusChanged;
+        _ruffle.Faulted -= OnFaulted;
+
+        _volumeCancellation?.Cancel();
+        _volumeCancellation?.Dispose();
+        _volumeCancellation = null;
+        foreach (var command in _commands)
+        {
+            command.Dispose();
+        }
+
+        await _ruffle.DisposeAsync().ConfigureAwait(false);
+    }
+
+    private async ValueTask NavigateAsync(CancellationToken cancellationToken)
+    {
+        if (NavigationResolver.IsLocalFileWithExtension(Address, ".swf"))
+        {
+            await OpenSwfAsync(Address, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var target = NavigationResolver.Resolve(Address);
+        IsPlayerPage = false;
+        await _browser.NavigateAsync(target, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask ReloadOrStopAsync(CancellationToken cancellationToken)
+    {
+        if (IsLoading)
+        {
+            await _browser.StopAsync(cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            await _browser.ReloadAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private async ValueTask RefreshSavesAndPageAsync(CancellationToken cancellationToken)
+    {
+        await _ruffle.CapturePageSavesAsync(cancellationToken).ConfigureAwait(false);
+        await RefreshSavesAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask RefreshSavesAsync(CancellationToken cancellationToken)
+    {
+        var saves = await _ruffle.GetSavesAsync(cancellationToken).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            Saves.Clear();
+            foreach (var save in saves)
+            {
+                Saves.Add(save);
+            }
+        });
+    }
+
+    private async ValueTask DeleteSelectedSaveAsync(CancellationToken cancellationToken)
+    {
+        var selected = SelectedSave;
+        if (selected is null)
+        {
+            return;
+        }
+
+        await _ruffle.DeleteAsync(selected, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task ExecuteGuardedAsync(
+        Func<CancellationToken, ValueTask> operation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await operation(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            OnFaulted(exception);
+        }
+    }
+
+    private T Track<T>(T command)
+        where T : IDisposable
+    {
+        _commands.Add(command);
+        return command;
+    }
+
+    private void OnBrowserStateChanged(BrowserState state)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            Address = state.Address?.AbsoluteUri ?? Address;
+            Title = state.Title;
+            IsLoading = state.IsLoading;
+            CanGoBack = state.CanGoBack;
+            CanGoForward = state.CanGoForward;
+            IsPlayerPage = _ruffle.CurrentSource?.PlayerUri == state.Address;
+        });
+    }
+
+    private void OnSaveChanged(RuffleSaveEntry entry)
+    {
+        Dispatcher.UIThread.Post(() => UpsertSave(entry));
+    }
+
+    private void UpsertSave(RuffleSaveEntry entry)
+    {
+        var existing = Saves.FirstOrDefault(save => save.Key.Equals(entry.Key, StringComparison.Ordinal));
+        if (existing is not null)
+        {
+            var index = Saves.IndexOf(existing);
+            Saves[index] = entry;
+            if (SelectedSave?.Key.Equals(entry.Key, StringComparison.Ordinal) == true)
+            {
+                SelectedSave = entry;
+            }
+        }
+        else
+        {
+            Saves.Add(entry);
+        }
+    }
+
+    private void OnSaveDeleted(string key)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            var existing = Saves.FirstOrDefault(save => save.Key.Equals(key, StringComparison.Ordinal));
+            if (existing is not null)
+            {
+                Saves.Remove(existing);
+            }
+        });
+    }
+
+    private void OnTraceReceived(string message)
+    {
+        SetStatusOnUiThread("SWF trace: " + message);
+    }
+
+    private void OnStatusChanged(string message)
+    {
+        SetStatusOnUiThread(message);
+    }
+
+    private void OnFaulted(Exception exception)
+    {
+        SetStatusOnUiThread($"{exception.GetType().Name}: {exception.Message}");
+    }
+
+    private void OnPopupRequested(Uri address)
+    {
+        Dispatcher.UIThread.Post(() => PopupRequested?.Invoke(address));
+    }
+
+    private void OnDownloadRequested(BrowserDownloadRequest request)
+    {
+        Dispatcher.UIThread.Post(() => DownloadRequested?.Invoke(request));
+    }
+
+    private void SetStatusOnUiThread(string status)
+    {
+        Dispatcher.UIThread.Post(() => Status = status);
+    }
+
+    private void ScheduleVolumeUpdate()
+    {
+        _volumeCancellation?.Cancel();
+        _volumeCancellation?.Dispose();
+        _volumeCancellation = new CancellationTokenSource();
+        var token = _volumeCancellation.Token;
+        var volume = Volume;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await Task.Delay(100, token).ConfigureAwait(false);
+                await _ruffle.SetVolumeAsync(volume, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception)
+            {
+                OnFaulted(exception);
+            }
+        }, token);
+    }
+}

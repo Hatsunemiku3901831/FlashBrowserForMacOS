@@ -1,0 +1,35 @@
+# SOL 格式边界与性能契约
+
+S05 在 Apple Silicon macOS 上验证新仓库正式实现。正式构建禁止读取原仓库、reference 和 bootstrap；固定第三方资产、规范 golden、产品依赖锁保持原字节。下述门禁不替代 U03 的真实编辑器或 Q02 的 UI/长期运行测量。
+
+## 可复现格式检查
+
+`scripts/check-sol-quality.py` 使用已锁定构建的 Release 测试程序集，分别以 `5eed1234`、`9e3779b9`、`deadbeef` 种子执行独立子进程。每进程 40,000 个输入突变，覆盖完整 SOL 和原始 AMF 的截断、长度、非法 UTF-8、引用、嵌套与随机字节；另有 128 个含全部节点类型、共享和循环的生成图。生成图只用于性质验证，规范预期仍来自独立手工 golden 和完整原样本内容。
+
+每次解析前将完整输入十六进制、SHA-256、种子和序号刷新至原始 journal，完成后记录结果；失败语料和堆栈保留。可接受的损坏输入结果是明确格式诊断；接受的输入必须再次编码、解码并通过包含身份映射的完整图比较。没有忽略任意异常的分支。
+
+每个 fuzz 子进程 wall time 45 秒、CPU soft/hard 30/35 秒、实际 GC heap hard limit 512 MiB；采样该进程树总 RSS，超过 1 GiB 时终止自身进程组并判失败。运行时记录 GC 配置与实际可用 heap，不能只记录环境变量便称限制生效。64 MiB 输入、256 深度、百万节点/元素的产品边界保持。
+
+## 覆盖率范围
+
+开发工具固定 `coverlet.console` 10.1.0，仅存于忽略的 artifacts 工具目录；版本、下载来源、包与全部工具文件 hash 进入证据，不加入产品运行时或更改产品锁。范围预先冻结为整个 `FlashMacOS.Sol.Managed` 模块及 Domain 的 `FlashMacOS.Domain.Sol` 命名空间，无文件排除，各模块分支覆盖率分别至少 90%。范围/模块名异常、空结果或单模块不达标均失败。
+
+覆盖率调用 Managed 和 Integration 测试并合并原始报告。带 `SolPerformance` 分类的测量只在覆盖率插桩阶段排除，必须另由无插桩 Release 全回归执行。插桩前后核对 DLL/PDB hash，恢复失败使任务失败。不能用插桩耗时做性能结果。
+
+## 性能与取消
+
+10 MiB 输入是独立指定的 SOL3：名称 Bench，单个 data ByteArray，payload 10,485,722 字节，xorshift32 种子 `5eed1234`；完整输入 SHA-256 为 `5cdb57e61085cc9909d327f1c6a173033926e6852eae161a1b7325a156719bad`。每次运行保存实际输入，不以生产编码器生成预期。
+
+Release ARM64、同一 APFS 临时文件、3 轮预热后 30 轮读写，记录所有原始样本及 nearest-rank P95。读取包括受限文件读取、SHA-256 和完整解码；保存包括编码、两次版本检查、flush、备份和原子替换。强制 GC 位于计时外；codec 与文件阶段分别记录。每轮读/保存均须不超过 500 毫秒，额外托管分配不超过输入的三倍。`GC.GetTotalAllocatedBytes(precise:true)` 的全线程差值为额外存活托管峰值的保守上界，不能解释为整个进程或 WebKit RSS。保留 GC 次数与观察到的 heap 差值。
+
+settings、mao、pvz、FBCookie、RuffleTest 五份冻结样本同样记录 3+30 轮读写及分配；小文件固定开销不套用专属 10 MiB 的三倍比值，也不增加未经冻结的通过阈值。它们作为实测 profile 保存。
+
+大集合解析和编码分别以工作线程开始后取消的方式测量 30 次，60 次均须真正响应取消且延迟不超过预先冻结的 100 毫秒。预取消、图构造和 unsupported 扫描另有回归。取消检查遍及图冻结/验证和编解码循环；取消不能被格式错误吞掉。
+
+分段输出缓冲使用有界的 64 KiB 池块并在释放时清空；最终结果分配一次完整数组。ByteArray 从源片段直接创建其自有拷贝。原子保存的版本检查流式计算 SHA-256，仍在租约与提交前两个阶段检查，保留冲突、取消、备份和失败后的内存语义。
+
+## 重跑
+
+先运行 `sh scripts/verify.sh --task S05 --run-id <fresh> --configuration Release --deny-read <original>`；再安装固定开发工具 `dotnet tool install coverlet.console --version 10.1.0 --tool-path artifacts/tools/coverlet-10.1.0`，最后执行 `python3 scripts/check-sol-quality.py --run-id <fresh> --deny-read <original>`。工具已安装时复用并核对 provenance，不能覆盖固定目录。
+
+覆盖率工具依据其[官方运行说明](https://github.com/coverlet-coverage/coverlet/blob/v10.1.0/Documentation/GlobalTool.md)；GC 限制按 [.NET 官方运行时配置](https://learn.microsoft.com/en-us/dotnet/core/runtime-config/garbage-collector#heap-hard-limit)。脚本从实际已安装 runtime 列表发现 DOTNET_ROOT，不能把 Homebrew 包装器的 bin 目录作为 runtime 根。

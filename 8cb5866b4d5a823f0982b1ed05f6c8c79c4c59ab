@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 2,
+  "fields": [
+    {
+      "legacyField": "FirstStart",
+      "modelField": "FirstStart",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "Language",
+      "modelField": "Language",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "Theme",
+      "modelField": "Theme",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "SearchEngine",
+      "modelField": "SearchEngine",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "NavigationType",
+      "modelField": "NavigationType",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "NewPageBehavior",
+      "modelField": "NewPageBehavior",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "DisableOnBeforeUnloadDialog",
+      "modelField": "DisableOnBeforeUnloadDialog",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "MainWindowSizeInfo",
+      "modelField": "MainWindowSizeInfo",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "BrowserWindowSizeInfo",
+      "modelField": "BrowserWindowSizeInfo",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "SwfWindowSizeInfo",
+      "modelField": "SwfWindowSizeInfo",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "SolSaveManagerSizeInfo",
+      "modelField": "SolSaveManagerSizeInfo",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "ProxySettings",
+      "modelField": "ProxySettings",
+      "schemaV2Section": "legacy.windows",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored legacy only; unavailable on this backend"
+    },
+    {
+      "legacyField": "UserAgentSetting",
+      "modelField": "UserAgentSetting",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "FakeFlashVersionSetting",
+      "modelField": "FakeFlashVersionSetting",
+      "schemaV2Section": "legacy.windows",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored legacy only; unavailable on this backend"
+    },
+    {
+      "legacyField": "HideMainWindowOnBrowsing",
+      "modelField": "HideMainWindowOnBrowsing",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "FollowSystemTheme",
+      "modelField": "FollowSystemTheme",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "EnableIntegratedDevTools",
+      "modelField": "EnableIntegratedDevTools",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "IntegratedDevToolsWidth",
+      "modelField": "IntegratedDevToolsWidth",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "SaveZoomLevel",
+      "modelField": "SaveZoomLevel",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "BrowserZoomLevel",
+      "modelField": "BrowserZoomLevel",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "DisableFullscreen",
+      "modelField": "DisableFullscreen",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "RetainedLogCount",
+      "modelField": "RetainedLogCount",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "DisableBrowserShortcuts",
+      "modelField": "DisableBrowserShortcuts",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "DisableGpuAcceleration",
+      "modelField": "DisableGpuAcceleration",
+      "schemaV2Section": "legacy.windows",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored legacy only; unavailable on this backend"
+    },
+    {
+      "legacyField": "DisableGpuAccelerationWPF",
+      "modelField": "DisableGpuAccelerationWPF",
+      "schemaV2Section": "legacy.windows",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored legacy only; unavailable on this backend"
+    },
+    {
+      "legacyField": "CustomEmoticon",
+      "modelField": "CustomEmoticon",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    },
+    {
+      "legacyField": "DisableBrowserContextMenu",
+      "modelField": "DisableBrowserContextMenu",
+      "schemaV2Section": "settings",
+      "readRule": "Case-insensitive known name; null/missing uses typed defaults; original raw preserved in legacy.sourceSettings",
+      "effect": "Stored; UI/browser application is explicit in U02/W01/U04"
+    }
+  ],
+  "unknownPolicy": "Retain unknown fields and nested metadata; immutable original legacy object stays in legacy.sourceSettings; future v2 root sections retained",
+  "favoritePolicy": "Preserve names, URLs, null slots, order and duplicate URLs; independent IDs; v1 UUIDs deterministic by index and compact original entry"
+}

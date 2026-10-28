@@ -1,0 +1,37 @@
+# SOL 文件与编辑事务
+
+S04 的入口为 `ISolCodec`、`SolEditorSession`、`ISolFileStorage`。UI 接入是 U03；本契约不把底层用例验收当作桌面编辑器已完成。
+
+## 文件会话与原始内容
+
+`SolCodec` 检查 00BF、chunk size = 文件长度减 6、TCSO 常量、短 UTF-8 名称、版本 0/3。每个条目由相应编码的名字、值和零尾字节组成。名字和值共用整份 SOL 的 AMF 表，包含 AMF3 root name 的字符串池；不能逐条调用独立 raw codec 后拼接。
+
+四份 Legacy 文件及 RuffleTest 均按完整类型内容独立核对，并做包含身份/环/属性顺序/位模式的语义往返。C++ oracle 的 AMF0 classdef 布尔字段没有初始化，且 wire 没有这两个 trait 标志；比较时明确排除这两个 AMF0 字段，保留所有原始 oracle 输出。AMF3 trait、所有负载值及字段名仍完整比较。RuffleTest 的 ECMA 声明计数差异按规范处理，不把旧失败当新通过。
+
+打开文件在后台读取有界快照、计算版本 hash 并解析。未知 marker/Externalizable 或坏格式得到只读会话，保留打开时的完整 `OriginalBytes`/`OriginalRevision` 和诊断。只读会话不允许编辑或 Save；可向一个不存在的新路径导出原始字节。原件导出永不覆盖已有目标。`OriginalBytes` 始终指第一次打开的图像，Reload 不把它悄悄替换为后来磁盘内容。
+
+## 编辑状态
+
+Current 是不可变快照：Document、单调 Version、文件版本、dirty、undo/redo 和诊断一起发布。Snapshot 的 IsReadOnly 不扫描大图；解析、候选命令验证、图成本估算与编码都在后台，UI 只读快照。
+
+编辑命令支持条目增加/改值/改名/删除、完整类型节点替换/增加和文档名称。Object/Array/Vector/Dictionary/二进制都保留 Domain 类型，由类型编辑器构造新的同 ID 节点；图验证拒绝悬空/重复 ID。每项操作必须带预期文档版本，过期命令失败而不覆盖新状态。图可编辑不保证当前格式能表示任意新值，Save 仍执行完整 codec 检查并显示具体诊断。
+
+Undo/Redo 保留不可变状态和对象身份，保存后的 undo 会重新 dirty，redo 回保存状态恢复 clean；新分支清除 redo。最多 32 状态，并以包含二进制、字符串和节点成本的保守估算限制为 256 MiB；超预算只保留最新可容纳状态。初始大文档本身不因为 undo 预算而丢失。关闭共享一次清理，取消后台操作并有 15 秒排空上限；停止后拒绝新命令。
+
+## 保存、冲突和恢复
+
+Save/SaveAs 先编码完整候选，再调用 A03 同目录临时文件、flush、版本复查和原子替换。正常覆盖生成 `.bak`。内存的路径、文件 hash 和 saved 标记只有提交成功后才发布；失败保留草稿和整个 Current 快照。取消发生在提交前则不保存；提交后的取消信号不能掩盖已经成功的磁盘写入。
+
+SaveAs 默认要求目标不存在；要替换已有目标必须传入已预览目标的版本。外部修改产生冲突，用户可以明确 Reload 后再编辑。版本锁协调本应用写入，并在提交前复查 hash；其他程序不遵守锁时无法把操作系统文件替换变成跨程序原子 CAS。
+
+RecoverBackup 先验证备份，再将当前原字节写为独立 `.recovery-UUID.sol`，最后按预期版本原子恢复，且不覆盖好备份。恢复失败仍保留原件、备份、草稿和已生成的恢复档；重试不复用档名。恢复成功重置为新的已保存状态。它是明确恢复操作，原磁盘状态可通过档案再次打开。
+
+## 格式转换
+
+`SolEncodingConversion.AnalyzeAsync` 先验证来源，产生候选和逐项报告，再编码/重读并对完整引用图做等价检查。预览最多保留 1024 条详细问题并汇总后续项；存在任一损失不产生候选。`ApplySolConversion` 绑定来源文档实例及编辑版本，旧预览不能覆盖新编辑，并参与 undo/redo。
+
+普通数值、可表达数组/动态对象/类名在原生格式间转换；整数转 Number 保持精确值并报告表示变化。ECMA advisory count、Date reserved timezone 没有目标字段时报告编码元数据变化，保留毫秒和数据值。密封/externalizable trait、共享 Date/XML、XML 类型差异、混合数组的独立 dense/assoc 形态、ByteArray/Vector/Dictionary 等无法在 native AMF0 完整保留时，默认拒绝。
+
+用户可明确选择 PreserveWithAmf3Envelope，将 AMF3 值放入 AMF0 AVM+ 封套，保留全部已知类型/身份，报告接收端需要 AMF3 扩展；不声称普通旧 AMF0 reader 也兼容。未知类仍需原有确切类 codec，封套不绕过未知内容保护。
+
+Legacy 117 断言去向见 provenance/S04-legacy-test-map.json。111 项格式/值/类型有新 API 语义等价测试；6 项 CLR 编辑器类型描述/default catalog 明确转 U03，不虚报原 Windows 测试程序已运行。

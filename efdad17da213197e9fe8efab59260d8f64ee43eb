@@ -1,0 +1,37 @@
+# P03 可行性门禁
+
+P02 固定矩阵已验收；P03 当前为 DONE，G0 可行性通过。只采用本项目的新真实应用证据。
+
+`p03-core-native-20261028-01` 已观察静态/动态标签 1→2、popup 路由与相同 persistent WK store、原生下载实际落盘并逐字节通过。真实鼠标在 Open panel 选择中文/空格路径 SWF，Open 按钮启用并成功播放，未发现历史自动化所提示的过滤不可选问题。实际 SWF 自动产生 279-byte RuffleTest SOL，原生 Export 面板导出内容与官方 SHA-256 完全一致。
+
+导回 saved→xaved 变体后，旧播放器销毁时将缓存重新写回，下一运行仍 saved=true。这是 FAIL；旧报告的最终 hash 判据不足以证明读取了变体。本次完整失败在 artifacts/evidence/P03/p03-core-native-20261028-01/import-failure.json，原始 journal 与文件保留。
+
+修复采用固定上游同步 disconnectedCallback 行为：暂停、先断开并销毁旧实例、再执行候选写入/删除、重新连接并重载；保留 trace 绑定、音量/暂停状态和原生脚本的可序列化返回边界。新增 VM 负控精确复现旧顺序覆盖，再验证新顺序、删除、异常重新连接、普通 reload 和播放状态。8 项工具回归通过。107 托管回归通过；第一次失败是原 HTML wire 断言仍固定旧无参数 reload 形式，调整到支持存储 mutation 的契约，未删测试、未跳过。真实闭环待新包复验。
+
+额外记录：原生导出默认名出现 RuffleTest.sol.sol；已去掉 SuggestedFileName 中的重复扩展，让 DefaultExtension 唯一负责扩展，待真实面板复验。当前实际导出使用了明确的新文件名，不能当成默认文件名 PASS。
+
+待验收：变体真实读取、跨进程与 Cookie 恢复、主窗关闭 popup 的生命周期、完整支持矩阵/预算/估算/ADR 及最终开发包。源只读，全部实验数据在本仓库 artifacts，未提交或发布。
+
+## 修复后真实存档读取
+
+p03-restart-native-20261028-01 在整包逐文件核对后复用正常退出的隔离 profile。新随机端口仍看到 persistent cookie=yes，已有 279-byte 存档在 SWF 启动前恢复，游戏输出 saved=true。默认导出面板已显示单个 RuffleTest.sol，实际导出 279 字节并与官方样本一致。
+
+真实导回 xaved 变体后，修复后的播放器输出 No data found. Initializing...，随后 size 279→289。实际保存保留未知 xaved 并新增 saved=true；独立按 AMF0 已知条目追加、更新 SOL 长度的预测与实际 289 字节完全一致，SHA-256 为 74cae55ec9aa6d4e26cd28d5b4a48389ee5090d75d47e3e6984a1bb8ce4b73b3。源码历史声称此变体会恢复为官方 279 字节并不准确，本次没有沿用该判据。结果见对应 storage-import-result.json 与 expected/actual SOL。
+
+带 popup 使用正常应用 Quit，主进程退出 0；journal 显示 host 正常停止。显式 popup 释放的资源跟踪仍由 A02/Q02 覆盖，不将进程退出等同于长期泄漏验收。
+
+## 诊断截图碰撞
+
+此次复用 profile 暴露旧 NativePageProbe 固定文件名缺陷，首轮 snapshot 0/1 已在 checkpoint 前被覆盖，不再用作原始画面证据。其余首轮 2–5 已保存在重启 evidence 的 checkpoint，所有独立 journal/兼容 JSONL 完整。具体文件与处理见 evidence-collision.json。新实现每次 capture 使用独立的进程/UUID 子目录；启动器在复用已关闭的 profile 前完整 checkpoint，待再次复验 hash 不变性。这次碰撞不被悄悄省略，也不把副本说成丢失原件。
+
+## 最终门禁
+
+[gate0-new-repository.json](gate0-new-repository.json) 汇总 11 组本任务真实可行性结果及代码、输入、原始输出 hash。最终开发包为 p03-package-20261028-02；18 个 Mach-O 全部 ARM64，严格开发签名通过、锁不变、非法 RID 预检拒绝。两次最终进程在无系统 dotnet、禁止原仓库读取、app 全部文件等于归档的条件下正常退出 0。
+
+最终新 profile 的原生工具栏 Pause/Resume 在六次实际 WK 采集中分别得到 false×3、true×3；普通播放器 reload 仍保留完整单次 trace。真实导回再次输出 No data found 并得到独立预测的 289 字节。下一进程在不同随机端口读取同一变更后存档，saved=true、size=289，全部字节不变。诊断输出按进程/UUID 分目录；复用前完整 checkpoint。重启后前一进程 10 个不可变证据文件 hash 全部不变，修复已由真实重启验证。
+
+[旧用户数据未变](legacy-data-preserved.json)、[原仓库 332 份业务文件/HEAD/dirty 未变](source-preserved.json)。新 107 项托管回归和 8 项工具回归通过；所有失败原始记录保留，并明确排除曾丢失的两张首轮诊断截图。
+
+已冻结 docs/support-matrix.json、performance-budget.json、remaining-estimates.json 和 ADR 0001。支持计划只面向 ARM64；当前实际覆盖 M1 Pro/macOS 26.5.1，macOS 15/27、第二代设备及干净账户在 Q05 保留真实硬件受阻项。预算是后续 S05/Q02 的目标，不是已测性能；剩余 77–130 净人日为逐任务规划范围，不是智能体运行时换算。
+
+P03 只关闭 G0 原型可行性。完整产品能力、稳定身份/事务、中文 IME、完整下载、正式 UI/codec、性能及发行均按后续任务完成，不能把本门禁写成已交付产品。下一任务为 A01，正式工程的唯一构建输入必须脱离 reference/bootstrap/原目录。

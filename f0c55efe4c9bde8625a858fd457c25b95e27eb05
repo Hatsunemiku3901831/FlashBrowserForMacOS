@@ -1,0 +1,47 @@
+namespace CefFlashBrowser.MacOS.Spike.Tests;
+
+internal static class TestAssets
+{
+    public static string Sol(string fileName) =>
+        Path.Combine(AppContext.BaseDirectory, "TestData", fileName);
+
+    public static string RuffleDirectory =>
+        Path.Combine(AppContext.BaseDirectory, "Assets", "Ruffle");
+
+    public static string ExternalInterfaceDirectory =>
+        Path.Combine(AppContext.BaseDirectory, "TestData", "avm2-external-interface");
+}
+
+internal sealed class TemporaryDirectory : IDisposable
+{
+    private bool _disposed;
+
+    public TemporaryDirectory()
+    {
+        RootPath = Path.Combine(
+            Path.GetTempPath(),
+            "CefFlashBrowser.MacOS.Spike.Tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(RootPath);
+    }
+
+    public string RootPath { get; }
+
+    public string GetPath(string relativePath) => Path.Combine(RootPath, relativePath);
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (Directory.Exists(RootPath))
+        {
+            Directory.Delete(RootPath, recursive: true);
+        }
+
+        GC.SuppressFinalize(this);
+    }
+}

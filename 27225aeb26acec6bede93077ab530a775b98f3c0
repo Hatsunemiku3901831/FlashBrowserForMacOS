@@ -1,0 +1,30 @@
+# SOL 类型图与样本契约
+
+S01 冻结语义；实际 AMF0/AMF3 codec 分别由 S02/S03 验证，文件和编辑事务由 S04 验证。支持状态逐项见 `../codec-support-matrix.json`。
+
+## 类型与身份
+
+`AmfValue` 只存原始值或显式 `AmfReference(AmfNodeId)`。所有复杂值位于 `AmfGraph.Nodes`，同一个 ID 表示同一个对象，内容相同的不同 ID 仍是两个对象。节点在构造后不可变，引用可以指回自己或组成环。图构造拒绝重复 ID、悬空引用和隐式 C# null，遍历使用已访问集合。
+
+- Undefined、Null、Boolean、Integer、Number 和 String 各自独立；Boolean 的 true/false 是同一明确布尔类型的两个值。
+- Number 保存完整 64 位 IEEE-754 位模式；不将负零变成零，不经 JSON 数字或 DateTime 传递 NaN、Infinity 和日期。Date 保存毫秒 Number，以及 AMF0 的保留时区字段。
+- Object 区分 AMF0 普通、AMF0 typed（即使空类名）及 AMF3。类名、密封成员顺序、dynamic/externalizable 标志各自保留；密封值与名字一一对应，动态属性按有序列表保留重复和空名字。
+- Array 区分 AMF0 Strict、AMF0 ECMA 和 AMF3 Mixed。ECMA 所有索引均是字符串属性，保留声明计数；对象结束标记决定内容结束。计数与真实属性数量不同不等于损坏。AMF3 同时保留关联和稠密部分。
+- XMLDocument 与 XML 不合并。ByteArray 保留原字节，Vector 保留元素类型、fixed、对象类型名；Dictionary 保留 weakKeys、有序任意类型键值及对象键身份。
+- AMF0 的 AVM+ 是一个明确包装值，只委派随后一个 AMF3 值；之后继续 AMF0。AMF3 的字符串、对象、trait 表互相独立，作用域由 codec 会话管理，不等于 Domain ID。
+
+Domain 不引用文件系统、UI、WebView 或具体 codec。文件输入、诊断和保留原字节由外层负责。默认限额集中在 `AmfLimits`：64 MiB、深度 256、累计节点和元素各 1,000,000；模型集合本身也有固定上限。实际 reader 必须在分配前检查长度和累计预算。
+
+## 未知内容与转换
+
+未知 marker、保留标记及未登记 Externalizable 类携带编码、marker、偏移和原因。未知自定义体没有通用长度，不能尝试跳过并继续解释后续内容。文档层必须保留完整原文件并阻止编辑保存；没有任何“自动转 null/undefined 后继续保存”的分支。
+
+S01 没有安装 Externalizable codec，所以所有外部类均阻止保存；S03 将建立显式登记表，只允许已知布局的成对 reader/writer。Domain 不持有注册表。跨编码不能表示的 XML/ByteArray/Vector/Dictionary/共享 Date 等必须由 S04 先报告损失，默认拒绝；格式之间的相似外观不作为自动转换依据。
+
+## 固定输入与独立预期
+
+- `test-assets/legacy-sol` 四份原文件及 Ruffle 模块内 `RuffleTest.sol` 保持原始 SHA-256。已有 header 测试只证明头部，不证明内容。
+- `test-assets/sol-golden/manifest.json` 记录 31 个手工规范字节、SHA-256、逐项预期和规范章节；不是本项目 writer 的输出。它们是单 AMF 值，不是 SOL 文件。Bool 非零规范化、短/长字符串选择允许合法字节不同的案例明确标记。
+- `legacy-content/*.sol.json` 四份完整类型树来自本仓库隔离副本编译的 Legacy C++ core，只是独立预期；不参与构建、不成为产品运行依赖。原始命令、复制源码 hash、编译日志和运行输出保留于 S01/legacy-oracle。
+- Legacy oracle 对 RuffleTest 的原始结果是 exit 1 / Unsupported AMF0 type: 9。`array` 声明计数 5，实际只有四个属性，其后是 `000009`；旧循环误把结束标记当成第五个值。这正是 S02 必须修复的差异。RuffleTest 的内容预期由原字节独立逐项抄录，不能标为旧解析器成功。
+- Legacy 的 117 个 SOL/AMF 测试逐名映射在 provenance/S01-legacy-test-map.json。S02/S03/S04 待执行项明确为 pending；S01 模型通过不冒充这些 codec/file 用例已通过。

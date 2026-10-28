@@ -1,0 +1,19 @@
+{
+  "taskId": "P02",
+  "status": "PASS",
+  "scope": "All selected mandatory P02 categories have new repository native results. Product tasks and recorded upstream/IME limitations remain open.",
+  "nativeSuiteRecords": 23,
+  "matrixEntries": 29,
+  "managedTests": 107,
+  "toolingTests": 7,
+  "artifactHashes": {
+    "docs/compatibility-matrix.json": "63764d1fc8ee2a5b39fa82adee9f162fb3d8f18473b2429b1c806e5d5f04f0b5",
+    "docs/provenance/P02-changes.json": "57b05c5177ec76659f9aa91936b513a2ece370610072f9cddb542fed41692b8e",
+    "artifacts/evidence/P02/p02-final-managed-20261028-01/inputs.json": "c666711de08bf846753d840c6aa6a3c19ae8704804faa432e1b10c306e8735ba",
+    "artifacts/evidence/P02/p02-package-20261028-09/result.json": "e9cbd752436f2a3da6727ced3331fe18ae6b9c811499e732f113781215b9ee50",
+    "artifacts/evidence/P02/p02-package-20261028-09/CefFlashBrowser-prototype.zip": "8c33c27c859d434a55d7842b39e26d9c925823565104b3e6ad335f280b1c1c85",
+    "artifacts/evidence/P02/p02-suite-native-20261028-06/launch.json": "535bb5e852ed8f46af90eb51f1864d2acd173dffc577e8bf920a28a029059de7",
+    "artifacts/evidence/P02/p02-suite-native-20261028-06/process-result.json": "cdac208d2fb6937bb9fb0143c3624beb7a0975f3589547166f7aa3d81800fde1",
+    "docs/evidence/P02/2026-10-28/source-unchanged.json": "a9ed5fdfbc2323a78ddc2aeb4c20ce6bc7a1a73b743994931e98fb3a3f3abd7c"
+  }
+}

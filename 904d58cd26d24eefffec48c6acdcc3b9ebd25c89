@@ -1,0 +1,53 @@
+using CefFlashBrowser.MacOS.Spike.Core.Application.Navigation;
+
+namespace CefFlashBrowser.MacOS.Spike.Tests;
+
+[TestClass]
+public sealed class NavigationResolverTests
+{
+    [TestMethod]
+    [DataRow("http://example.com", true)]
+    [DataRow("https://example.com/path?q=flash", true)]
+    [DataRow("ftp://files.example.com", true)]
+    [DataRow("localhost:8080", true)]
+    [DataRow("192.168.1.1:8080", true)]
+    [DataRow("example.com/path", true)]
+    [DataRow("hello", false)]
+    [DataRow("hello world", false)]
+    [DataRow("3.14", false)]
+    [DataRow("123", false)]
+    [DataRow("file:///tmp/movie.swf", false)]
+    [DataRow("abc:abc", false)]
+    public void LooksLikeWebAddressMatchesLegacyBehavior(string input, bool expected)
+    {
+        Assert.AreEqual(expected, NavigationResolver.LooksLikeWebAddress(input));
+    }
+
+    [TestMethod]
+    public void ResolvePlainTextUsesSelectedSearchEngineAndEncodesKeyword()
+    {
+        var result = NavigationResolver.Resolve("flash 游戏", SearchEngine.DuckDuckGo);
+
+        Assert.AreEqual("https://duckduckgo.com/?q=flash+%E6%B8%B8%E6%88%8F", result.AbsoluteUri);
+    }
+
+    [TestMethod]
+    public void ResolveDomainWithoutSchemeAddsHttpScheme()
+    {
+        var result = NavigationResolver.Resolve("example.com/ruffle");
+
+        Assert.AreEqual("http://example.com/ruffle", result.AbsoluteUri);
+    }
+
+    [TestMethod]
+    public void IsLocalFileWithExtensionRequiresExistingMatchingFile()
+    {
+        using var directory = new TemporaryDirectory();
+        var swfPath = directory.GetPath("movie.SWF");
+        File.WriteAllBytes(swfPath, [0x46, 0x57, 0x53]);
+
+        Assert.IsTrue(NavigationResolver.IsLocalFileWithExtension(swfPath, ".swf"));
+        Assert.IsFalse(NavigationResolver.IsLocalFileWithExtension(swfPath, ".sol"));
+        Assert.IsFalse(NavigationResolver.IsLocalFileWithExtension(directory.GetPath("missing.swf"), ".swf"));
+    }
+}

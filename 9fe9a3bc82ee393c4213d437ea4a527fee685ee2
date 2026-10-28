@@ -1,0 +1,13 @@
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Platform.MacOS;
+
+internal static class BundleResourceLocator
+{
+    public static string ResolveRoot()
+    {
+        var appBase = Path.GetFullPath(AppContext.BaseDirectory);
+        var bundleResources = Path.GetFullPath(Path.Combine(appBase, "..", "Resources"));
+        return Directory.Exists(Path.Combine(bundleResources, "Assets"))
+            ? bundleResources
+            : appBase;
+    }
+}

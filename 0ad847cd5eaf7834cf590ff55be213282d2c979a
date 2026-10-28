@@ -1,0 +1,10 @@
+test_changed_source_rejected_after_freeze (test_import_source.ImportSourceTests.test_changed_source_rejected_after_freeze) ... ok
+test_conflict_preflight_preserves_existing_file_and_copies_nothing (test_import_source.ImportSourceTests.test_conflict_preflight_preserves_existing_file_and_copies_nothing) ... ok
+test_dry_run_no_writes_then_repeat_is_byte_and_mtime_noop (test_import_source.ImportSourceTests.test_dry_run_no_writes_then_repeat_is_byte_and_mtime_noop) ... ok
+test_nested_roots_and_escaping_roots_rejected (test_import_source.ImportSourceTests.test_nested_roots_and_escaping_roots_rejected) ... ok
+test_source_symlink_excluded_and_destination_symlink_rejected (test_import_source.ImportSourceTests.test_source_symlink_excluded_and_destination_symlink_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.948s
+
+OK

@@ -1,0 +1,15 @@
+{
+  "taskId": "P02",
+  "targetId": "mole-official-login",
+  "specifiedBy": "user",
+  "date": "2026-10-28",
+  "product": "摩尔庄园",
+  "expected": "Official game entry opens and displays the in-game login interface",
+  "authenticationRequired": false,
+  "status": "IN_PROGRESS",
+  "supersededTarget": {
+    "product": "赛尔号",
+    "reason": "User corrected the target; discovered official H5 entry is irrelevant to Flash acceptance",
+    "evidencePreserved": "artifacts/evidence/P02/seer-*"
+  }
+}

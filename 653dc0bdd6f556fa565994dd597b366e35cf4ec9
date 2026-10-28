@@ -1,0 +1,57 @@
+{
+  "taskId": "P02",
+  "fixtureId": "bitmap-renderer-golden",
+  "runId": "p02-renderer-fillrect-20261028-01",
+  "status": "PASS",
+  "capturedAt": "2026-10-27T20:48:10.378Z",
+  "expected": {
+    "size": [
+      550,
+      400
+    ],
+    "pixelTolerance": 0,
+    "differingPixels": 0,
+    "nonWhitePixels": 1200,
+    "source": "upstream bitmap-fillrect/test.toml and output.expected.png"
+  },
+  "actual": {
+    "nativeSnapshotSize": [
+      1690,
+      1356
+    ],
+    "viewport": {
+      "width": 845,
+      "height": 678,
+      "devicePixelRatio": 2,
+      "scrollX": 0,
+      "scrollY": 0
+    },
+    "playerRect": {
+      "x": 18,
+      "y": 108.1875,
+      "width": 550,
+      "height": 400
+    },
+    "cropBox": [
+      36,
+      216,
+      1136,
+      1016
+    ],
+    "differingPixels": 0,
+    "maxChannelDelta": 0,
+    "meanAbsoluteChannelDelta": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "method": "Actual WK takeSnapshot compositor PNG; exact stage crop, backing-pixel center samples; no renderer buffer inference"
+  },
+  "artifactHashes": {
+    "/Users/umisonoda/PycharmProjects/flash/flashMacOS/artifacts/profiles/p02-renderer-fillrect-20261028-01/native-snapshot-0.png": "1364b79cbd71181a681c781c88f6a156c1f59cfd51625bae6c6561bc03d3f1c5",
+    "/Users/umisonoda/PycharmProjects/flash/flashMacOS/test-assets/flash/ruffle-v0.4.1/bitmap-fillrect/output.expected.png": "da6ad247a9d256e97382c384fa7db3cca8bbb8903b7b653560ead3c72e69e1d6",
+    "/Users/umisonoda/PycharmProjects/flash/flashMacOS/artifacts/profiles/p02-renderer-fillrect-20261028-01/page-inspection.jsonl": "a80f8721489a472555e76621aea6579b0514a388802b1a3aba061059cf8e112a",
+    "/Users/umisonoda/PycharmProjects/flash/flashMacOS/artifacts/evidence/P02/p02-renderer-fillrect-20261028-01/golden/actual-stage.png": "acc2a646b9055dec7099dc447ac27d06c35d2f1b63469b4eae9d01933227cb25",
+    "/Users/umisonoda/PycharmProjects/flash/flashMacOS/artifacts/evidence/P02/p02-renderer-fillrect-20261028-01/golden/absolute-diff.png": "25145f707f9e5ae136268fa378f5987a5048f8f0bc8626df993466afb1aa0876"
+  }
+}

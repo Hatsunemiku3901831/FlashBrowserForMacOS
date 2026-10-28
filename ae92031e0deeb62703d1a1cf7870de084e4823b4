@@ -1,0 +1,33 @@
+# 设置与收藏夹契约
+
+版本：A04 / schemaVersion=2。纯模型在 Domain/Configuration，仓储端口和用例在 Application/Configuration，JSON、迁移与原子提交在 Infrastructure/Configuration。没有 GlobalData、全局 Messenger、Window 或文件系统依赖进入纯模型。来源、27 字段映射与独立 fixture 分别见 provenance/A04-source-inputs.json、settings-field-map.json、provenance/A04-fixtures.json。
+
+## 设置
+
+v2 文档具有 schemaVersion=2、settings 和 legacy 节点。Settings 保留语言、主题、搜索、导航模式、新页面策略、四类窗口状态、UA、缩放、快捷键等跨平台配置。Windows CEF Proxy、Fake Flash 版本、WPF/CEF GPU 开关保存在 legacy.windows；原始完整 flat 设置对象保存在 legacy.sourceSettings。已保存的值不等于功能已在当前后端生效。
+
+AppSettings 的默认值继承 Legacy：首次启动 true、zh-CN、Light、Bing、Automatic、OriginalWindow、跟随系统主题 true、开发工具配置 true/300、保存缩放 true/0、保留日志 30；其余默认开关和空窗口与原模型一致。开发工具、日志数量、浏览器设置等实际应用仍由 W01/U02 受控接入；不会因旧值 true 自动开放发布包调试功能。Fake Flash 的 99.0.0.999 只是被保留的旧值，不修改固定 Ruffle 或伪称插件版本。
+
+读取接受原 flat 无 schema/v1 和规范 v2。已知字段大小写不敏感，重复大小写别名拒绝；保存规范化为 camelCase。缺失/null 的已知引用及嵌套属性采用构造默认；nullable 窗口/标题空值仍可表达。窗口 NaN/Infinity 归一为缺失坐标，原 JSON 值在 legacy 原对象中保留。其他不合法类型、枚举、版本或损坏根拒绝，不回退覆盖。
+
+未知根/设置/嵌套/legacy 字段保存时保留。清空一个含未知属性的窗口对象时，原对象保存在 legacy.preserved 的 JSON 路径下；重新建立窗口对象时恢复其未知元数据并覆盖已知候选值。真正的窗口位置适配和多屏约束由 U02 实施。
+
+SettingsService.ResolveAddress 接受显式快照，覆盖九个原搜索提供商及 Automatic/SearchOnly/NavigateOnly；URL 编码语义继承原 UrlHelper。SearchEngine 从 Application 的旧定位移到 Domain 纯配置层，数值与既有 97/107 回归语义保持。实际地址栏接入及搜索设置界面由 U02 完成。
+
+## 收藏夹
+
+v2 文档具有 schemaVersion=2 和有序 favorites 数组；每项拥有独立 Guid id、可空 name/url 及保留的未知属性。重复名称、重复 URL 不合并，空名字、空 URL 和旧 null 槽仍保留顺序；旧 null 槽成为有独立 ID 的空条目，并带 legacyNullSlot，原数组完整保存在 legacy.sourceFavorites。
+
+v1 ID 固定规则：取 UTF-8 的 `FlashMacOS.Favorite.v1\0 + 原索引十进制 + \0 + 原条目的 .NET JsonNode 紧凑 JSON`，SHA-256 前 16 字节按 .NET Guid 字节顺序构造；null 槽原条目为字面量 null。相同来源重复迁移得到同一组 ID，重复条目的不同索引仍有不同 ID。独立 Python SHA-256/UUID byte order 预期已固定在 golden fixture。新收藏使用新 UUID。
+
+FavoritesService 按 ID 增加、改名/改 URL、删除和移动，操作顺序由单写者 gate 保持。更新和排序保留对应条目的未知字段；显式删除移除该条目，其原始状态仍受前一文件备份保护。UI 显示与打开空/不合法地址的交互由 U02 验收。
+
+## 事务、迁移和失败
+
+仓储返回 ConfigurationSnapshot<T>，含不可变值、文件 SHA-256 revision（缺失为 missing）和 NeedsUpgrade。Load 不写文件；UpgradeAsync 仅对 legacy 执行一次提交，v2 再调用不改字节。新文件缺失时可读取默认值，首次 Save 才创建。读取和迁移不写来源仓库或用户选中的迁移源；M02 使用独立目标路径。
+
+Save 要求调用方 revision 与当前已加载快照一致，再以 A03 文件租约/hash 检查提交磁盘。完整验证、JSON 构造和序列化在后台执行，持久化成功后才同时发布仓储及服务状态。失败、取消、版本冲突不改变可见候选；显式 ReloadAsync 可重新读取外部版本。损坏文件不在退出时被默认值覆盖。
+
+当前上限：settings 文件 4 MiB，favorites 文件 16 MiB，收藏最多 10000 项，名称/URL 和单个设置长字符串 16 Ki 字符，JSON 深度 64。v1 转 v2 可能因保留原始对象增大，候选仍受总大小限制；超限保留原件并报告。原子文件和恢复边界沿用 [storage.zh-CN.md](storage.zh-CN.md)。
+
+Root 在浏览器创建前加载两个仓储；失败进入既有可关闭启动错误流程。Root 拥有服务及仓储，停止命令和浏览器/host 后释放。主题、语言、窗口和收藏 UI 的实际绑定在 U02；本任务不以配置存在冒充这些界面已完成。

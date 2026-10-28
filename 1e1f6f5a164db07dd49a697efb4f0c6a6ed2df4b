@@ -1,0 +1,183 @@
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Storage;
+using CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Paths;
+using CefFlashBrowser.MacOS.Spike.Desktop.Browser;
+using CefFlashBrowser.MacOS.Spike.Desktop.Diagnostics;
+using CefFlashBrowser.MacOS.Spike.Desktop.Platform.MacOS;
+using CefFlashBrowser.MacOS.Spike.Desktop.ViewModels;
+using CefFlashBrowser.MacOS.Spike.Desktop.Views;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Composition;
+
+public sealed class CompositionRoot : IAsyncDisposable
+{
+    private readonly IReadOnlyList<string> _arguments;
+    private readonly TestProfile _paths;
+    private readonly JsonRuffleSaveStore _saveStore;
+    private readonly LoopbackContentHost _contentHost;
+    private readonly CompatibilityContentHost _compatibilityHost;
+    private readonly CompatibilityEvidenceRecorder _compatibilityRecorder;
+    private readonly CancellationTokenSource _probeLifetime = new();
+    private Task? _pageProbe;
+    private readonly DocumentStartScriptSource _documentStartScriptSource;
+    private readonly GateZeroSessionJournal _journal;
+    private readonly IDocumentStartInjector _documentStartInjector = new MacDocumentStartInjector();
+    private readonly SemaphoreSlim _initializeMutex = new(1, 1);
+    private AvaloniaNativeWebViewSession? _mainBrowser;
+    private MainWindowViewModel? _mainViewModel;
+    private bool _initialized;
+    private bool _disposed;
+
+    public CompositionRoot(IReadOnlyList<string> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        _arguments = arguments;
+        _paths = TestProfile.FromEnvironment();
+        _paths.EnsureCreated();
+        _journal = new GateZeroSessionJournal(_paths.LogDirectory);
+        _journal.Record("profile.isolated", $"root={_paths.RootDirectory}; webKitDataStore={_paths.DataStoreIdentifier}");
+
+        var resourceRoot = BundleResourceLocator.ResolveRoot();
+        _journal.Record("composition.resources.resolved", resourceRoot);
+        var ruffleAssets = Path.Combine(resourceRoot, "Assets", "Ruffle");
+        var fixture = Path.Combine(resourceRoot, "Assets", "Fixtures", "settings.sol");
+        var externalInterfaceFixture = Path.Combine(
+            resourceRoot,
+            "Assets",
+            "Fixtures",
+            "avm2-external-interface");
+        _saveStore = new JsonRuffleSaveStore(_paths.RuffleSaveStorePath);
+        _contentHost = new LoopbackContentHost(
+            ruffleAssets,
+            fixture,
+            externalInterfaceFixture,
+            _saveStore);
+        _compatibilityHost = new CompatibilityContentHost(Path.Combine(resourceRoot, "CompatibilityFixtures", "ruffle-v0.4.1"));
+        _compatibilityRecorder = new CompatibilityEvidenceRecorder(_paths.RootDirectory, _journal.Record);
+        _documentStartScriptSource = new DocumentStartScriptSource(
+            _contentHost,
+            Path.Combine(ruffleAssets, "ruffle.js"));
+    }
+
+    public MainWindow CreateMainWindow()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_mainViewModel is not null)
+        {
+            throw new InvalidOperationException("The main window has already been composed.");
+        }
+
+        _mainBrowser = CreateBrowserSession();
+        _mainBrowser.BridgeMessageReceived += _compatibilityRecorder.Record;
+        var ruffle = new RufflePlayerCoordinator(_mainBrowser, _contentHost, _saveStore);
+        _mainViewModel = new MainWindowViewModel(_mainBrowser, _contentHost, ruffle);
+        return new MainWindow(
+            _mainViewModel,
+            _mainBrowser,
+            InitializeAsync,
+            _arguments,
+            CreatePopupWindow,
+            DisposeAsync,
+            () => Environment.GetEnvironmentVariable("FLASHMACOS_COMPAT_CASE") is { Length: > 0 } caseId
+                ? caseId == "external-interface" ? new Uri(_contentHost.DiagnosticsUri!, "fixtures/external-interface")
+                    : _compatibilityHost.GetCaseUri(caseId) : null,
+            StartPageProbe);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _journal.Record("composition.stopping");
+        await _probeLifetime.CancelAsync().ConfigureAwait(false);
+        if (_pageProbe is not null) await _pageProbe.ConfigureAwait(false);
+        if (_mainViewModel is not null)
+        {
+            await _mainViewModel.DisposeAsync().ConfigureAwait(false);
+            _journal.Record("composition.viewModel.disposed");
+        }
+
+        if (_mainBrowser is not null)
+        {
+            _mainBrowser.BridgeMessageReceived -= _compatibilityRecorder.Record;
+            await _mainBrowser.DisposeAsync().ConfigureAwait(false);
+            _journal.Record("composition.browser.disposed");
+        }
+
+        await _compatibilityRecorder.DisposeAsync().ConfigureAwait(false);
+        await _compatibilityHost.DisposeAsync().ConfigureAwait(false);
+        _probeLifetime.Dispose();
+
+        _documentStartScriptSource.Dispose();
+        _journal.Record("composition.contentHost.stopping");
+        await _contentHost.DisposeAsync().ConfigureAwait(false);
+        _journal.Record("composition.contentHost.stopped");
+        _saveStore.Dispose();
+        _initializeMutex.Dispose();
+        await _journal.DisposeAsync().ConfigureAwait(false);
+    }
+
+    private AvaloniaNativeWebViewSession CreateBrowserSession()
+    {
+        return new AvaloniaNativeWebViewSession(
+            _documentStartInjector,
+            _documentStartScriptSource.GetRequiredScript,
+            _paths.DataStoreIdentifier,
+            _journal.Record);
+    }
+
+    private PopupWindow CreatePopupWindow(Uri address)
+    {
+        return new PopupWindow(CreateBrowserSession(), address);
+    }
+
+    private async ValueTask InitializeAsync(CancellationToken cancellationToken)
+    {
+        if (_initialized)
+        {
+            return;
+        }
+
+        await _initializeMutex.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
+            await _documentStartScriptSource.PrepareAsync(cancellationToken).ConfigureAwait(false);
+            _journal.Record("composition.documentStart.prepared");
+            if (_mainViewModel is null)
+            {
+                throw new InvalidOperationException("The main view model is unavailable.");
+            }
+
+            await _mainViewModel.InitializeAsync(cancellationToken).ConfigureAwait(false);
+            await _compatibilityHost.StartAsync(_contentHost.RufflePublicPath!, cancellationToken).ConfigureAwait(false);
+            _journal.Record("compatibility.host.started", _compatibilityHost.SuiteUri!.AbsoluteUri);
+            _initialized = true;
+            _journal.Record("composition.initialized");
+        }
+        finally
+        {
+            _initializeMutex.Release();
+        }
+    }
+
+    private void StartPageProbe()
+    {
+        if (Environment.GetEnvironmentVariable("FLASHMACOS_PAGE_INSPECT") != "1" || _mainBrowser is null) return;
+        _pageProbe = Task.Run(async () =>
+        {
+            try { await NativePageProbe.CaptureAsync(_mainBrowser, _paths.RootDirectory, _probeLifetime.Token).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (_probeLifetime.IsCancellationRequested) { }
+            catch (Exception exception) { _journal.Record("page.probe.failed", exception.ToString()); }
+        });
+    }
+}

@@ -1,0 +1,25 @@
+# ADR 0003：原生 WKDownload 下载与宿主 popup
+
+## 背景
+
+W01 之前的下载路径有两处与实施方案 W02 冲突：document-start 脚本拦截 `a[download]` 点击并 `preventDefault`，再由托管 `HttpClient` 复制 Cookie 重新发起 GET；`Content-Disposition: attachment` 和 WebKit 无法显示的响应没有任何处理。重新请求丢失 POST body、HttpOnly/会话状态之外的认证与一次性 URL 语义，blob:/data: 根本不能发起。popup 只走 Avalonia 的 NewWindowRequested（仅给出 URL），`window.open` 因没有 UIDelegate 的 createWebView 而不会出现，POST 表单开新窗口会退化成 GET，popup 内再开窗口会替换当前页。
+
+固定的 Avalonia.Controls.WebView 12.0.1 公共 API 不暴露 WKDownload、响应策略、认证挑战或新窗口请求的方法/body；内部 WKNavigationDelegate 只实现 action 策略与完成回调。
+
+## 决定
+
+1. 在已有的项目自有 ARC 动态库（ADR 0002）里补齐公开 Apple API：`decidePolicyForNavigationResponse`、`navigationAction/navigationResponse:didBecomeDownload:`、`WKDownloadDelegate`、`startDownloadUsingRequest:`、`didReceiveAuthenticationChallenge:`、`createWebViewWithConfiguration`/`webViewDidClose:`。只编译 ARM64/macOS 15+，不升级依赖、不改第三方二进制、不使用私有 API。
+2. 下载永远是 WebKit 对原请求/原响应的 WKDownload。删除 JS 拦截和 HttpClient 路径，不保留 fallback：实施方案只允许“可证明等价”的 HTTP fallback，而 POST/blob/data/一次性 URL/认证都无法证明等价。
+3. 文件事务属于 Application：DownloadManager 选择最终路径后在同目录交给 WebKit 一个隐藏暂存名，只有 WebKit 完成后才 flush+rename 到最终名；任何失败只删除暂存。产品目标是原生保存面板，同名替换由系统面板确认。
+4. popup 由宿主新建 surface，按原方法/body/Content-Type 自行加载，继承发起 surface 的 BrowserPurpose 与对应稳定 data store；`window.opener` 不保留。新窗口请求只接受 http/https/about:blank、GET/POST、≤8 MiB 内存 body；流式 body 明确拒绝。
+5. 下载生命周期跟随其 surface：关闭 surface 先取消并等待其下载的唯一终止更新，再拆除代理。首个响应即下载的 popup 在标题中显示正在下载，下载终止后自行关闭（不隐藏：隐藏后关闭会遗留原生窗口）。
+
+## 后果
+
+- 下载结果可以与服务端实际写出字节逐一比对 SHA-256；取消/失败/磁盘错误不会产生假完成文件，也不会改动旧目标。
+- 主 frame 导航转下载时页面保留，托管侧重新提交上一文档身份，bridge 消息不中断（kind 15）。
+- `window.opener` 依赖的站点（父子窗口脚本通信）不受支持；这需要 Avalonia 接管 WebKit 创建的视图，留给依赖升级任务单独评估，不在 W02 通过任何私有手段实现。
+- 关闭窗口会取消其中未完成的下载；跨窗口存活的下载列表与下载 UI 属于 U02。
+- HTTP Basic/Digest 凭据只在 WebKit 会话内存中；没有 Keychain 持久化。
+
+依据：本机 macOS SDK 的 WKNavigationDelegate/WKUIDelegate/WKDownload/WKDownloadDelegate/WKWebView 公开头（macOS 11.3+ API，部署目标 15.0）、[Apple WKDownload](https://developer.apple.com/documentation/webkit/wkdownload)、[WKNavigationDelegate](https://developer.apple.com/documentation/webkit/wknavigationdelegate)。

@@ -1,0 +1,56 @@
+using System.Text.Json;
+using System.Threading.Channels;
+using CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Diagnostics;
+
+/// <summary>Preserves complete, bounded P02 payloads in the explicit test profile.</summary>
+public sealed class CompatibilityEvidenceRecorder : IAsyncDisposable
+{
+    private readonly Channel<string> _entries = Channel.CreateBounded<string>(256);
+    private readonly Task _writer;
+    private readonly Action<string, string?> _journal;
+    private readonly string _runId;
+    private bool _disposed;
+
+    public CompatibilityEvidenceRecorder(string profileRoot, Action<string, string?> journal)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profileRoot);
+        ArgumentNullException.ThrowIfNull(journal);
+        _journal = journal;
+        _runId = Path.GetFileName(profileRoot);
+        FilePath = Path.Combine(profileRoot, $"compatibility-{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfffZ}-{Environment.ProcessId}.jsonl");
+        _writer = Task.Run(WriteAsync);
+    }
+
+    public string FilePath { get; }
+
+    public void Record(WebBridgeMessage message)
+    {
+        if (_disposed || message.Type is not ("compatibilityResult" or "compatibilityConsole") || message.Data is null) return;
+        var entry = JsonSerializer.Serialize(new { taskId = "P02", runId = _runId, fixtureId = message.Key,
+            receivedAt = DateTimeOffset.UtcNow, message = message.Message, rawData = message.Data });
+        if (message.Data.Length > 2 * 1024 * 1024 || !_entries.Writer.TryWrite(entry))
+            _journal("compatibility.evidence.failed", "P02 payload exceeds bounded recorder capacity; case is not accepted.");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        _entries.Writer.TryComplete();
+        await _writer.ConfigureAwait(false);
+    }
+
+    private async Task WriteAsync()
+    {
+        await using var stream = new FileStream(FilePath, FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite,
+            bufferSize: 16 * 1024, FileOptions.Asynchronous);
+        await using var writer = new StreamWriter(stream);
+        await foreach (var payload in _entries.Reader.ReadAllAsync())
+        {
+            await writer.WriteLineAsync(payload).ConfigureAwait(false);
+            await writer.FlushAsync().ConfigureAwait(false);
+        }
+    }
+}

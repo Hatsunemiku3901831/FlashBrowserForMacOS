@@ -1,0 +1,105 @@
+using System.Net;
+using System.Net.Http.Headers;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting;
+
+namespace CefFlashBrowser.MacOS.Spike.Tests;
+
+[TestClass]
+public sealed class CompatibilityContentHostTests
+{
+    private static string FixtureRoot => Path.Combine(AppContext.BaseDirectory, "CompatibilityFixtures", "ruffle-v0.4.1");
+    private static readonly Uri RufflePath = new("http://127.0.0.1:12345/token/assets/ruffle/");
+
+    [TestMethod]
+    public async Task ServesOnlyHashVerifiedFixedAssetsAndRangeRequests()
+    {
+        await using var host = new CompatibilityContentHost(FixtureRoot);
+        await host.StartAsync(RufflePath);
+        using var client = new HttpClient();
+        var prefix = host.SuiteUri!.AbsolutePath.Split('/')[1];
+        var uri = new Uri(host.BaseUri!, $"{prefix}/assets/keyboard-input/test.swf");
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        request.Headers.Range = new RangeHeaderValue(0, 2);
+        using var response = await client.SendAsync(request);
+        Assert.AreEqual(HttpStatusCode.PartialContent, response.StatusCode);
+        CollectionAssert.AreEqual(File.ReadAllBytes(Path.Combine(FixtureRoot, "keyboard-input", "test.swf"))[..3],
+            await response.Content.ReadAsByteArrayAsync());
+        Assert.AreEqual("application/x-shockwave-flash", response.Content.Headers.ContentType!.MediaType);
+        Assert.AreEqual(HttpStatusCode.NotFound, (await client.GetAsync(new Uri(host.BaseUri!, $"{prefix}/assets/keyboard-input/unknown.txt"))).StatusCode);
+        Assert.AreEqual(HttpStatusCode.NotFound, (await client.GetAsync(new Uri(host.BaseUri!, "wrong/assets/keyboard-input/test.swf"))).StatusCode);
+        using var page = await client.GetAsync(host.SuiteUri);
+        var html = await page.Content.ReadAsStringAsync();
+        StringAssert.Contains(page.Headers.GetValues("Content-Security-Policy").Single(), host.SecondOrigin!.GetLeftPart(UriPartial.Authority));
+        StringAssert.Contains(page.Headers.GetValues("Content-Security-Policy").Single(), "'unsafe-eval'");
+        StringAssert.Contains(html, "timer-events");
+    }
+
+    [TestMethod]
+    public async Task SecondOriginHasExplicitCorsAndRedirectWithoutGeneralProxy()
+    {
+        await using var host = new CompatibilityContentHost(FixtureRoot);
+        await host.StartAsync(RufflePath);
+        using var handler = new HttpClientHandler { AllowAutoRedirect = false };
+        using var client = new HttpClient(handler);
+        var prefix = host.SuiteUri!.AbsolutePath.Split('/')[1];
+        Assert.AreNotEqual(host.BaseUri!.Port, host.SecondOrigin!.Port);
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(host.SecondOrigin, $"{prefix}/network/allowed/data.txt"));
+        request.Headers.Add("Origin", host.BaseUri.GetLeftPart(UriPartial.Authority));
+        using var allowed = await client.SendAsync(request);
+        Assert.AreEqual(host.BaseUri.GetLeftPart(UriPartial.Authority), allowed.Headers.GetValues("Access-Control-Allow-Origin").Single());
+        using var deniedRequest = new HttpRequestMessage(HttpMethod.Get, new Uri(host.SecondOrigin, $"{prefix}/network/denied/data.txt"));
+        deniedRequest.Headers.Add("Origin", host.BaseUri.GetLeftPart(UriPartial.Authority));
+        using var denied = await client.SendAsync(deniedRequest);
+        Assert.IsFalse(denied.Headers.Contains("Access-Control-Allow-Origin"));
+        using var redirected = await client.GetAsync(new Uri(host.BaseUri, $"{prefix}/network/redirect/data.bin"));
+        Assert.AreEqual(HttpStatusCode.Redirect, redirected.StatusCode);
+        Assert.AreEqual(host.SecondOrigin.Port, redirected.Headers.Location!.Port);
+        Assert.AreEqual(HttpStatusCode.NotFound, (await client.GetAsync(new Uri(host.SecondOrigin, $"{prefix}/network/allowed/arbitrary-file"))).StatusCode);
+    }
+
+    [TestMethod]
+    public async Task CookieAndPolicyFixturesHaveDistinctSuccessAndFailureConditions()
+    {
+        await using var host = new CompatibilityContentHost(FixtureRoot);
+        await host.StartAsync(RufflePath);
+        using var client = new HttpClient();
+        var prefix = host.SuiteUri!.AbsolutePath.Split('/')[1];
+        var required = new Uri(host.BaseUri!, $"{prefix}/network/cookie/data.txt");
+        Assert.AreEqual(HttpStatusCode.Unauthorized, (await client.GetAsync(required)).StatusCode);
+        await client.GetStringAsync(new Uri(host.BaseUri!, $"{prefix}/network/allowed/cookie"));
+        Assert.AreEqual("Hello, world!\n", await client.GetStringAsync(required));
+        var allow = await client.GetStringAsync(new Uri(host.SecondOrigin!, $"{prefix}/network/allowed/crossdomain.xml"));
+        var deny = await client.GetStringAsync(new Uri(host.SecondOrigin!, $"{prefix}/network/denied/crossdomain.xml"));
+        StringAssert.Contains(allow, "allow-access-from");
+        Assert.DoesNotContain("allow-access-from", deny);
+    }
+
+    [TestMethod]
+    public async Task CorruptFixturePreventsServerStartup()
+    {
+        using var temporary = new TemporaryDirectory();
+        foreach (var file in Directory.EnumerateFiles(FixtureRoot, "*", SearchOption.AllDirectories))
+        {
+            var destination = temporary.GetPath(Path.GetRelativePath(FixtureRoot, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            File.Copy(file, destination);
+        }
+        File.WriteAllText(temporary.GetPath("keyboard-input/Test.as"), "corrupted");
+        await using var host = new CompatibilityContentHost(temporary.RootPath);
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => host.StartAsync(RufflePath).AsTask());
+        Assert.IsNull(host.BaseUri);
+    }
+
+    [TestMethod]
+    public async Task CancellationAndConcurrentShutdownKeepEndpointsClosed()
+    {
+        var host = new CompatibilityContentHost(FixtureRoot);
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+        await Assert.ThrowsAsync<OperationCanceledException>(() => host.StartAsync(RufflePath, cancelled.Token).AsTask());
+        await host.StartAsync(RufflePath);
+        await Task.WhenAll(host.DisposeAsync().AsTask(), host.DisposeAsync().AsTask());
+        Assert.IsNull(host.BaseUri);
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => host.StartAsync(RufflePath).AsTask());
+    }
+}

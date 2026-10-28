@@ -1,0 +1,13 @@
+# ADR 0002：受控 WKWebView 原生适配
+
+W01 采用固定 Avalonia.Controls.WebView 12.0.1 提供的 WKWebView 句柄。公开托管 API 没有消息原生 frameInfo、WKFindConfiguration 或运行时 isInspectable；用本项目小型 Objective-C/ARC 动态库适配这些公开 Apple API，仍只有 WKWebView 一个浏览器后端，只编译 ARM64/macOS 15+，不升级依赖。
+
+代理保留并转发原 navigation/UI delegate 的其他选择器，自己拥有导航世代、script handler、KVO、sheet 和局部键盘 monitor。所有原生句柄与回调根都留在 Browser.WebKit。composition root 管理安装和释放；ViewModel 只见用例端口。新动态库进入正式输出、签名、SHA 和架构检查。
+
+第一版将库原有 cefFlashBrowserBridge 注册替换为自己的 handler。长会话退出时，库销毁路径在 removeScriptMessageHandlerForName 收到已复用的非字符串对象而崩溃；完整 process.log 和 OS ips 已保留。栈在本项目 dylib 之外，所有权失效是根据栈和替换时机得到的诊断，不能冒称已经证明库内部实现。修复是让库继续独立拥有其原注册，本项目仅新增 flashMacOSNativeBridgeV1，关闭时只移除自己的名字。随后以同类长会话/多次退出验证，不以捕获原生异常或强杀退出绕过。
+
+主 frame 导航与可信消息来源直接来自 WKNavigationDelegate/WKScriptMessage.frameInfo，页面自报 isMainFrame 不能成为凭证。网页与本地播放器保留两个长期附着的原生控件和不同稳定数据区；隐藏控件必须在首次 Ready 后才隐藏，否则 Avalonia 会延迟创建 native adapter。
+
+同文档历史更新不一定产生新的 WKNavigation delegate 开始/完成。观察 WKWebView.loading 的最终 false，并仅对仍未收到新 navigation-start 的宿主请求补全同文档状态；普通跨文档跳转继续等待其文档 ID/完成事件。对应首次人工失败已扩充为自动 pushState/back/forward 用例。
+
+isInspectable 是受控的系统检查能力，公开 API 通过 Safari Develop 暴露目标，并不承诺页面右键菜单入口。本地 Safari 尚未开启 Develop；不改其设置，不声称已打开 Inspector。产品提示按真实方式说明；默认关闭，显式启用/关闭均读取原生实际属性。此边界不把私有 WebInspector API 引入应用。依据：[WebKit 官方说明](https://webkit.org/blog/13936/enabling-the-inspection-of-web-content-in-apps/)。

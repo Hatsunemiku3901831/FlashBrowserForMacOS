@@ -1,0 +1,71 @@
+// Project-authored read-only test oracle. The copied MIT Legacy core is used only in evidence tooling.
+#include "sol.h"
+#include <iostream>
+#include <iomanip>
+#include <cstring>
+#include <sstream>
+
+static void text(const std::string& value) {
+    std::cout << '"';
+    for (unsigned char ch : value) {
+        if (ch == '"' || ch == '\\') std::cout << '\\' << ch;
+        else if (ch < 32) std::cout << "\\u" << std::hex << std::setfill('0') << std::setw(4) << (unsigned int)ch << std::dec;
+        else std::cout << ch;
+    }
+    std::cout << '"';
+}
+static void bits(double value) {
+    uint64_t raw; std::memcpy(&raw, &value, sizeof raw);
+    std::ostringstream stream; stream << std::hex << std::setfill('0') << std::setw(16) << raw;
+    text(stream.str());
+}
+static void value(const sol::SolValue& item);
+static void properties(const std::map<std::string, sol::SolValue>& items) {
+    std::cout << '{'; bool comma = false;
+    for (auto& pair : items) {
+        if (comma) std::cout << ','; comma = true;
+        text(pair.first); std::cout << ':'; value(pair.second);
+    }
+    std::cout << '}';
+}
+static void value(const sol::SolValue& item) {
+    std::cout << "{\"type\":" << static_cast<unsigned int>(item.type);
+    using T = sol::SolType;
+    switch(item.type) {
+        case T::Undefined: case T::Null: break;
+        case T::BooleanFalse: case T::BooleanTrue: std::cout << ",\"value\":" << (item.get<bool>() ? "true" : "false"); break;
+        case T::Integer: std::cout << ",\"value\":" << item.get<int32_t>(); break;
+        case T::Double: case T::Date: std::cout << ",\"bits\":"; bits(item.get<double>()); break;
+        case T::String: case T::XmlDoc: case T::Xml: std::cout << ",\"value\":"; text(item.get<std::string>()); break;
+        case T::Binary: {
+            std::ostringstream stream;
+            for (auto byte : item.get<sol::SolBinary>()) stream << std::hex << std::setfill('0') << std::setw(2) << static_cast<unsigned int>(byte);
+            std::cout << ",\"hex\":"; text(stream.str()); break;
+        }
+        case T::Array: {
+            auto& array = item.get<sol::SolArray>();
+            std::cout << ",\"associative\":"; properties(array.assoc); std::cout << ",\"dense\":[";
+            bool comma = false;
+            for (auto& child : array.dense) { if (comma) std::cout << ','; comma = true; value(child); }
+            std::cout << ']'; break;
+        }
+        case T::Object: {
+            auto& object = item.get<sol::SolObject>();
+            std::cout << ",\"className\":"; text(object.classdef.name);
+            std::cout << ",\"dynamic\":" << (object.classdef.dynamic ? "true" : "false")
+                      << ",\"externalizable\":" << (object.classdef.externalizable ? "true" : "false") << ",\"sealedNames\":[";
+            bool comma = false;
+            for (auto& name : object.classdef.members) { if (comma) std::cout << ','; comma = true; text(name); }
+            std::cout << "],\"properties\":"; properties(object.props); break;
+        }
+    }
+    std::cout << '}';
+}
+int main(int argc, char** argv) {
+    if (argc != 2) return 2;
+    sol::SolFile file; file.path = argv[1];
+    if (!sol::ReadSolFile(file)) { std::cerr << file.errmsg; return 1; }
+    std::cout << "{\"name\":"; text(file.solname);
+    std::cout << ",\"encoding\":" << static_cast<unsigned int>(file.version) << ",\"values\":";
+    properties(file.data); std::cout << "}\n"; return 0;
+}

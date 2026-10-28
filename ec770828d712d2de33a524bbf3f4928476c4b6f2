@@ -1,0 +1,429 @@
+{
+  "schemaVersion": 1,
+  "stage": "S01-S05 core, malformed-input, branch coverage and bounded Release performance verified; actual editor UI U03 pending",
+  "limits": {
+    "fileBytes": 67108864,
+    "depth": 256,
+    "nodes": 1000000,
+    "elements": 1000000
+  },
+  "specErrata": [
+    "AMF0 2.18 grammar labels object-marker but marker table defines typed-object 0x10; use marker table.",
+    "AMF3 introduction says 13 types although 2013 sections include Vectors and Dictionary.",
+    "Signed integer 29-bit two-complement range is [-2^28,2^28-1]; do not infer integer range from conflicting prose about unsigned numbers.",
+    "AMF0 ECMA count is not a substitute for the required object-end marker."
+  ],
+  "types": [
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "00",
+        "01",
+        "02",
+        "0C"
+      ],
+      "model": "AmfNumber(raw bits), AmfBoolean, AmfString",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "Long-string selection uses encoded bytes; bool read permits nonzero",
+      "newPolicy": "Strict UTF-8; 64 MiB/depth/elements bound; preserve numeric bits; shortest permitted string encoding",
+      "implementationTask": "S02",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "03",
+        "10"
+      ],
+      "model": "AmfObjectNode + AmfObjectKind + ordered properties + class name",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "std::map loses order/duplicate names; empty key mistaken for terminator; ReadAMF0Object/TypedObject leave classdef bool fields uninitialized; these flags do not exist on the AMF0 wire",
+      "newPolicy": "Retain order/duplicates/empty names; distinguish typed object even empty class alias",
+      "implementationTask": "S02",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "05",
+        "06"
+      ],
+      "model": "AmfNull / AmfUndefined",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "none confirmed",
+      "newPolicy": "Keep distinct types, never use C# null for an AMF value",
+      "implementationTask": "S02",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "07"
+      ],
+      "model": "AmfReference / AmfNodeId",
+      "legacySupport": "read copies; writer absent",
+      "knownLegacyDefect": "Object pool uses copies; registration after children; writer has no object pool",
+      "newPolicy": "Register identity before children; U16 indices only for object/typed/ECMA/strict array; shared/cyclic graph",
+      "implementationTask": "S02",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "08"
+      ],
+      "model": "AmfArrayNode(Amf0Ecma), ordered associative properties, declared count",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "Reader loops exactly declared count",
+      "newPolicy": "Object-end terminator defines end; advisory count retained, validated against resource bound only when actual elements parsed",
+      "implementationTask": "S02",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "0A"
+      ],
+      "model": "AmfArrayNode(Amf0Strict)",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "remaining/2 rejects legal one-byte null/undefined values",
+      "newPolicy": "Count is exact; minimum value size is one byte; checked count before allocation",
+      "implementationTask": "S02",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "0B"
+      ],
+      "model": "AmfDateNode with raw double ms and reserved timezone",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "CLI local DateTime constrains range/precision; writer resets timezone",
+      "newPolicy": "Raw milliseconds retained; no DateTime coercion; preserve reserved bytes when writing same encoding",
+      "implementationTask": "S02",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "0F"
+      ],
+      "model": "AmfXmlNode(IsDocument=true)",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "AMF0 mapping merges XML and XMLDocument",
+      "newPolicy": "AMF0 only XMLDocument; AMF3 XML needs explicit conversion report; XML text not parsed as active XML",
+      "implementationTask": "S02",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "11"
+      ],
+      "model": "AmfAvmPlus(value)",
+      "legacySupport": "absent",
+      "knownLegacyDefect": "AMF0 type enum ends at 0x10",
+      "newPolicy": "Delegate exactly one value through explicit AMF3 codec; shared AMF3 tables within stream; surrounding AMF0 continues",
+      "implementationTask": "S02/S03",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF0",
+      "markers": [
+        "04",
+        "0D",
+        "0E",
+        "09 outside object-end",
+        "unknown"
+      ],
+      "model": "AmfUnsupported diagnostic(offset, encoding, marker, reason)",
+      "legacySupport": "unsupported/unknown",
+      "knownLegacyDefect": "Unsupported marker may be conflated with undefined by consumers",
+      "newPolicy": "Reserved/unsupported/unknown markers refuse parsing and saving; keep exact input at document layer; 09 allowed only as 000009 terminator",
+      "implementationTask": "S02/S04",
+      "verification": "PASS_RAW_AMF0_WITH_REAL_AMF3_DELEGATION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "00",
+        "01",
+        "02",
+        "03"
+      ],
+      "model": "Undefined / Null / Boolean(false/true)",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "none confirmed",
+      "newPolicy": "Distinct null/undefined and bool values",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "04"
+      ],
+      "model": "AmfInteger",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "Legacy Int32 wrapper accepts values outside signed U29",
+      "newPolicy": "Signed range [-268435456,268435455]; reject overflow; explicit lossless Number conversion available via S04",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "05"
+      ],
+      "model": "AmfNumber raw bits",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "none confirmed",
+      "newPolicy": "Preserve IEEE-754 bits including -0, infinities and NaN payload",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "06"
+      ],
+      "model": "AmfString",
+      "legacySupport": "read/write, string pooling",
+      "knownLegacyDefect": "UTF-8 validity not uniformly enforced",
+      "newPolicy": "Separate zero-based string table; empty strings not pooled; names and class aliases participate; ordinal content equality",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "07",
+        "0B"
+      ],
+      "model": "AmfXmlNode(IsDocument true/false)",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "No reference identity on write",
+      "newPolicy": "Preserve distinct XML/XMLDocument, text and shared identity; no XML entity execution",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "08"
+      ],
+      "model": "AmfDateNode",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "CLI DateTime conversion constrains range/precision",
+      "newPolicy": "Raw double milliseconds; object-table identity; no implicit timezone conversion",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "09"
+      ],
+      "model": "AmfArrayNode(Amf3Mixed)",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "Copies and late object registration break cycles",
+      "newPolicy": "Ordered associative then dense; empty name ends associative section; register before children",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "0A regular/typed"
+      ],
+      "model": "AmfObjectNode + AmfTraits + sealed/dynamic values",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "Class traits partially supported; object identity writer absent",
+      "newPolicy": "Separate object and structural trait pools; preserve sealed order/class/dynamic; register before children",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "0A externalizable"
+      ],
+      "model": "AmfObjectNode external traits; unknown diagnostic",
+      "legacySupport": "unsupported",
+      "knownLegacyDefect": "No general framing for unknown payload",
+      "newPolicy": "Explicit class registry only; registered codecs parse/write exact known custom layout; unknown class refuses save, never guesses payload boundary",
+      "implementationTask": "S03/S04",
+      "verification": "PASS_EXPLICIT_REGISTRY_AND_UNKNOWN_REJECTION",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03",
+      "productionRegisteredClasses": [],
+      "registeredTestClasses": [
+        "T: one AMF value, tests.single.v1",
+        "B: A5 + U32 length + bytes, tests.raw.v1"
+      ]
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "0C"
+      ],
+      "model": "AmfByteArrayNode",
+      "legacySupport": "read/write",
+      "knownLegacyDefect": "No shared identity on write",
+      "newPolicy": "Bound byte length before allocation; preserve bytes and references",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "0D"
+      ],
+      "model": "AmfVectorIntNode",
+      "legacySupport": "absent",
+      "knownLegacyDefect": "Legacy known types stop at 0C",
+      "newPolicy": "Retain fixed flag, numeric element width/signedness/bits, object type alias and references; register before children",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "0E"
+      ],
+      "model": "AmfVectorUIntNode",
+      "legacySupport": "absent",
+      "knownLegacyDefect": "Legacy known types stop at 0C",
+      "newPolicy": "Retain fixed flag, numeric element width/signedness/bits, object type alias and references; register before children",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "0F"
+      ],
+      "model": "AmfVectorNumberNode",
+      "legacySupport": "absent",
+      "knownLegacyDefect": "Legacy known types stop at 0C",
+      "newPolicy": "Retain fixed flag, numeric element width/signedness/bits, object type alias and references; register before children",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "10"
+      ],
+      "model": "AmfVectorObjectNode",
+      "legacySupport": "absent",
+      "knownLegacyDefect": "Legacy known types stop at 0C",
+      "newPolicy": "Retain fixed flag, numeric element width/signedness/bits, object type alias and references; register before children",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "11"
+      ],
+      "model": "AmfDictionaryNode",
+      "legacySupport": "absent",
+      "knownLegacyDefect": "No Dictionary type",
+      "newPolicy": "Retain weakKeys and ordered arbitrary typed key/value pairs; identity rather than value equality for object keys; do not silently string-coerce integer keys",
+      "implementationTask": "S03",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    },
+    {
+      "encoding": "AMF3",
+      "markers": [
+        "unknown"
+      ],
+      "model": "AmfUnsupported diagnostic",
+      "legacySupport": "unknown",
+      "knownLegacyDefect": "No general extension framing",
+      "newPolicy": "Stop at exact byte offset/type; retain original input and refuse edit/save",
+      "implementationTask": "S03/S04",
+      "verification": "PASS_STANDARD_RAW_CODEC",
+      "evidence": "artifacts/evidence/S03/amf3-managed-20261028-03"
+    }
+  ],
+  "solContainer": {
+    "verification": "PASS_FIVE_COMPLETE_TYPED_EXPECTATIONS_AND_GRAPH_ROUNDTRIPS",
+    "evidence": "artifacts/evidence/S04/sol-final-managed-20261028-01",
+    "entries": "Ordered duplicate/empty names, shared pools across all entries, zero entry terminators, strict UTF-8 name, exact chunk length",
+    "legacyOracleCaveat": "AMF0 object classdef dynamic/externalizable flags were uninitialized in Legacy C++; those non-wire fields are excluded from AMF0 oracle comparison, not rewritten in raw outputs. AMF3 flags and all payload fields remain compared."
+  },
+  "conversion": {
+    "nativeDefault": "Refuse data/type/identity loss after explicit preview",
+    "envelopeOption": "Explicit AMF3 AVM+ envelopes in AMF0 preserve all known AMF3 semantics and require AMF3-aware readers",
+    "ignoredMetadata": "Advisory ECMA count and reserved timezone changes are explicit encoding notices; raw number/date bits remain intact"
+  },
+  "qualityGate": {
+    "status": "PASS",
+    "evidence": "docs/evidence/S05/2026-10-28/quality-gate.json",
+    "branchCoverage": {
+      "FlashMacOS.Domain.dll": {
+        "branches": 248,
+        "coveredBranches": 245,
+        "branchPercent": 98.79032258064517,
+        "lines": 232,
+        "coveredLines": 229,
+        "linePercent": 98.70689655172414
+      },
+      "FlashMacOS.Sol.Managed.dll": {
+        "branches": 451,
+        "coveredBranches": 411,
+        "branchPercent": 91.13082039911308,
+        "lines": 486,
+        "coveredLines": 482,
+        "linePercent": 99.17695473251028
+      }
+    },
+    "fixedSeedMutations": 120000,
+    "generatedGraphs": 384,
+    "performance": {
+      "evidence": "artifacts/evidence/S05/final-managed-release-20261028-02/measurements/sol-performance-12419-ecaba0272b4e45d59a09b12fa91b9a03.json",
+      "inputSha256": "5cdb57e61085cc9909d327f1c6a173033926e6852eae161a1b7325a156719bad",
+      "samplesEachReadSave": 30,
+      "readP95Ms": 8.709,
+      "saveP95Ms": 35.533,
+      "maxPhaseMs": 54.5502,
+      "maxReadAllocatedBytes": 21045376,
+      "maxSaveAllocatedBytes": 10503056,
+      "budgetMs": 500,
+      "budgetAllocatedBytes": 31457280
+    },
+    "cancellation": {
+      "evidence": "artifacts/evidence/S05/final-managed-release-20261028-02/measurements/cancellation-12455-473659b58ddb46ad81978ad6e9b439ad.json",
+      "samples": 60,
+      "maxLatencyMs": 10.9064,
+      "budgetMs": 100,
+      "allCanceled": true
+    },
+    "remainingUiAssertions": 6
+  }
+}

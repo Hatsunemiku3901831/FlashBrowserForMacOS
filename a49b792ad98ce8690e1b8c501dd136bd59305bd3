@@ -1,0 +1,15 @@
+# S01 类型模型和独立预期
+
+状态：DONE。只验收类型与测试语义，不声称 AMF codec/SOL 文件编辑已经通过。工作树 main 无提交；来源只读。
+
+输入：两个原字节 AMF PDF、Legacy sol.cpp/sol.h/utils/CLI 与两个测试文件，逐路径 SHA-256 在 provenance/S01-source-inputs.json；A02/A04 的最终 managed result 已复核，分别 PASS 145/222。固定四份 Legacy SOL 和 RuffleTest.sol 仍为原字节。
+
+实现：Domain 显式标量/引用图，支持共享/循环对象身份，区分 Null/Undefined、Integer/Number、XML/XMLDocument、各数组/对象编码形态；保留浮点位模式、毫秒、类/trait 顺序、Vector 属性、Dictionary 对象键。未知标记和未登记类阻止编辑保存。详情见 contracts/sol-model.zh-CN.md；26 行支持矩阵列出 Legacy/规范/已知缺陷/后续实现任务。
+
+独立预期：31 个手工规范 AMF 值（451 bytes）及 12 个 signed U29 边界；每项记录 hex、hash、预期及规范章节，未使用新 writer。隔离复制四个 Legacy core 文件后以 clang++ 编译 read-only oracle；四份旧 SOL 完整类型内容成功输出。RuffleTest 原始失败 exit 1/Unsupported AMF0 type: 9 保留：声明计数 5 与四个真实属性不一致，旧实现固定次数循环误读 000009。该文件的完整八个条目从原字节手工定义，未谎报 oracle 成功。117 个旧测试逐名映射，codec/file 阶段项仍为 pending。
+
+环境：Apple M1 Pro、arm64、macOS 26.5.1、SDK 10.0.301/runtime 10.0.9。最终命令：`sh scripts/verify.sh --task S01 --run-id graph-managed-20261028-04 --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser`。预期：锁定构建、全部回归、104 固定资产与来源禁读通过；实际 exit 0，231 托管+18 工具，0 失败/跳过/警告。模型 8 项与样本完整性 1 项为新增；原 107 逐名保留。-01/-02 的命名/测试数组分析器错误原始日志保留，修复后 -03/-04 均通过；未关闭分析器，只有 AMF 规范枚举名局部允许保留标准术语。
+
+证据：artifacts/evidence/S01/graph-managed-20261028-04/、spec-read-20261028-01/、legacy-oracle-20261028-01/；acceptance-index.json 记录输入与证据 hash，provenance/S01-changes.json 记录变更。原仓库 332 文件、HEAD/dirty 与四个旧用户数据根保持；没有 GUI/兼容/发行的新声明。
+
+下一任务 S02：实现有界 AMF0 reader/writer，以固定字节校验内容和引用，并保留对 AMF3 的显式委派边界。

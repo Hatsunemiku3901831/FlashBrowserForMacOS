@@ -1,0 +1,12 @@
+{
+  "taskId": "A04",
+  "status": "PASS",
+  "allProductAndToolInputsEqual": true,
+  "differences": {
+    "tests/FlashMacOS.IntegrationTests/ConfigurationUseCaseTests.cs": {
+      "package": "a5f181e39f2a94792b857efa8e70c70e46844caee628cbd74caf8cecf486d76b",
+      "finalManaged": "94e537b402d0336f72fc4f5fcccc2a0baa09eb15b4b9769a31a0e5c437f4dfa3"
+    }
+  },
+  "reason": "Only additional assertions in one test file; no product/runtime/dependency/resource/tool changes"
+}

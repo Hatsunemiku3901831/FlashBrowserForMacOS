@@ -1,0 +1,134 @@
+using System.Text.Json;
+using CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+
+namespace CefFlashBrowser.MacOS.Spike.Tests;
+
+[TestClass]
+public sealed class WebBridgeProtocolTests
+{
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow("  \t\r\n")]
+    [DataRow("null")]
+    [DataRow("[]")]
+    [DataRow("42")]
+    [DataRow("\"PRIVATE_BODY_SENTINEL\"")]
+    [DataRow("{")]
+    public void ParseRejectsMalformedRootsWithoutEchoingTheBody(string? body)
+    {
+        var exception = Assert.ThrowsExactly<JsonException>(() => WebBridgeProtocol.Parse(body));
+
+        Assert.IsFalse(exception.ToString().Contains("PRIVATE_BODY_SENTINEL", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    [DataRow("{}")]
+    [DataRow("{\"type\":null}")]
+    [DataRow("{\"type\":\"  \"}")]
+    public void ParseRejectsMissingNullOrBlankType(string body)
+    {
+        Assert.ThrowsExactly<JsonException>(() => WebBridgeProtocol.Parse(body));
+    }
+
+    [TestMethod]
+    public void ParsePreservesUnknownNonEmptyTypeForForwardCompatibility()
+    {
+        var message = WebBridgeProtocol.Parse("{\"type\":\"futureMessage\",\"data\":\"opaque\"}");
+
+        Assert.AreEqual("futureMessage", message.Type);
+        Assert.AreEqual("opaque", message.Data);
+    }
+
+    [TestMethod]
+    [DataRow("{\"type\":\"saveChanged\",\"data\":\"value\"}")]
+    [DataRow("{\"type\":\"saveChanged\",\"key\":\"key\"}")]
+    [DataRow("{\"type\":\"saveChanged\",\"key\":\"  \",\"data\":\"value\"}")]
+    [DataRow("{\"type\":\"saveDeleted\"}")]
+    [DataRow("{\"type\":\"savesSnapshot\"}")]
+    [DataRow("{\"type\":\"trace\"}")]
+    [DataRow("{\"type\":\"diagnostics\",\"flashElementCount\":0,\"documentStartMilliseconds\":0}")]
+    [DataRow("{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"documentStartMilliseconds\":0}")]
+    [DataRow("{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"flashElementCount\":0}")]
+    [DataRow("{\"type\":\"bridgeError\"}")]
+    [DataRow("{\"type\":\"downloadRequested\"}")]
+    [DataRow("{\"type\":\"downloadRequested\",\"url\":\"  \"}")]
+    [DataRow("{\"type\":\"compatibilityResult\",\"message\":\"PASS\",\"data\":\"{}\"}")]
+    [DataRow("{\"type\":\"compatibilityResult\",\"key\":\"  \",\"message\":\"PASS\",\"data\":\"{}\"}")]
+    [DataRow("{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"data\":\"{}\"}")]
+    [DataRow("{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"  \",\"data\":\"{}\"}")]
+    [DataRow("{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\"}")]
+    public void ParseRejectsKnownMessagesWithMissingRequiredFields(string body)
+    {
+        Assert.ThrowsExactly<JsonException>(() => WebBridgeProtocol.Parse(body));
+    }
+
+    [TestMethod]
+    [DataRow("{\"type\":\"saveChanged\",\"key\":\"save-key\",\"data\":\"\"}", "saveChanged")]
+    [DataRow("{\"type\":\"saveDeleted\",\"key\":\"save-key\"}", "saveDeleted")]
+    [DataRow("{\"type\":\"savesSnapshot\",\"data\":\"\"}", "savesSnapshot")]
+    [DataRow("{\"type\":\"trace\",\"message\":\"\"}", "trace")]
+    [DataRow("{\"type\":\"playerReady\"}", "playerReady")]
+    [DataRow("{\"type\":\"diagnostics\",\"ruffleAvailable\":false,\"flashElementCount\":0,\"documentStartMilliseconds\":0}", "diagnostics")]
+    [DataRow("{\"type\":\"bridgeError\",\"message\":\"\"}", "bridgeError")]
+    [DataRow("{\"type\":\"downloadRequested\",\"url\":\"https://example.test/file\",\"fileName\":\"file.bin\"}", "downloadRequested")]
+    [DataRow("{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\",\"data\":\"{}\"}", "compatibilityResult")]
+    public void ParseAcceptsEachMinimalKnownMessage(string body, string expectedType)
+    {
+        var message = WebBridgeProtocol.Parse(body);
+
+        Assert.AreEqual(expectedType, message.Type);
+        if (expectedType.Equals("diagnostics", StringComparison.Ordinal))
+        {
+            Assert.AreEqual(false, message.RuffleAvailable);
+            Assert.AreEqual(0, message.FlashElementCount);
+            Assert.AreEqual(0d, message.DocumentStartMilliseconds);
+        }
+        else if (expectedType.Equals("downloadRequested", StringComparison.Ordinal))
+        {
+            Assert.AreEqual("https://example.test/file", message.Url);
+            Assert.AreEqual("file.bin", message.FileName);
+        }
+    }
+
+    [TestMethod]
+    public void DescribeTruncatesMessageAndKeyContextsWithAnExplicitMarker()
+    {
+        var context = new string('x', 2_049);
+
+        Assert.AreEqual(
+            $"trace: {context[..2_048]}…",
+            WebBridgeProtocol.Describe(new WebBridgeMessage("trace", Message: context)));
+        Assert.AreEqual(
+            $"saveDeleted: {context[..2_048]}…",
+            WebBridgeProtocol.Describe(new WebBridgeMessage("saveDeleted", Key: context)));
+    }
+
+    [TestMethod]
+    public void DataNeverAppearsInDescriptionsOrValidationErrors()
+    {
+        const string sentinel = "PRIVATE_DATA_SENTINEL";
+        var message = WebBridgeProtocol.Parse(
+            $"{{\"type\":\"saveChanged\",\"key\":\"safe-key\",\"data\":\"{sentinel}\"}}");
+
+        var description = WebBridgeProtocol.Describe(message);
+        var exception = Assert.ThrowsExactly<JsonException>(
+            () => WebBridgeProtocol.Parse($"{{\"data\":\"{sentinel}\"}}"));
+
+        Assert.IsFalse(description.Contains(sentinel, StringComparison.Ordinal));
+        Assert.IsFalse(exception.ToString().Contains(sentinel, StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void CompatibilityResultDescriptionUsesOnlyTheShortMessage()
+    {
+        const string sentinel = "PRIVATE_COMPATIBILITY_DATA_SENTINEL";
+        var message = WebBridgeProtocol.Parse(
+            $"{{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS available=true\",\"data\":\"{sentinel}\"}}");
+
+        var description = WebBridgeProtocol.Describe(message);
+
+        Assert.AreEqual("compatibilityResult: PASS available=true", description);
+        Assert.IsFalse(description.Contains(sentinel, StringComparison.Ordinal));
+    }
+}

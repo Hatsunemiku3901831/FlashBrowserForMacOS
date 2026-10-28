@@ -1,0 +1,98 @@
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+using CefFlashBrowser.MacOS.Spike.Desktop.Browser;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Views;
+
+public sealed partial class PopupWindow : Window
+{
+    private readonly AvaloniaNativeWebViewSession _session;
+    private readonly Uri _initialAddress;
+    private bool _started;
+
+    public PopupWindow(AvaloniaNativeWebViewSession session, Uri initialAddress)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(initialAddress);
+        _session = session;
+        _initialAddress = initialAddress;
+        InitializeComponent();
+        Opened += OnOpened;
+        Closed += OnClosed;
+        _session.StateChanged += OnStateChanged;
+        _session.PopupRequested += OnPopupRequested;
+        _session.Faulted += OnFaulted;
+    }
+
+    private async void OnOpened(object? sender, EventArgs args)
+    {
+        if (_started)
+        {
+            return;
+        }
+
+        _started = true;
+        var webView = new NativeWebView();
+        _session.Attach(webView);
+        this.FindControl<ContentControl>("BrowserHost")!.Content = webView;
+        await _session.NavigateAsync(_initialAddress);
+    }
+
+    private async void OnClosed(object? sender, EventArgs args)
+    {
+        Opened -= OnOpened;
+        Closed -= OnClosed;
+        _session.StateChanged -= OnStateChanged;
+        _session.PopupRequested -= OnPopupRequested;
+        _session.Faulted -= OnFaulted;
+        await _session.DisposeAsync();
+    }
+
+    private void OnStateChanged(BrowserState state)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            this.FindControl<TextBox>("AddressBox")!.Text = state.Address?.AbsoluteUri ?? string.Empty;
+            Title = state.Title;
+        });
+    }
+
+    private async void OnPopupRequested(Uri address)
+    {
+        await ExecuteSafelyAsync(() => _session.NavigateAsync(address));
+    }
+
+    private void OnFaulted(Exception exception)
+    {
+        Dispatcher.UIThread.Post(() => Title = exception.Message);
+    }
+
+    private async void OnBackClick(object? sender, RoutedEventArgs args)
+    {
+        await ExecuteSafelyAsync(() => _session.GoBackAsync());
+    }
+
+    private async void OnForwardClick(object? sender, RoutedEventArgs args)
+    {
+        await ExecuteSafelyAsync(() => _session.GoForwardAsync());
+    }
+
+    private async void OnReloadClick(object? sender, RoutedEventArgs args)
+    {
+        await ExecuteSafelyAsync(() => _session.ReloadAsync());
+    }
+
+    private async Task ExecuteSafelyAsync(Func<ValueTask> operation)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (Exception exception)
+        {
+            OnFaulted(exception);
+        }
+    }
+}

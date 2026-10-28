@@ -1,0 +1,48 @@
+# A04 设置与收藏夹验收
+
+状态：DONE。日期：2026-10-28（Australia/Sydney）。目标 Git 为无提交 main。G1 的 A01—A04 基础任务已具备各自证据；主题、语言、窗口及收藏界面接入仍由 U02/W01/U04 验收，不能以配置存在代替生效。没有提交、推送或发布。
+
+## 输入和实现
+
+来源为冻结快照内 Settings、FavoritesFile、Website、四个枚举及嵌套配置、GlobalData、UrlHelper 和两个 Legacy 测试文件。原路径/hash 与迁移去向见 `docs/provenance/A04-source-inputs.json`；完整最终文件/hash 见 A04-changes.json。GlobalData、Messenger 和 WPF Window 方法只作为行为参考，没有进入新实现。新 source 全在正式模块，构建不读取来源。
+
+建立不可变设置/收藏模型，schema v2 仓储和显式应用用例；27 个旧字段、全部默认值、引用 null/缺失、未知根/嵌套属性和 legacy 区均有映射。Proxy、Fake Flash 和 WPF/CEF GPU 开关只存于 legacy.windows，不声明其已在 WK 生效。配置能力状态与存储值分开。完整原 flat 文档保留，Load 不写，Upgrade 只提交一次，候选失败不发布内存。收藏通过独立 ID 按顺序编辑，重复 URL、空名字/URL 和旧 null 槽均不丢失。
+
+SearchEngine 迁至 Domain，保持原数值和九个提供商的 URL 编码。四类窗口模型没有 WPF 对象；有限坐标可完整表示，NaN/Infinity 转缺失并保留原值。后台构造/序列化，复用 A03 文件租约、版本、原子备份、取消及限额。Root 在创建浏览器前加载仓储，并在关停后释放。
+
+契约见 `docs/contracts/configuration.zh-CN.md` 和 `settings-field-map.json`。七份合成 fixture/hash 见 A04-fixtures.json；expected-settings-v2 是依据冻结字段/默认值独立手写，未调用待测迁移生成。收藏 UUID 预期通过独立 Python SHA-256/UUID 字节序计算。没有使用真实 Cookie、会话或凭据作为 fixture。
+
+## 执行和结果
+
+Apple M1 Pro、arm64、macOS 26.5.1 (25F80)、SDK 10.0.301 / runtime 10.0.9；managed Debug、native Release self-contained。全部依赖版本和 13 锁保持；104 个固定 Ruffle/语料资产不变。最终命令：
+
+```sh
+sh scripts/verify.sh --task A04 --run-id configuration-managed-20261028-07 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+python3 scripts/package-development.py --task A04 --run-id configuration-package-20261028-01 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+```
+
+真实会话通过 run-native.py，使用同一冻结包、新 Test profile 和 `--settings-fixture`/`--favorites-fixture`；实际完整命令、环境、退出码、seed 原 hash 和日志均在各 run 目录。fixture 种子只允许本项目固定配置样本，不能注入 Product 数据或任意运行数据。
+
+| 检查 | 预期与实际 | 证据 |
+|---|---|---|
+| 最终回归 | 222 托管、18 工具全部通过，0 失败/跳过，0 构建警告；锁/输入不变 | configuration-managed-20261028-07，五份 TRX；退出 0 |
+| 旧设置 | 27 字段、默认/非默认、null/缺失及未知值完整映射，v2 与独立 golden 等价，原字节备份保留 | SettingsModelTests、ConfigurationRepositoryTests |
+| 未知字段 | 根/嵌套/窗口清空再建立/legacy 和收藏未知属性在重排、修改后保留 | ConfigurationRepositoryTests、ConfigurationUseCaseTests |
+| 收藏 | 同 URL 保留独立身份、顺序和 null 槽；改名、更新、排序、删除、20 并发追加不丢项 | 同上 |
+| 事务 | 设置/收藏写失败保持仓储和服务 Current；可重试，三阶段取消不发布候选，外部版本变化拒绝 | 同上 |
+| 损坏文件 | null/缺失数组/错类型/错版本/重复大小写别名均拒绝；不覆盖默认 | 同上 |
+| 幂等 | v2 再 Upgrade 不改变 revision/文件字节，独立进程重读等价 | 同上 |
+| URL/Legacy 测试 | 原 Settings 5 个与 URL 20 个断言有新去向，九个搜索提供商与导航策略测试通过；原型 107 逐名保留 | A04-legacy-test-map.json、A04-test-map.json |
+| 原生合法配置 | 两个旧格式文件加载成功，内置 Hello SWF 正常 trace；原配置字节不变；正常退出 0，清理 failures=0 | configuration-valid-native-20261028-01/native-result.json |
+| 原生损坏配置 | 可见 Configuration JSON is malformed 状态；没有创建 browser adapter；原两字节文件保持；关闭退出 1，未当作普通成功启动 | configuration-damaged-native-20261028-01/native-result.json；原 process-result 保留 FAIL |
+| 原仓库/旧数据/bundle | 332 业务文件/HEAD/dirty 与四个旧数据根保持；运行后开发包逐文件及严格签名保持 | 本目录对应 preserved 文件 |
+
+最终 native 包在 managed-05 后生成；managed-06/07 只补强同一测试文件的未知收藏元数据和两个原 URL 样例断言，全部产品 src、依赖、身份、打包/运行脚本、资源与最终 managed-07 一致。对比清单完整保留，不把两份完整输入表称为完全相同。
+
+早期 CA1822、CA1816、CA1707 编译拒绝及 managed-03 的 202 项通过均保留。一次在损坏配置窗口关闭后读取 CUA 状态又启动普通 Product 进程 PID 79446，已正常 Command-Q 退出并保存日志，不计来源禁读验收，也不把它混成损坏配置恢复成功。新代码没有修复或改判 A02 的 Flash 焦点 Command-Q、IME 和 frame 问题。
+
+## 下一任务
+
+S01：读取两个固定 AMF PDF、Legacy sol.cpp/sol.h/CLI 和格式测试，冻结显式类型/引用图、支持矩阵及独立 goldens；未知类型默认阻止有损保存。设置和收藏实际 UI 在 U02 继续，完整产品及发行仍未完成。

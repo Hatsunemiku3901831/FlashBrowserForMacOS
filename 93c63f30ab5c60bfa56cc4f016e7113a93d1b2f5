@@ -1,0 +1,196 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 92cfcfd..2fe6bd2 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -1,87 +1,129 @@
+ # AGENTS.md
+ 
+-This file provides guidance to AI coding agents when working with code in this repository.
+-
+-## Project Overview
+-
+-CefFlashBrowser is a Windows WPF desktop application providing a web browser with built-in Flash Player support. It can browse the web, play local SWF files, and edit Flash game save data (SOL files).
+-
+-## Build Commands
+-
+-The solution contains C++/CLI projects, so **must use VS MSBuild** (not `dotnet build`). The MSBuild path may vary by VS edition (Community/Professional/Enterprise).
++本文件只定义仓库级通用规范。具体任务的技术方案、阶段、验收项和风险必须通过“任务路由”进入对应文档，不在这里重复维护。
++
++## 1. 项目概览
++
++CefFlashBrowser 是一个支持网页浏览、本地/网页 SWF 运行及 Flash SharedObject（SOL）存档管理的桌面应用。
++
++当前仓库包含 Windows Legacy 实现：.NET Framework 4.6.2、WPF、CefSharp 84 和 C++/CLI。跨平台/macOS vNext 另有专项方案，不能把两套技术边界混为一体。
++
++## 2. 任务路由
++
++开始操作前先匹配任务，只读取和执行相关入口：
++
++| 任务类型 | 首要入口 | 补充入口 |
++|---|---|---|
++| 独立 flashMacOS 仓库初始化、方案一任务交接、实现与验收 | `Docs/flashMacOS-task-pack/START-HERE.zh-CN.md` | 包内 `AGENTS.md`、`docs/implementation-plan.zh-CN.md`、`docs/task-status.zh-CN.md`；原仓库作为只读来源 |
++| macOS 新会话接手、当前事实、阻塞、下一开发任务 | `spike/macos-host/docs/development-handoff.zh-CN.md` | `spike/macos-host/AGENTS.md`、`Docs/macos-porting-plan.zh-CN.md` |
++| macOS 目标、范围、进度、里程碑、交付评估 | `Docs/macos-porting-plan.zh-CN.md` | `spike/macos-host/AGENTS.md` |
++| macOS vNext 接口、端口、模型、事件、bridge、生命周期 | `spike/macos-host/docs/interfaces.zh-CN.md` | `spike/macos-host/AGENTS.md`、对应实现与测试 |
++| macOS vNext 变量、配置、路径、持久化、路由、Cookie、签名 | `spike/macos-host/docs/variables.zh-CN.md` | `spike/macos-host/AGENTS.md`、对应实现与测试 |
++| macOS vNext 架构、Avalonia、WKWebView、Ruffle、性能、安全、测试、发布 | `spike/macos-host/docs/engineering-spec.zh-CN.md` | `spike/macos-host/AGENTS.md`、相关 ADR 与 Gate 报告 |
++| Windows WPF、CefSharp、Flash 插件问题 | `CefFlashBrowser/CefFlashBrowser.csproj`、`CefFlashBrowser/Program.cs` | `CefFlashBrowser.FlashBrowser/`、`CefFlashBrowser.WinformCefSharp4WPF/` |
++| SOL、AMF0、AMF3 编解码 | `CefFlashBrowser.Sol/` | `Docs/amf0-file-format-specification.pdf`、`Docs/amf3-file-format-spec.pdf`、`CefFlashBrowser.Tests/` |
++| 设置、收藏夹、用户数据 | `CefFlashBrowser/Data/GlobalData.cs`、`CefFlashBrowser/Models/` | `CefFlashBrowser.Tests/SettingsTests.cs`、`CefFlashBrowser.Tests/UrlHelperTests.cs` |
++| UI、主题、本地化 | `CefFlashBrowser/Views/`、`CefFlashBrowser/Themes/` | `CefFlashBrowser/Assets/Language/`、`CefFlashBrowser/ViewModels/` |
++| 日志 | `CefFlashBrowser.Log/` | `CefFlashBrowser.Tests/FileLoggerTests.cs`、`CefFlashBrowser/Utils/LogHelper.cs` |
++| 测试 | `CefFlashBrowser.Tests/CefFlashBrowser.Tests.csproj` | 对应测试类与 `TestData/` |
++| Windows 发布 | `publish.ps1`、`publish.bat` | 主项目 post-build 与输出目录配置 |
++
++路由规则：
++
++- 任务文档是该任务的细节来源；`AGENTS.md` 只提供通用约束。
++- 进入 `spike/macos-host/` 操作前，必须继续读取并执行 `spike/macos-host/AGENTS.md`；不得只读本表后直接修改。
++- 同一任务命中多个路由时，必须读取全部匹配的首要入口；“接口同时改变变量”等跨域任务不得只选其中一个。
++- 文档与代码不一致时，以可验证的仓库事实为准，并同步修正文档。
++- 新增长期专项文档时，在上表增加入口；不要把专项执行清单复制回本文件。
++- 不要猜测尚未创建的工程、命令、资产或能力。
++
++## 3. 通用工作规则
++
++1. 修改前执行 `git status --short`，识别并保留用户已有改动。
++2. 先阅读相关实现、调用方和测试，再确定最小改动面。
++3. 优先复用已有模型、算法、fixture、资源和测试；不能合理复用时再重写。
++4. 保持高内聚、低耦合；平台、UI、浏览器和文件系统细节不得扩散到业务逻辑。
++5. 不做与任务无关的批量格式化、目录移动、重命名、依赖升级或架构重写。
++6. 不通过跳过项目、禁用测试、吞掉异常或降低功能来制造“通过”。
++7. 对不确定行为先建立最小验证或回归测试，不凭经验臆测。
++8. 只报告实际执行过的构建、测试和验证；未执行项必须明确说明。
++
++## 4. 架构规范
++
++- 业务模型和用例不依赖具体 UI、浏览器内核、窗口句柄或平台 API。
++- View 负责展示和原生控件宿主；ViewModel 不持有 `Window`、WebView、HWND、文件对话框等平台对象。
++- 浏览器、Flash、SOL、存储、日志、路径、激活和外部启动通过明确接口接入。
++- 依赖在 composition root 组装，优先使用构造函数注入；避免新增全局状态、service locator 和无所有者事件订阅。
++- 适配器可以依赖业务接口，业务层不能反向依赖适配器；适配器之间避免直接耦合。
++- 平台差异集中在平台层，不在业务代码中散布条件编译或 OS 判断。
++- Legacy 修复遵循现有结构并保持改动最小；除非任务明确要求，不借修复之机强制套用 vNext 架构。
++
++## 5. 代码与性能规范
++
++- 遵循所在项目已有语言版本、格式和命名；不要为单个改动整体升级 Legacy 目标框架或编译选项。
++- 新代码应明确 null、错误和生命周期语义，避免以裸 `object` 或魔法字符串表达稳定领域类型。
++- 长生命周期资源采用确定性释放；事件订阅必须有对应取消订阅。
++- 异步 API 支持取消；禁止在 UI 线程执行同步网络、全目录扫描、大文件解析或无界等待。
++- 路径使用 `Path.Combine` 或路径服务，不硬编码目录分隔符。
++- 设置、收藏夹和 SOL 等用户数据写入采用临时文件、原子替换和必要备份。
++- 并发、缓存、对象池和批量处理只能在有测量依据时引入；性能改动附基准或前后数据。
++- 第三方依赖必须解决明确问题、固定版本并记录来源；不要重复造已有且适用的组件。
++
++## 6. 构建规范
++
++当前 `CefFlashBrowser.slnx` 含 C++/CLI 项目，Legacy **必须在 Windows 使用 Visual Studio MSBuild**，不能使用 `dotnet build`。
+ 
+ ```cmd
+-:: Build solution (x64 Debug)
++:: x64 Debug
+ set DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR=C:\Program Files\dotnet
+ "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\MSBuild.exe" ^
+   CefFlashBrowser.slnx -p:Configuration=Debug -p:Platform=x64 -restore
+ ```
+ 
+ ```cmd
+-:: Build and run unit tests
++:: Build and run Legacy tests
+ set DOTNET_MSBUILD_SDK_RESOLVER_CLI_DIR=C:\Program Files\dotnet
+ "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\MSBuild.exe" ^
+   CefFlashBrowser.Tests\CefFlashBrowser.Tests.csproj -p:Configuration=Debug -p:Platform=x64 -restore
+ dotnet test CefFlashBrowser.Tests/CefFlashBrowser.Tests.csproj -p:Platform=x64 --no-build
+ ```
+ 
+-```cmd
+-:: Build Release (x86 + x64) and create versioned zip archives in bin\Publish\
+-publish
+-```
+-
+-## Architecture
+-
+-**Solution:** `CefFlashBrowser.slnx` — 8 projects, MVVM pattern using SimpleMvvm framework.
+-
+-### Projects
+-
+-| Project | Type | Purpose |
+-|---------|------|---------|
+-| **CefFlashBrowser** | WPF App (.NET 4.6.2) | Main application — Views, ViewModels, Models, Utils |
+-| **CefFlashBrowser.FlashBrowser** | C# Library | Flash-enabled browser controls wrapping CefSharp |
+-| **CefFlashBrowser.WinformCefSharp4WPF** | C# Library | Bridges WinForms CefSharp into WPF via HwndHost |
+-| **CefFlashBrowser.Sol** | C++/CLI Library | SOL file parser/writer with AMF0/AMF3 serialization |
+-| **CefFlashBrowser.Singleton** | C++/CLI Library | Win32 IPC messaging for single-instance enforcement |
+-| **CefFlashBrowser.Log** | C# Library (.NET 4.6.2) | File-based logging |
+-| **CefFlashBrowser.EmptyExe** | WPF Exe | Minimal subprocess used by CefSharp |
+-| **CefFlashBrowser.Tests** | MSTest (.NET 4.6.2) | Unit tests — links source files from main app via `<Compile Include>` |
+-
+-### Main App Structure (CefFlashBrowser/)
++- MSBuild 路径按 Visual Studio Edition 调整。
++- macOS/Linux 环境无法完整验证 Legacy；不要通过跳过 C++/CLI 项目替代正式构建。
++- vNext 的构建命令以对应任务文档和实际工程文件为准；执行前先确认文件存在。
++- Windows Release 使用 `publish.ps1` 或 `publish.bat`。
+ 
+-- **Data/** — `GlobalData` (global app state, paths, config), `MessageTokens` (MVVM messenger tokens)
+-- **Models/** — `Settings` (serialized user preferences), domain models (search engines, themes, SOL types, etc.)
+-- **ViewModels/** — One ViewModel per window; `ViewModelLocator` wires DI via `SimpleIoc`
+-- **Views/** — WPF windows and dialogs; `Views/Custom/` for reusable controls; `Views/Dialogs/` for modal dialogs
+-- **Utils/** — Helpers (`WindowManager`, `ThemeManager`, `LanguageManager`, `DialogHelper`, `SolHelper`), `Converters/`, `Behaviors/`, `Handlers/`
+-- **Assets/** — Icons, SVGs, language resource dictionaries, bundled CEF/Flash binaries (tar.gz archives extracted at post-build)
+-- **Themes/** — WPF theme resource dictionaries
++## 7. 测试规范
+ 
+-### Reference Documentation (Docs/)
++- 每个行为变更必须有相应回归验证；优先扩展最接近的现有测试类。
++- 修复缺陷时，尽可能先增加能复现缺陷的失败测试。
++- 覆盖正常路径、边界条件、错误输入和兼容性；专项用例按任务路由中的规范与 fixture 执行。
++- UI 与浏览器逻辑尽量下沉为可单测状态；原生 WebView、窗口、快捷键和文件对话框需在目标系统验证。
++- 修改被 source-linked 的 Legacy 源文件时，同步检查测试项目配置和实际编译范围。
++- 无法在当前环境运行相关测试时，记录准确原因、未验证范围和建议验证命令。
+ 
+-- `amf0-file-format-specification.pdf` — AMF0 file format specification (used by CefFlashBrowser.Sol)
+-- `amf3-file-format-spec.pdf` — AMF3 file format specification (used by CefFlashBrowser.Sol)
++## 8. 文件与数据安全
+ 
+-### Unit Tests (CefFlashBrowser.Tests/)
++- 工作区中的已有修改和未跟踪文件默认属于用户，不覆盖、不删除、不回滚。
++- 不编辑生成目录、构建产物、压缩二进制资产或第三方包，除非任务明确要求。
++- 删除、迁移、覆盖用户数据前先解析精确目标，并优先采用可恢复操作。
++- 不将运行时数据写入应用资源目录；平台数据路径通过专用路径层管理。
++- 数据格式迁移必须幂等、可预检、可回退，不静默丢弃未知字段。
+ 
+-- **Framework:** MSTest (`Microsoft.NET.Test.Sdk`, `MSTest.TestAdapter`, `MSTest.TestFramework`)
+-- **Project references:** Only `CefFlashBrowser.Log` and `CefFlashBrowser.Sol` — does **not** reference the main app project
+-- **Source linking:** Testable source files (Models, Utils, Converters) are linked from the main app via `<Compile Include>` entries in the test `.csproj`. To test a new class, add a corresponding `<Compile Include>` link.
+-- **Limitation:** WPF is enabled (`<UseWPF>true`), but there is no reference to the main app project or CefSharp — cannot directly test code that depends on CefSharp or main app types not linked via `<Compile Include>`
+-- **Test data:** SOL fixture files in `TestData/` directory (copied to output via `<Content>`)
+-- **Test classes:** `AmfEncodingTests`, `SolFileReadWriteTests`, `SettingsTests`, `UrlHelperTests`, `ConverterTests`, `FileLoggerTests`
++## 9. 文档规范
+ 
+-### Key Patterns
++- README 面向使用者；AGENTS 面向所有代码任务；专项方案/ADR 面向具体工程决策。
++- 构建方式、目录、依赖或行为发生变化时，同步更新唯一权威文档及路由入口。
++- 不在多个文档复制完整任务清单；通过链接保持单一来源。
++- 注释解释原因、约束和非显然行为，不复述代码。
+ 
+-- **MVVM messaging:** Cross-component communication uses `Messenger` with tokens defined in `MessageTokens.cs`
+-- **Assembly embedding:** Costura.Fody bundles managed DLLs into the main exe; native DLLs (Sol, Singleton) are excluded and shipped separately
+-- **Post-build scripts:** The main `.csproj` has extensive post-build steps that extract tar.gz CEF/Flash archives and organize output directories
+-- **Localization:** XAML resource dictionaries in `Assets/Language/`; managed by `LanguageManager`
+-- **User data:** Stored in `%USERPROFILE%\Documents\CefFlashBrowser\` (settings.json, favorites.json)
++## 10. 完成标准
+ 
+-### Platform Notes
++任务只有在以下条件满足时才算完成：
+ 
+-- Builds target both x86 and x64; output paths differ: `bin\Release\` (x86) vs `bin\x64\Release\` (x64)
+-- Entry point is `Program.cs` (not the default `App.xaml.cs`)
+-- CefSharp version 84.4.10 is pinned for Flash compatibility
+-- UI controls from HandyControl library
++- 需求已实现，改动范围与任务一致。
++- 依赖方向和平台边界没有恶化。
++- 相关测试或目标平台验证已完成；未验证项已明确报告。
++- 用户数据兼容性和可恢复性得到保护。
++- 工作区无意外生成物或无关改动。
++- 相关专项文档、ADR 或路由已与代码同步。

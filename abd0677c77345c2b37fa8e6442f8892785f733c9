@@ -1,0 +1,55 @@
+# A02 端口与生命周期验收
+
+状态：DONE。日期：2026-10-28（Australia/Sydney）。本任务验收正式端口、生命周期和导航隔离；产品浏览器、存储事务、菜单及发行仍按后续任务实施。目标 Git 为无提交 main，全部修改未提交；没有推送或发布。
+
+## 输入、实现和契约
+
+输入为 A01 已验收的八模块正式工程。`docs/provenance/A02-before.json` 保留修改前输入，`A02-changes.json` 逐文件记录前后 hash、继承的原路径/hash 及修改原因。104 个固定资产和全部 13 个依赖锁保持原字节，没有升级依赖或改写 Ruffle。完整来源与证据索引见本目录 acceptance-index.json。
+
+实现单一 AsyncLifecycle、共享 Ready 和共享关闭任务、可取消命令及音量工作排空；Root 明确拥有播放器、窗口、popup、session、原生控件、服务和诊断采集。失败清理继续尝试其他资源，失败不作为正常退出。实际初始化任务与取消等待分开，防止初始化尚在访问资源时提前释放。ViewModel 通过 IUiDispatcher 更新，不持有 Window、WebView、原生句柄或面板。
+
+导航带递增世代与当前文档 ID；本地每次播放带独立 runId。版本 1 bridge 检查上下文并使用有界后台解析与应用队列，限制长度、深度、排队条数及 snapshot 数量；旧页任务不能更新新页。具体事件线程、期限、关闭策略与资源所有权表见 `docs/contracts/interfaces.zh-CN.md`。来源字段来自当前文档读取及注入上下文，不宣称已实现 WebKit 原生 frame 认证。
+
+先建立失败回归，再修复旧页存档 UI 事件、旧 trace、消息洪泛、已释放命令可再次执行和较早本地打开覆盖新请求。原始失败保留在 `lifetime-red-20261028-01`（应用 3 失败、桌面 1 失败）及 `open-order-red-20261028-01`（1 失败）；不计入最终通过数。
+
+## 环境、执行和结果
+
+Apple M1 Pro、arm64、macOS 26.5.1 (25F80)、SDK 10.0.301 / .NET 10.0.9。依赖仍为集中锁定的 Avalonia 12.1.0、WebView 12.0.1。托管验证 Debug；实际 native 会话使用 Release self-contained 开发包，PATH 仅系统目录、DOTNET_ROOT 未设置。所有最终构建/运行禁读原仓库、reference 和 bootstrap。构建禁用持久服务器并设置每次唯一 MSBuild 握手 salt。
+
+```sh
+sh scripts/verify.sh --task A02 --run-id lifecycle-managed-20261028-04 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+python3 scripts/package-development.py --task A02 --run-id lifecycle-package-20261028-04
+python3 scripts/run-native.py --task A02 --run-id lifecycle-mole-login-native-20261028-03 \
+  --package-run lifecycle-package-20261028-04 --url http://mole.61.com/ \
+  --inspect-page --capture-count 30 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+```
+
+完整实际命令、时间、环境、退出码和 hash 在 `artifacts/evidence/A02/<run-id>/`，原生页面与应用日志在对应 `artifacts/profiles/<run-id>/`。脚本 `process-result.json` 的 EXITED 只表示进程退出；内容判定另存 native-result.json。
+
+| 检查 | 预期与实际 | 证据与退出码 |
+|---|---|---|
+| 正式构建及回归 | 145 托管、12 工具全部通过，0 跳过，0 构建警告；输入与 13 锁不变 | lifecycle-managed-20261028-04，各阶段 0 |
+| 初始化失败/取消/关闭竞态 | fake 覆盖失败后清理、共享启动、调用方取消、不合作期限、并发关闭；native 无 adapter 的 Ready 有界；关闭后拒绝操作 | 五份 TRX；全部通过 |
+| 迟到消息及队列 | 同 URL 新文档、导航期间写入、旧 trace、洪泛、较早打开覆盖等均由回归验证 | Application/Integration/Desktop TRX |
+| 本地 SWF 真机 | 初始打开、连续两次 Reload player、浏览器 Reload：4 个 runId 各仅一次开始/ready/Hello trace，2 个文档 ID；Command-Q 退出 | lifecycle-local-native-20261028-01/native-result.json；0 |
+| popup 真机 | 打开 popup 可见通过提示，关闭后再开；主窗口与 popup 同时退出。3 个 adapter 均实际 destroyed、3 个 reader 均停止、2 个 popup 所有权均释放，共享同一 WebKit store | lifecycle-popup-native-20261028-01/native-result.json；0 |
+| 摩尔庄园 | 官方入口 → 点击开始 → 空账号/密码和登录按钮可见，未输入凭据；原生截图实际显示登录页；原生关闭按钮退出且清理无失败 | lifecycle-mole-login-native-20261028-03/native-result.json；0；本目录 mole-login-native.png |
+| 原仓库及旧数据 | 332 份源业务文件、HEAD、完整 dirty 状态以及四个旧数据根均不变 | source-preserved.json、legacy-data-preserved.json |
+
+本地和 popup 会话使用 package-03。package-04 仅增加诊断截图数量的有界配置，摩尔庄园最终会话使用同一 package-04 整包，启动前全部 bundle 文件与冻结归档一致，严格开发签名验证通过。最终 managed-04 覆盖新增诊断配置。两份包及源码输入 hash 都完整保留，不把不同产物视为同一 hash。
+
+## 开发签名和保留问题
+
+开发打包最初两次失败：仅签 Mach-O 时 managed DLL 未签，补签 DLL 后 runtime metadata JSON 未签。`lifecycle-package-20261028-01/02` 原始日志与产物保留。最终开发包明确签 18 个 Mach-O、348 个 managed DLL 以及两个 .NET runtime metadata JSON，严格验证通过。通用代码签名依赖扩展属性，由归档保留；该布局和开发 entitlement 不代表正式发行合规，Q03/Q04 必须收敛并重新验收。
+
+摩尔庄园前两轮 native 采样在手动点击前已结束，尽管资源列表包含 Login.swf，截图仍是开始页；这些截图没有算作登录证明。最终以有界 30 次采样取得真正登录画面并逐图核验。没有将预加载资源当作 UI 成功。
+
+已确认未解决的问题：Flash 登录输入框聚焦时 Command-Q 没有退出（`lifecycle-mole-native-20261028-01/focused-quit-failure.json`，FAIL），改为原生关闭按钮可正常释放；点击原生地址栏再 Command-Q 可退出，仅为对照，不覆盖该失败。U01/W01/U04 必须修复和复测。页面 iframe 导航一度使地址栏短暂显示公告 URL，W01 仍须完善 frame 导航处理。P02 的中文 IME 重复事件仍为 FAIL。菜单、frame/CSP 全覆盖、完整播放器错误/确认、存档事务和最终发布均不因 A02 变为通过。
+
+A02 的共享关闭、释放和 fake 失败路径均已验证；原生菜单焦点属于后续菜单/浏览器任务，保留具体失败，不降低必要产品要求。没有真实初始化故障的负向 GUI 会话，相关失败退出目前由可控 fake 和既有服务缺失资产回归验证，不冒充真机注错。
+
+## 下一任务
+
+A03：先为 JSON store 磁盘失败后内存提前提交和部分加载建立失败用例；再完成产品身份/路径、候选状态原子提交、备份恢复、限额、内容身份模型与有界日志。测试 profile 和产品数据分离，普通启动不再要求依赖原型配置。

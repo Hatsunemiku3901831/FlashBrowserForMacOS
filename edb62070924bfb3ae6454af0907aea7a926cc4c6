@@ -1,0 +1,58 @@
+# A01 正式工程迁移验收
+
+状态：DONE。日期：2026-10-28（Australia/Sydney）。目标 Git 为无提交的 main，全部源码与文档尚未提交。本任务验收正式分层、迁移语义和独立构建，不代表正式桌面产品或发行包已经完成。
+
+## 输入与变更
+
+输入为 P03 通过 G0 的本仓库 bootstrap；已复核 `docs/evidence/P03/2026-10-28/gate0-new-repository.json` 的全部索引 hash，无差异。来源仓库没有参与正式构建。原路径、原 SHA-256、P03 工作副本路径/hash、正式目标/hash 和修改原因见 `docs/provenance/A01-changes.json`，四份分阶段 import manifest 保留最初迁移状态。
+
+建立八个正式模块及五个测试工程。Domain 仅有纯模型，Application 拥有浏览器、文件、脚本、路径、存档和头解析端口及协调用例；各适配器只依赖内层。Ruffle 的脚本原文、WebKit 的原生绑定、平台文件面板和基础设施文件写入各有单一实现。Desktop 的具体实现引用只存在于 composition root，ViewModel 不持有窗口、浏览器控件、原生句柄或对话框。
+
+迁移保留既有 bridge 全局名、命令同步返回 true、存储变更在旧实例销毁后执行、trace 绑定与 bridge 排空语义。没有升级依赖、改写固定运行时或重写 AMF codec。完整 AMF 类型和事务增强分别由 S01—S05、A03 实施；原有 JSON store 的内存提前提交风险仍须在 A03 修复。
+
+104 份正式固定资产见 `docs/provenance/formal-assets.json`，包含固定 Ruffle 0.4.1、许可、官方语料、项目语料和四份 Legacy SOL。Ruffle/fixture 从已验收副本原字节复制；正式 Content/ProjectReference 不引用 reference、bootstrap 或原仓库。迁移后的 bootstrap 冻结，不再双写。
+
+13 份新图的锁先受控生成，再审查并只使用 locked restore。`docs/provenance/A01-lock-review.json` 显示所有第三方包版本及 contentHash 均来自原锁，没有第三方版本变化。
+
+## 环境和执行
+
+Apple M1 Pro、arm64、macOS 26.5.1 (25F80)、.NET SDK 10.0.301、net10.0、Debug。集中版本仍为 Avalonia 12.1.0、Controls.WebView 12.0.1、MSTest 4.3.2；SDK、原型资产版本均未升级。
+
+正式入口：
+
+```sh
+sh scripts/verify.sh --run-id independent-20261028-03 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+```
+
+每阶段实际命令、环境、退出码、完整 TRX、输入及日志 SHA-256 在 `artifacts/evidence/A01/independent-20261028-03/`。驱动从新临时工作目录调用绝对 solution 路径；macOS sandbox 禁止读取原仓库、本仓库 reference 和 bootstrap。restore/build/test 全部关闭持久构建服务器，并为该轮设置唯一 MSBuild 握手 salt，防止不同 sandbox 的后台节点互用。
+
+独立改路径的干净源码位于 `/private/tmp/FlashMacOS-A01-relocated-20261028-02/已移动 项目`。只复制正式输入，不复制 bin/obj、reference 或 bootstrap；复制清单和逐文件 hash 在 `artifacts/evidence/A01/relocated-20261028-02/copy-manifest.json`。从 `/private/tmp` 执行该副本的 verify，同时禁止读取整个原 flashMacOS 工作目录及 CefFlashBrowser。原始输出已完整镜像到本项目 `relocated-results/`，不只保留临时目录链接。
+
+## 实际结果
+
+| 检查 | 预期与实际 | 退出码/证据 |
+|---|---|---|
+| 正式边界 | 八模块、五测试工程；Domain/Application 无 UI/具体适配器；无适配器互引、外部输入或符号链接；实际 PASS | 0，independent-20261028-03/boundaries.json |
+| 固定资产 | 104 个文件 hash 一致，实际 PASS | 同上 |
+| locked restore/build | 成功；零警告、零错误；全部 13 锁不变 | 各 0，restore.log、build.log |
+| 托管回归 | 原型 107 项逐名保留，加 3 项架构检查；实际 110/110、0 失败、0 跳过 | 五项目均 0，TestResults、result.json |
+| 工具回归 | 原 8 项及新增 4 项边界负例；实际 12/12 | 0，tooling.log |
+| 路径变化/来源不可见 | 中文/空格新路径、无生成物、原新两个工作目录不可读；实际同样 110+12 通过，输入与锁不变 | 0，relocated-20261028-02/driver-result.json、relocated-results/ |
+| ARM64 预检 | osx-x64 在 restore 前由 FM0001 拒绝，全部锁不变 | 预期非零，architecture-rejection-20261028-03/result.json |
+| 测试迁移 | 原始 97 项及 P01—P03 新增 10 项均有正式去向，无丢项或跳过 | provenance/A01-test-map.json |
+| 原仓库 | 332 份业务文件、HEAD 和完整 dirty 状态均不变 | source-preserved.json |
+
+最小 CI 已创建为 `.github/workflows/arm64-managed.yml`，仅手动触发、有 Apple Silicon 的 self-hosted macOS runner，checkout 固定为已核对的完整 commit。未配置远程仓库/runner，因此没有声称 CI 已实际运行。checkout 来源为 [官方发行](https://github.com/actions/checkout/releases/tag/v7.0.1)，同时实际查询 tag 得到 `3d3c42e5aac5ba805825da76410c181273ba90b1`。
+
+## 失败、修复和适用范围
+
+原始失败均保留：首轮 Desktop 编译遇到 CA1859，具体 factory 返回类型改为 NativeWebView（仍只在 root）；第一轮边界工具负例发现 `/var` 与 `/private/var` canonical path 比较错误，修复后四个拒绝场景通过。首轮架构拒绝由 NU1004 拦截而非预期 FM0001，补充 RuntimeIdentifiers 复数属性及 restore 图前的检查。
+
+第一次目录迁移构建虽然通过，但后续命令发现不同 sandbox 间复用构建节点会产生 Access denied 干扰。`architecture-rejection-20261028-02` 的混合错误不计通过；`relocated-20261028-01` 仅保留为早期结果。最终 independent-03、relocated-02 使用唯一握手 salt 和禁用后台服务器完整复验。依据为当前 SDK 的 restore help、[MSBuild server 文档](https://github.com/dotnet/msbuild/blob/main/documentation/MSBuild-Server.md)及[握手实现](https://source.dot.net/Microsoft.Build.Framework/BackEnd/Handshake.cs.html)。
+
+此轮没有以浏览器自动化替代嵌入式 WK，也没有把 P03 原型截图当成正式工程新 GUI 验收。A01 的专属门禁是正式边界和构建迁移；正式初始化、关闭竞态及窗口所有权进入 A02，浏览功能、IME、完整存档编辑和最终发布门禁继续按方案实施。未提交、推送或发布。
+
+## 下一任务
+
+A02：冻结接口、导航世代、bridge 上限、事件线程及资源所有权，先建立失败用例覆盖初始化失败、取消、并发关闭、迟到消息和已接受任务排空。工作目录仍为本仓库，后续只改正式 src/tests。

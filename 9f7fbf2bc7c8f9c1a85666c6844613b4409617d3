@@ -1,0 +1,67 @@
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Storage;
+using CefFlashBrowser.MacOS.Spike.Core.Sol;
+
+namespace CefFlashBrowser.MacOS.Spike.Tests;
+
+[TestClass]
+public sealed class RuffleSaveStoreTests
+{
+    [TestMethod]
+    public async Task UpsertAsyncPersistsAtomicallyAndSurvivesReload()
+    {
+        using var directory = new TemporaryDirectory();
+        var storePath = directory.GetPath("ruffle-saves.json");
+        var bytes = await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol"));
+        var base64 = Convert.ToBase64String(bytes);
+        const string key = "127.0.0.1/game/settings";
+
+        RuffleSaveEntry inserted;
+        using (var store = new JsonRuffleSaveStore(storePath))
+        {
+            inserted = await store.UpsertAsync(key, base64);
+        }
+
+        Assert.AreEqual("settings", inserted.SolName);
+        Assert.AreEqual(SolEncoding.Amf0, inserted.Encoding);
+        Assert.AreEqual(bytes.Length, inserted.ByteLength);
+        Assert.IsTrue(File.Exists(storePath));
+        Assert.IsEmpty(Directory.EnumerateFiles(directory.RootPath, "*.tmp"));
+
+        using var reloadedStore = new JsonRuffleSaveStore(storePath);
+        var reloaded = await reloadedStore.GetAllAsync();
+        Assert.HasCount(1, reloaded);
+        Assert.AreEqual(key, reloaded[0].Key);
+        Assert.AreEqual(base64, reloaded[0].Base64Data);
+    }
+
+    [TestMethod]
+    public async Task UpsertAsyncInvalidBase64DoesNotOverwriteExistingStore()
+    {
+        using var directory = new TemporaryDirectory();
+        var storePath = directory.GetPath("ruffle-saves.json");
+        var base64 = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        using var store = new JsonRuffleSaveStore(storePath);
+        await store.UpsertAsync("valid", base64);
+        var original = await File.ReadAllBytesAsync(storePath);
+
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(
+            async () => await store.UpsertAsync("invalid", "not base64").AsTask());
+
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(storePath));
+        Assert.HasCount(1, await store.GetAllAsync());
+    }
+
+    [TestMethod]
+    public async Task RemoveAsyncReportsWhetherEntryExisted()
+    {
+        using var directory = new TemporaryDirectory();
+        var storePath = directory.GetPath("ruffle-saves.json");
+        var base64 = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("mao.sol")));
+        using var store = new JsonRuffleSaveStore(storePath);
+        await store.UpsertAsync("game/mao", base64);
+
+        Assert.IsTrue(await store.RemoveAsync("game/mao"));
+        Assert.IsFalse(await store.RemoveAsync("game/mao"));
+        Assert.IsEmpty(await store.GetAllAsync());
+    }
+}

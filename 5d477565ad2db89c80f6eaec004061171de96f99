@@ -1,0 +1,19 @@
+{
+  "mode": "apply",
+  "sourceRoot": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser",
+  "targetRoot": "/Users/umisonoda/PycharmProjects/flash/flashMacOS",
+  "sourceHead": "7cfbe01596168aca6326db7a68ca1c15d1b55638",
+  "sourceRemote": "https://github.com/Mzying2001/CefFlashBrowser.git",
+  "fileCount": 296,
+  "totalBytes": 30793859,
+  "copyCount": 0,
+  "noOpCount": 296,
+  "baselineDelta": {
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "baselineHeadMatches": true,
+  "conflicts": [],
+  "sourceUnchanged": true
+}

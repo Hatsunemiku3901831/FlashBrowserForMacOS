@@ -1,0 +1,47 @@
+# 持久化与恢复契约
+
+版本：A03。设置、收藏夹的 v2 schema 在 A04 追加；实时存档索引升级与编辑冲突在 W04 追加。本契约不把 SOL 头检查当作完整 AMF 内容验证。
+
+## 提交顺序
+
+所有仓储先读取完整、受限、通过校验的快照，再构造候选。JsonRuffleSaveStore 由实例内 SemaphoreSlim 顺序处理；读取、Base64 校验、映射和序列化在后台进行。读取失败不发布部分字典，也不把 null、未知版本、缺失 saves 或损坏 JSON 当作空默认值。JSON 成员名不得重复，深度最多 64；成员名 UTF-8 最多 64 KiB。
+
+候选写入同目录、随机名称、CreateNew 临时文件；经过流式长度限制、FlushAsync 与 Flush(true)，在提交点前再次检查取消和文件版本。当前文件存在时以 File.Replace 同时保留 `.bak`；首次创建或明确恢复使用同目录 rename。提交点之后不再次抛取消而伪报未提交。内存字典及 revision 仅在提交成功后更新。
+
+每个目标的 `.lock` 文件以 FileShare.None 持有独占提交租约，不删除这个租约文件，以免竞争进程锁到不同 inode。实例间或进程间竞争会明确失败；仓储再用 SHA-256 FileRevision 检查读取以来的版本。PersistenceConflictException 保留旧内存快照及磁盘上的新版本；调用方需明确 ReloadAsync 或保留双方。该协议针对参与租约的写者；非合作外部编辑器仍可能在最后检查与 rename 之间竞争，不能宣称跨所有外部程序的无条件比较交换。
+
+取消、权限拒绝、磁盘写入失败、限额或版本冲突均保留原文件与已提交内存。只清理本次拥有的临时文件；不扫描删除其他临时文件。原子 rename 与 durable file flush 可防止应用级半写；未宣称对所有文件系统、突然掉电和硬件故障提供事务保证，Q02/Q05 仍需异常退出与恢复验证。
+
+## 当前 v1 存档与限额
+
+当前文件为 ruffle-saves.v1.json：schemaVersion=1，saves 以现有 key 索引 Base64 SOL 和 updatedAt。原型 key 尚未自动改成 contentId；W04 必须提供明确映射和回退。未知根字段与未知 entry 字段使用 JsonExtensionData 原值保留；更新已有条目也保留其未知字段。原始损坏文件不会被退出默认保存覆盖。
+
+| 项目 | 默认边界 |
+|---|---|
+| 单个解码 SOL | 64 MiB |
+| 整个 JSON store（读取和候选序列化） | 256 MiB |
+| 条目数 | 1024 |
+| key | 16 Ki 字符 |
+| JSON 深度 | 64 |
+
+SaveStoreLimits 可注入更小边界以复现失败；正式默认没有为测试放宽。单文件目前验证 Base64、SOL 容器头和声明长度；完整 AMF 内容支持由 S01—S05 验收。v1 仍整体序列化，文件布局及大数据优化由 W04 基准决定，未宣称达到 10 MiB 性能预算。
+
+## 备份和恢复
+
+正常替换保留前一个已提交文件为 `.bak`。加载损坏数据只报告错误。RecoverBackupAsync 是显式基础设施操作：完整验证备份后，先将当前原字节保存到唯一 `.recovery-<guid>` 文件，再按当前 revision 原子恢复；不以损坏当前文件覆盖原备份。备份无效、当前超限或提交失败时拒绝恢复，保留所有已有材料。其最终用户入口、提示和迁移流程由 U03/M02 实施。
+
+AtomicFileWriter 的 TemporaryCreated、ContentFlushed、BeforeCommit 是可注入故障点，不是生产中的任意脚本执行入口。测试已覆盖各阶段写失败与取消、真实目录权限、旧 revision、并发租约和损坏恢复。最终任务报告指向具体 TRX 与输入 hash。
+
+## 内容身份
+
+Domain 的 ContentId 是非空持久 UUID，ContentIdentity 同时保留 profileId、LocalPackage/WebOrigin、locationAliases、可选内容 SHA-256 与资源包标识。增加别名保持同一 contentId；相同名称或相同字节不会自动合并独立游戏。Web 别名只接受无凭据、路径和 query 的公开 origin，随机 loopback 端口不成为永久网页身份。当前只冻结模型及验证规则；登记、移动关联、旧路径 key 升级和实时冲突由 W04 实现。
+
+## 日志与原始证据
+
+GateZeroSessionJournal 目前保留类名以稳定 composition 边界，内部已是产品事件摘要服务。默认 512 条有界队列、每文件 2 MiB、最多 8 个 session 文件；队列满计数并在排空时记录 journal.dropped。文件名含进程与 UUID，不覆盖历史文件。轮转只处理自己命名的已关闭 session 文件；保留 gate0 等历史原始证据。多个活动进程的文件各受自身边界控制，暂时不能删除其他进程正在写的文件。
+
+仅保留白名单元数据：进程 ID、版本、失败数、文档/run ID、协议类型和安全 origin。URL 的用户信息、路径、query、fragment，以及任意 trace、异常全文、Cookie、令牌和 SOL payload 不进入摘要。完整诊断由明确测试配置和采集选项写入独立证据；既有原始证据不被回溯脱敏、删减或改写。
+
+DisposeAsync 停止新入口，共享一个排空任务，默认最多 3 秒。磁盘错误通过 Completion/Failure 和 DisposeAsync 传播；不合作 writer 超时是失败，不算成功排空。原生 Root 最后释放日志，将清理失败反映到非零应用退出码。
+
+依据：[.NET File.Replace](https://learn.microsoft.com/en-us/dotnet/api/system.io.file.replace?view=net-10.0) 的替换/备份接口；真实 macOS 文件系统行为由本仓库测试验证。

@@ -1,0 +1,94 @@
+"""Transcribe normative examples by hand. No production AMF reader or writer is used."""
+from pathlib import Path
+import hashlib
+import json
+
+ROOT = Path(__file__).resolve().parents[4]
+DEST = ROOT / 'test-assets/sol-golden'
+DEST.mkdir(exist_ok=True)
+rows = []
+def add(name, encoding, hex_bytes, expected, sections, canonical=True, diagnostic=None):
+    data = bytes.fromhex(hex_bytes)
+    path = DEST / (name + '.amf' + str(encoding))
+    path.write_bytes(data)
+    rows.append({'id': name, 'path': str(path.relative_to(ROOT)), 'encoding': encoding,
+                 'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data), 'hex': data.hex(),
+                 'expected': expected, 'specSections': sections, 'canonicalWriterBytes': canonical,
+                 'diagnostic': diagnostic})
+
+add('amf0-scalars', 0,
+    '0a0000000b 06 05 0100 01ff 008000000000000000 007ff8000000000042 '
+    '007ff0000000000000 00fff0000000000000 020006e4bda0e5a5bd 0c0000000178 020000',
+    {'arrayKind': 'Amf0Strict', 'dense': ['undefined','null',False,True,
+     {'numberBits':'8000000000000000'},{'numberBits':'7ff8000000000042'},
+     {'numberBits':'7ff0000000000000'},{'numberBits':'fff0000000000000'},'你好','x','']},
+    ['AMF0 2.2-2.4, 2.7-2.8, 2.12, 2.14'], False)
+add('amf0-null-array', 0, '0a00000003050605',
+    {'arrayKind':'Amf0Strict','dense':['null','undefined','null']}, ['AMF0 2.12'])
+add('amf0-self-object', 0, '03 000473656c66 070000 000009',
+    {'nodeId':0,'objectKind':'Amf0Object','properties':[['self',{'ref':0}]]}, ['AMF0 2.5, 2.9, 2.11'])
+add('amf0-shared-object', 0, '0a00000002 03000178003ff0000000000000000009 070001',
+    {'arrayId':0,'dense':[{'nodeId':1,'properties':[['x',{'numberBits':'3ff0000000000000'}]]},{'ref':1}]},
+    ['AMF0 2.5, 2.9, 2.12'])
+add('amf0-empty-and-duplicate-keys', 0, '03 000005 00017a05 00017a06 000009',
+    {'properties':[['','null'],['z','null'],['z','undefined']]}, ['AMF0 2.5, 2.11'])
+add('amf0-ecma-advisory-count', 0, '08000001f4 00017805 000009',
+    {'arrayKind':'Amf0Ecma','declaredAssociativeCount':500,'associative':[['x','null']]}, ['AMF0 2.10-2.11'])
+add('amf0-date-fraction-timezone', 0, '0bbfd0000000000000ffc4',
+    {'millisecondsBits':'bfd0000000000000','reservedTimezone':-60}, ['AMF0 2.13'])
+add('amf0-xml-document', 0, '0f000000043c782f3e', {'xmlDocument':'<x/>'}, ['AMF0 2.17'])
+add('amf0-typed-object', 0, '100005506f696e74 000178003ff0000000000000 000009',
+    {'objectKind':'Amf0TypedObject','className':'Point','properties':[['x',{'numberBits':'3ff0000000000000'}]]}, ['AMF0 2.18'])
+add('amf0-empty-typed-class', 0, '100000000009',
+    {'objectKind':'Amf0TypedObject','className':'','properties':[]}, ['AMF0 2.18'])
+add('amf0-avmplus-and-following', 0, '0a00000002 11042a 02000178',
+    {'dense':[{'avmPlus':{'integer':42}},'x']}, ['AMF0 3.1; AMF3 3.6'])
+for marker, label in [('04','MovieClip'),('0d','Unsupported'),('0e','Recordset'),('ff','Unknown')]:
+    add('amf0-reject-'+label.lower(), 0, marker, {'mustRefuseSave':True}, ['AMF0 2.1, 2.6, 2.15-2.16'],
+        diagnostic={'offset':0,'marker':int(marker,16),'reason':label})
+
+add('amf3-scalars', 3,
+    '091901 00 01 02 03 04ffffffff 0400 058000000000000000 057ff8000000000042 '
+    '057ff0000000000000 05fff0000000000000 060de4bda0e5a5bd 0601',
+    {'arrayKind':'Amf3Mixed','dense':['undefined','null',False,True,{'integer':-1},{'integer':0},
+     {'numberBits':'8000000000000000'},{'numberBits':'7ff8000000000042'},
+     {'numberBits':'7ff0000000000000'},{'numberBits':'fff0000000000000'},'你好','']}, ['AMF3 3.2-3.8, 3.11'])
+add('amf3-self-array', 3, '0903010900', {'arrayId':0,'dense':[{'ref':0}]}, ['AMF3 3.11'])
+add('amf3-self-object', 3, '0a0b010973656c660a0001',
+    {'nodeId':0,'dynamic':True,'properties':[['self',{'ref':0}]]}, ['AMF3 3.12'])
+add('amf3-shared-object', 3, '0905010a0b010378042a010a02',
+    {'arrayId':0,'dense':[{'nodeId':1,'properties':[['x',{'integer':42}]]},{'ref':1}]}, ['AMF3 3.11-3.12'])
+add('amf3-trait-reference', 3, '090501 0a230b506f696e740378037904010402 0a0104030404',
+    {'dense':[{'className':'Point','sealedNames':['x','y'],'sealedValues':[1,2]},
+              {'className':'Point','sealedNames':['x','y'],'sealedValues':[3,4]}],'traitTableCount':1}, ['AMF3 3.12'])
+add('amf3-string-reference-empty', 3, '090901060378060006010601',
+    {'dense':['x','x','',''],'stringTable':['x']}, ['AMF3 2.2, 3.8, 3.11'])
+add('amf3-date-reference', 3, '0905010801bfd00000000000000802',
+    {'dense':[{'nodeId':1,'millisecondsBits':'bfd0000000000000'},{'ref':1}]}, ['AMF3 3.10-3.11'])
+add('amf3-xml-kinds', 3, '09090107093c782f3e0b093c782f3e07020b04',
+    {'dense':[{'nodeId':1,'xmlDocument':'<x/>'},{'nodeId':2,'xml':'<x/>'},{'ref':1},{'ref':2}]}, ['AMF3 3.9, 3.13'])
+add('amf3-bytearray', 3, '0c070080ff', {'bytesHex':'0080ff'}, ['AMF3 3.14'])
+add('amf3-vector-int', 3, '0d0501800000007fffffff',
+    {'vector':'int','fixed':True,'values':[-2147483648,2147483647]}, ['AMF3 3.15'])
+add('amf3-vector-uint', 3, '0e050000000000ffffffff',
+    {'vector':'uint','fixed':False,'values':[0,4294967295]}, ['AMF3 3.15'])
+add('amf3-vector-number', 3, '0f050180000000000000007ff8000000000042',
+    {'vector':'double','fixed':True,'numberBits':['8000000000000000','7ff8000000000042']}, ['AMF3 3.15'])
+add('amf3-vector-object-self', 3, '100500032a011000',
+    {'nodeId':0,'vector':'object','fixed':False,'typeName':'*','values':['null',{'ref':0}]}, ['AMF3 3.15'])
+add('amf3-dictionary-identity-self', 3, '1105010a030111000a010601',
+    {'nodeId':0,'weakKeys':True,'entries':[[{'nodeId':1,'sealedNames':[]},{'ref':0}],
+                                          [{'nodeId':2,'sealedNames':[]},'']]}, ['AMF3 3.12, 3.16'])
+add('amf3-unknown-externalizable', 3, '0a071f756e6b6e6f776e2e5061796c6f6164deadbeef',
+    {'className':'unknown.Payload','mustRefuseSave':True,'unparsedTail':'deadbeef'}, ['AMF3 3.12, 4'],
+    diagnostic={'offset':0,'marker':10,'reason':'UnknownExternalizable'})
+add('amf3-unknown-marker', 3, 'ff', {'mustRefuseSave':True}, ['AMF3 3.1'],
+    diagnostic={'offset':0,'marker':255,'reason':'Unknown'})
+
+manifest = {'schemaVersion':1,'origin':'Project-authored manual transcription from fixed Adobe specifications; not generated by a codec',
+ 'specifications':[{ 'path':str(path.relative_to(ROOT)), 'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+                  for path in sorted((ROOT/'reference/legacy/Docs').glob('amf*.pdf'))],
+ 'note':'These are single AMF values, not SOL files. canonicalWriterBytes=false permits bool normalization and short/long string choice. Reader/writer verification is S02/S03, not S01.',
+ 'fixtures':rows}
+(DEST/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'fixtures':len(rows),'bytes':sum(row['bytes'] for row in rows)}))

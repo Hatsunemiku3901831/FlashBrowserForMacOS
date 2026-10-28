@@ -1,0 +1,105 @@
+using System.Security.Cryptography;
+using System.Text;
+
+namespace CefFlashBrowser.MacOS.Spike.Tests;
+
+[TestClass]
+public sealed class GateZeroFixtureTests
+{
+    [TestMethod]
+    public void SharedObjectFixturesMatchPinnedUpstreamHashes()
+    {
+        Assert.AreEqual(
+            "1a215bd4d1f1b6833267216650d8b1db94b42b9f72fb6489e18a65c229411b7c",
+            ComputeSha256(Path.Combine(AppContext.BaseDirectory, "TestData", "shared-object-avm1.swf")));
+        Assert.AreEqual(
+            "f680967f67a440d153d63cfd00c89ece1c0770d79531d51003afa3131758b978",
+            ComputeSha256(TestAssets.Sol("RuffleTest.sol")));
+    }
+
+    [TestMethod]
+    [DataRow("Test.as", "b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e")]
+    [DataRow("output.txt", "0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8")]
+    [DataRow("test.swf", "708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17")]
+    [DataRow("test.toml", "fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd")]
+    public void Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes(
+        string fileName,
+        string expectedHash)
+    {
+        var path = Avm2HelloWorld(fileName);
+
+        Assert.IsTrue(File.Exists(path), $"Missing AVM2 fixture file: {fileName}");
+        Assert.AreEqual(expectedHash, ComputeSha256(path));
+    }
+
+    [TestMethod]
+    public void Avm2HelloWorldExpectedOutputNormalizesExactly()
+    {
+        var output = File.ReadAllText(Avm2HelloWorld("output.txt"), Encoding.UTF8)
+            .TrimStart('\uFEFF')
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .TrimEnd('\n');
+
+        Assert.AreEqual("Hello world!", output);
+    }
+
+    [TestMethod]
+    public void Avm2HelloWorldSourceAndSwfCarryDeterministicEvidence()
+    {
+        var source = File.ReadAllText(Avm2HelloWorld("Test.as"), Encoding.UTF8);
+        var swfPath = Avm2HelloWorld("test.swf");
+        var swf = File.ReadAllBytes(swfPath);
+
+        StringAssert.Contains(source, "trace(\"Hello world!\");");
+        Assert.IsNotEmpty(swf);
+        Assert.AreEqual(580, swf.Length);
+        Assert.AreEqual("CWS", Encoding.ASCII.GetString(swf, 0, 3));
+        Assert.AreEqual(
+            "708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17",
+            ComputeSha256(swfPath));
+    }
+
+    [TestMethod]
+    [DataRow("Test.as", 5_715, "d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d")]
+    [DataRow("index.html", 1_906, "e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0")]
+    [DataRow("test.fla", 4_804, "1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9")]
+    [DataRow("test.swf", 2_308, "d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5")]
+    [DataRow("test.ts", 11_769, "ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894")]
+    public void ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream(
+        string fileName,
+        int expectedBytes,
+        string expectedHash)
+    {
+        var path = ExternalInterface(fileName);
+
+        Assert.IsTrue(File.Exists(path), $"Missing ExternalInterface fixture file: {fileName}");
+        Assert.AreEqual(expectedBytes, new FileInfo(path).Length);
+        Assert.AreEqual(expectedHash, ComputeSha256(path));
+    }
+
+    [TestMethod]
+    public void ExternalInterfaceFixtureCarriesThePinnedBidirectionalOracle()
+    {
+        var actionScript = File.ReadAllText(ExternalInterface("Test.as"), Encoding.UTF8);
+        var upstreamOracle = File.ReadAllText(ExternalInterface("test.ts"), Encoding.UTF8);
+
+        StringAssert.Contains(actionScript, "ExternalInterface.addCallback(\"returnAValue\"");
+        StringAssert.Contains(actionScript, "ExternalInterface.addCallback(\"callMethodWithDelay\"");
+        StringAssert.Contains(upstreamOracle, "player.ruffle().callExternalInterface(\"returnAValue\", 123.4)");
+        StringAssert.Contains(upstreamOracle, "player.callMethodWithDelay(\"window.RuffleTest.set\", true)");
+        StringAssert.Contains(upstreamOracle, "it.skip(\"calls a reentrant JS method\"");
+    }
+
+    private static string Avm2HelloWorld(string fileName) =>
+        Path.Combine(AppContext.BaseDirectory, "TestData", "avm2-hello-world", fileName);
+
+    private static string ExternalInterface(string fileName) =>
+        Path.Combine(TestAssets.ExternalInterfaceDirectory, fileName);
+
+    private static string ComputeSha256(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexStringLower(SHA256.HashData(stream));
+    }
+}

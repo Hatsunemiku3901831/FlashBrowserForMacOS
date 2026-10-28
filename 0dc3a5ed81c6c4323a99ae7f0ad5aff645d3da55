@@ -1,0 +1,24 @@
+{
+  "taskId": "P02",
+  "fixtureId": "required-mole-login",
+  "runId": "mole-native-login-evidence-20261028-01",
+  "status": "PASS",
+  "classification": "A for requested entry-to-login flow only",
+  "input": "http://mole.61.com/",
+  "expected": "Open official Flash game, native Start click, account/password/login shown",
+  "actual": "Visually inspected real WKWebView native compositor PNG: all three login elements visible. No credentials entered or login submitted. Loaded Client.swf and Login.swf.",
+  "environment": {
+    "architecture": "arm64",
+    "macOS": "26.5.1",
+    "configuration": "Release self-contained; no system dotnet; original source reads denied"
+  },
+  "packageResult": "artifacts/evidence/P02/p02-package-20261028-04/result.json",
+  "processExitCode": 0,
+  "artifactHashes": {
+    "artifacts/profiles/mole-native-login-evidence-20261028-01/native-snapshot-2.png": "db82e6d4a16bfa93756856d92a5cbe8ca39edc7bcafe7e6dbe7e8f90cc95684d",
+    "artifacts/profiles/mole-native-login-evidence-20261028-01/page-inspection.jsonl": "2cac3060745d7d7228e7883b8f8dc3b080936776101d069179833294df05c26c",
+    "artifacts/profiles/mole-native-login-evidence-20261028-01/logs/gate0-20261027T203114265Z-15524.jsonl": "04af5026d49511cf3cc9ad5f936f1ab40fa95f2cecb698bc5417dda340ff0b9c",
+    "artifacts/evidence/P02/mole-native-login-evidence-20261028-01/process-result.json": "de4f5871e254be0672d2593995d8e493048197f8d78e9bc441b1701569b9b199",
+    "docs/evidence/P02/2026-10-28/mole-login-native.png": "db82e6d4a16bfa93756856d92a5cbe8ca39edc7bcafe7e6dbe7e8f90cc95684d"
+  }
+}

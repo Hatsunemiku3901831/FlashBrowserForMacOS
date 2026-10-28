@@ -1,0 +1,6 @@
+{
+  "archive": "artifacts/evidence/P01/native-smoke-20261028-01/CefFlashBrowser-P01.zip",
+  "sha256": "f8e5e69126f3da89b7b16e7b24a6204a3e205c0e8724c062295dbf72479b69ef",
+  "mainExecutableSha256": "89b4f63ab249c585041ae897440dbbf5d5e51b31f33e69fdc6a6328646630f74",
+  "reason": "Preserve the exact P01 app before P02 package rebuilds"
+}

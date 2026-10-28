@@ -1,0 +1,32 @@
+{
+  "taskId": "P00",
+  "caseId": "source-freeze",
+  "runId": "P00-20261028-01",
+  "profileId": "not-applicable-file-import",
+  "status": "PASS",
+  "expected": "All 296 selected files retain original bytes; repeated import changes no snapshot or manifest files; source unchanged",
+  "actual": {
+    "files": 296,
+    "snapshotMtimesUnchanged": true,
+    "sourceBusinessFilesUnchanged": 332,
+    "sourceGitStatusUnchanged": true
+  },
+  "startedAt": "2026-10-28T06:27:45.633651+11:00",
+  "finishedAt": "2026-10-28T06:27:45.633710+11:00",
+  "environment": {
+    "architecture": "arm64",
+    "macOS": "26.5.1",
+    "sdk": "10.0.301",
+    "targetHead": "UNBORN, uncommitted"
+  },
+  "artifactHashes": {
+    "sourceManifest": "1b535474f00b5cb7189c9320d744f8ee38e3faa6df94d1a76e15f96ee7827c8b"
+  },
+  "evidencePaths": [
+    "docs/provenance/source-import.json",
+    "docs/provenance/P00-dry-run.json",
+    "docs/provenance/P00-apply.json",
+    "docs/provenance/P00-repeat.json",
+    "docs/evidence/P00/2026-10-28/source-state-before.json"
+  ]
+}

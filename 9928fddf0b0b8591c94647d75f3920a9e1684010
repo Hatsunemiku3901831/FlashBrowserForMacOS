@@ -1,0 +1,91 @@
+# 正式端口与生命周期契约
+
+版本：A02，A03 补充持久化与 profile / protocolVersion 1，W02 补充下载与 popup 端口。源代码签名是本文件各表所列接口的实现依据；依赖方向见 A01。此处冻结当前已实现端口，完整 SOL codec、设置收藏、激活、下载任务和编辑事务分别在 S/A04/M/W 任务追加版本化契约，不以空接口冒充实现。
+
+## 模型与线程
+
+Domain 的 BrowserState、WebBridgeMessage、LocalSwfSource、RuffleSaveEntry、SolFileHeader 是不可变快照。BrowserState 新增 NavigationSequence（本会话递增）及 NavigationId（当前实际文档 ID），首次导航前分别为 0/null。Native session 以原子引用发布快照，任意线程可读；浏览器事件在 Avalonia UI 线程发出。Application 播放器的 bridge 工作在单一后台顺序队列运行，事件也在该工作线程发出；ViewModel 经 IUiDispatcher 更新属性。
+
+ViewModel 只依赖内层和 IUiDispatcher，不持有 Window、NativeWebView、WKWebView、句柄或文件面板。已排到 UI 队列的状态/存档/trace/popup/download 回调，在执行前再次检查关闭标志和导航归属。关闭后的回调不更新界面。
+
+## 当前接口
+
+| 接口与文件 | 操作和结果 | 取消、失败和所有者 |
+|---|---|---|
+| Application/Browser/IBrowserSession.cs | State、共享 Ready；导航（Uri 或保留方法/body/Content-Type 的 BrowserRequest）/历史/刷新/停止；ExecuteScriptAsync；状态、popup（BrowserPopupRequest 含发起用途）、CloseRequested（window.close）、bridge、fault 事件 | 公开操作任意线程调用，适配器负责切回 UI；等待可由调用方 token 取消。native Ready 首次等待开始计 30 秒，不创建 adapter 时也会超时；失败不能再变为成功。Root 拥有 session。W02 移除 DownloadAsync/DownloadRequested。 |
+| Application/Browser/IBrowserDownloads.cs（IBrowserSession.cs 内） | DownloadRequested（WebKit 已执行原请求，等待暂存路径）、DownloadUpdated（进度/重定向/唯一终止）、StartDownloadAsync(GET)、SetDownloadDestinationAsync(暂存路径或 null 拒绝)、CancelDownloadAsync | 只由原生 session 实现，不经 workspace 路由；事件在 UI 线程。关闭 session 时先取消并等待其下载终止更新。 |
+| Application/Browser/DownloadManager.cs | Attach(surface)→注册；Items/Changed（DownloadItem 快照）；CancelAsync；DisposeAsync | 选择目标→同目录隐藏暂存→完成后 IDownloadFiles.CommitAsync 原子改名；拒绝/取消/失败/提交失败删除暂存、不动已有目标。注册 Dispose 视为 surface 关闭（残留项 Cancelled）。Root 拥有，在所有 session 之后释放。 |
+| Application/Files/IDownloadFiles.cs | IDownloadFiles.CommitAsync/DeleteAsync；IDownloadDestinations.ChooseAsync | Infrastructure LocalDownloadFiles 以 flush+同目录 rename 提交；产品目标是 SaveDialogDownloadDestinations（单个保存面板串行、取消即拒绝）。 |
+| Application/Flash/IFlashPlayer.cs | 打开 SWF、CurrentSource、CurrentRunId、捕获/导入/导出/删除、暂停/恢复/重载/全屏/音量及事件 | 控制方法成功仅表示脚本已派发；实际加载完成由对应运行的 playerReady 决定。RufflePlayerCoordinator 是应用用例，脚本细节经 IRuffleScriptBuilder；Root 拥有并释放。 |
+| Application/Flash/ILocalContentHost.cs | RuntimeVersion、BaseUri、DiagnosticsUri、RufflePublicPath；显式 StartAsync、RegisterSwfAsync | 未启动 URI 为 null；登记结果是资源定位对象，不是 Flash 成功运行证明。源路径散列身份暂沿用，A03/W04 改为独立 contentId。Root 在浏览器之后释放。 |
+| Application/Flash/IRuffleSaveStore.cs | GetAllAsync、UpsertAsync、RemoveAsync | 所有异步方法有 token，失败不作为空数据。当前 v1 JSON 已具备 A03 候选提交、版本检查、限额与显式备份恢复；完整 contentId 索引和编辑冲突由 W04 实施。Root 拥有。 |
+| Application/Files/IFileAccess.cs | ExistsAsync、受大小限制读取、回调式原子写入 | 具体文件系统在 Infrastructure；元数据和 I/O 不在 UI 做大文件同步读取。读取检查初始长度并拒绝读取中增长；导入单文件上限 64 MiB。 |
+| Application/Files/IFileDialogs.cs | OpenAsync/SaveAsync 返回本地路径或 null；NativeFileKind 为 Any/FlashMovie/SharedObject | 用户按取消返回 null；token 取消等待抛 OperationCanceledException。面板由平台和所属 Window 管理，等待取消不会强行销毁系统面板。结果取消后不得再触发文件操作。 |
+| Application/Paths/IAppPaths.cs | support/cache/log/store 路径、EnsureCreated | 只提供路径策略；A03 已实施 Product/Development/Test 三类路径；普通 Release 启动默认 Product，非法显式测试配置不回退。禁止回退旧应用数据。 |
+| Application/Sol/ISolHeaderInspector.cs | ReadHeader(ReadOnlySpan<byte>) | 只验证现有 SOL 容器头，不能据此声明 AMF 内容支持；无 UI/文件路径。完整 codec 在 S01—S05。 |
+| Application/Threading/IUiDispatcher.cs | CheckAccess、Post、可取消 InvokeAsync | 平台实现持有 Dispatcher；Post 回调必须重新检查对象和导航是否仍有效。 |
+| Application/Flash/IRuffleScriptBuilder.cs | 捕获、存储变更、控制命令返回字符串 | 纯脚本生成，具体实现只在 Flash.Ruffle；保留原始桥接全局名及同步 true 返回边界。 |
+
+W02 起下载只由 WebKit 原生 WKDownload 完成，不再有 HTTP 客户端重发；语义、认证 sheet、popup 继承与验证入口见 [browser.zh-CN.md](browser.zh-CN.md) 的 W02 节和 ADR 0003。产品浏览器其余功能、frame/CSP/IME 和平台激活按 W01/M01 继续，不能用本契约抬高兼容等级。
+
+## 导航与 bridge
+
+文档开始脚本为每个文档生成新的 128-bit 文档 ID。宿主在导航完成后从当前真实 WK 文档读取该 ID 和 URL，再允许对应消息。消息早于完成到达时先有界缓冲，提交后只释放 ID 和来源匹配的消息。新导航清空旧缓冲，旧完成不能提交新一代状态；同 URL 重新加载仍使用不同文档 ID。相同文档内的 SPA 路径变化允许，同源判定不会依赖随机 loopback 端口生成永久游戏身份。
+
+v1 envelope 为：
+
+```json
+{
+  "protocolVersion": 1,
+  "navigationId": "32 hex characters",
+  "runId": "32 hex characters",
+  "messageType": "trace",
+  "origin": "http://127.0.0.1:12345",
+  "href": "http://127.0.0.1:12345/session/player/id",
+  "isMainFrame": true,
+  "payload": { "type": "trace", "message": "fixture output" }
+}
+```
+
+解析器检查版本、根与 payload 类型、ID 格式、必填字段、类型一致性、长度和深度；无效输入只产生固定诊断，不把 body/SOL payload 拼入错误。旧 flat 消息仍可由解析器读取，以保留明确的旧协议/测试迁移；正式 native session 只接收 v1。当前只向应用转发匹配的主文档消息；frame 字段来自注入上下文，不能把该字段称为 WebKit 原生 frame 认证。frame 完整支持和进一步原生来源验证属于 W01 的必要验收。
+
+本地播放器每次 load/reload 创建新的 runId，并让每个 trace observer 闭包捕获自己的 runId。旧 observer 不能把旧 trace 投入新实例。常规网页 polyfill 暂以文档 ID 作为缺省 runId；多 player 的完整产品状态由 W03 扩展。所有固定上游 SWF/JS/WASM 字节保持不变。
+
+Native 原始消息先进入后台有界队列，避免在 UI 解析大 JSON。当前边界为：单 body 96 Mi 字符、原始/应用队列各最多 64 条、各最多 128 Mi 排队字符、单 snapshot 最多 1024 项、上下文字段最多 16 Ki 字符、JSON 深度 32。超过限制明确发 fault，不静默当作成功。应用 bridge 单写者保持接受顺序；已进入持久化的旧页写入可完成，但导航后不发出更新新页面的事件，尚未开始的旧页工作丢弃。
+
+## 启动、关闭与时间
+
+AsyncLifecycle 只有一个初始化任务和一个关闭任务。多个 Start 共享初始化，调用方取消只取消自己的等待；owner 关闭才取消共享初始化。初始化失败保留原异常，释放仍执行一次，关闭后拒绝新 Start。默认初始化期限 30 秒；关闭对初始化及其实际任务分别最多等待 15 秒，再以 15 秒清理期限执行释放。不合作的端口导致显式失败，不能算排空成功。初始化 wrapper 取消后仍须等待实际初始化任务，不能直接释放其正在使用的资源。
+
+播放器停止接受 bridge 后排空已接受队列，默认 10 秒；超时取消并给 1 秒确认期，仍报告关闭失败。Native session 停止入口、取消/结束 parser，等待 reader 和原生 adapter 销毁各 3 秒。重复和并发 DisposeAsync 返回同一关闭任务。控件由 root 提供明确 detach 回调，在 UI 解除事件与父控件，从 AdapterDestroyed 事件确认原生实例已销毁；不是仅清空 C# 引用。
+
+异步命令的 CTS 只由实际执行的 finally 释放。Dispose 先禁止新执行并取消，DisposeAsync 再等待 Completion；预期关闭取消不记作操作失败，其他错误仍通过 Completion/Faulted/LastError 可见。音量后台工作和全部命令均由 ViewModel 等待结束，播放器由 Root 单独排空。
+
+TimeProvider 由 composition root 注入 lifecycle、浏览器、播放器、store 和 journal。wall clock 用 GetUtcNow，journal 间隔用单调 timestamp。调度不依赖系统时钟跳变；性能门限另按 Q02 实测。
+
+## 资源所有权表
+
+| 资源 | 创建者/唯一释放所有者 | 关闭约定 |
+|---|---|---|
+| 主窗口与主 session | Root；Window 请求 Root 关闭 | 先取消窗口入口，再等待共享 root 关闭，最后关闭窗口 |
+| popup/session/关闭观察任务 | Root 跟踪；popup 负责请求该 session 关闭 | popup 先停输入和销毁 native（其中先取消并等待本 surface 下载），再发 ClosedTask；Root 释放该 surface 的下载注册；Root 退出时先拒绝新 popup、关闭并等待所有 popup；释放后从集合移除 |
+| DownloadManager/下载注册/保存面板串行器 | Root | 所有 session 释放后先解除两个主 surface 注册，再排空 DownloadManager（暂存删除/提交任务），最后释放保存面板串行器 |
+| MainWindowViewModel/命令/音量任务 | Root/VM | 解除订阅、取消全部命令、等待已启动后台工作，不抢占 Root 的播放器所有权 |
+| RufflePlayerCoordinator | Root | 停止桥接入口，排空/取消并报告失败，再释放浏览器 |
+| native parser/Ready/原生控件 | Browser.WebKit session | 取消等待，结束后台 parser，UI detach，确认 adapter 销毁 |
+| 诊断采集与兼容 recorder | Root | 先取消采集并等待，再释放 recorder 和兼容服务 |
+| document-start script、本地服务、JSON store | Root | 浏览器销毁后关闭服务，最后关闭 store；上层资源失败也继续尝试其余清理 |
+| journal | Root | 所有资源清理后最后关闭；不合作的清理有失败结果，不能伪报正常退出 |
+
+Quit/主窗口关闭使用同一异步流程，UI 线程不同步等待需要回 UI 的清理。正常关闭后没有新入口；失败导致日志和非零退出结果。OS 强制终止无法保证异步清理完成，不算正常退出验收。
+
+A03 持久化与 profile 细节分别见 [storage.zh-CN.md](storage.zh-CN.md) 和 [variables.zh-CN.md](variables.zh-CN.md)。
+
+A04 增加 IConfigurationRepository<T>（Load/Reload/Save/Upgrade）、ISettingsRepository 和 IFavoritesRepository。Save 要求 snapshot revision；服务只在提交后更新 Current，Root 拥有服务及仓储。配置值与实际平台能力分离，完整契约见 [configuration.zh-CN.md](configuration.zh-CN.md)。
+
+## S04 SOL 端口
+
+ISolCodec 处理整份 SOL，IAmfCodec 处理单个 raw 值；ISolFileStorage 只提供有界读取与带预期版本的原子提交。SolEditorSession 拥有每个编辑文档的候选状态、版本、undo/redo、保存和清理；没有窗口/对话框/原生句柄。后台解析、校验、编码后才发布不可变快照；磁盘提交成功后才发布文件版本/saved 标记。SolEncodingConversion 的预览绑定来源文档，未知内容只读。完整字段、备份/恢复和转换边界见 sol-editor.zh-CN.md。
+
+
+W03：IFlashPlayer 控制方法现等待绑定 commandId/runId 的实际完成，不能把脚本派发当成功；新增运行状态、配置 OpenSwf 重载、产品 HomeUri，保留旧签名作为默认配置入口。产品/诊断资源、15 秒 metadata 及 30 秒命令等待、取消和 pagehide 清理见 [播放器契约](ruffle-player.zh-CN.md)。

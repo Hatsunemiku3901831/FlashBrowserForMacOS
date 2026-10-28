@@ -1,0 +1,129 @@
+{
+  "taskId": "P03",
+  "runId": "P03-20261028-final",
+  "status": "PASS",
+  "scope": "G0 feasibility only; formal product and release tasks remain unfinished",
+  "environment": {
+    "chip": "Apple M1 Pro",
+    "macOS": "26.5.1",
+    "architecture": "arm64",
+    "targetHead": "UNBORN; no commit"
+  },
+  "cases": [
+    {
+      "caseId": "browser-static-dynamic",
+      "status": "PASS",
+      "actual": "Real document-start polyfill count 1→2; missing SWF negative resources stay intentional",
+      "evidencePath": "artifacts/profiles/p03-core-native-20261028-01/page-inspection.jsonl"
+    },
+    {
+      "caseId": "native-popup-profile",
+      "status": "PASS",
+      "actual": "Real popup routed into owned window, same persistent store GUID and same localStorage save observed; explicit close recorded",
+      "evidencePath": "artifacts/profiles/p03-core-native-20261028-01/logs/gate0-20261027T205518481Z-24575.jsonl"
+    },
+    {
+      "caseId": "native-download-GET",
+      "status": "PASS",
+      "actual": "Actual save dialog produced the exact fixed file; full download edge matrix remains W02",
+      "evidencePath": "artifacts/evidence/P03/p03-core-native-20261028-01/download-result.json"
+    },
+    {
+      "caseId": "native-open-panel",
+      "status": "PASS",
+      "actual": "Actual mouse selected enabled SWF in Chinese/space path; Open became enabled and playback captured official 279-byte SOL",
+      "evidencePath": "artifacts/evidence/P03/p03-core-native-20261028-01/input-manifest.json"
+    },
+    {
+      "caseId": "capture-export",
+      "status": "PASS",
+      "actual": "Real SWF created official 279-byte SOL and native export was byte-identical",
+      "evidencePath": "artifacts/evidence/P03/p03-core-native-20261028-01/inputs/真实 SWF/captured-export.sol"
+    },
+    {
+      "caseId": "storage-import-read",
+      "status": "PASS",
+      "actual": "Old flush overwrite reproduced then fixed; actual SWF reads xaved mutation and produces independently predicted 289 bytes",
+      "evidencePath": "artifacts/evidence/P03/p03-restart-native-20261028-01/storage-import-result.json"
+    },
+    {
+      "caseId": "native-pause-resume",
+      "status": "PASS",
+      "actual": "Native toolbar; actual WK api isPlaying false then true across immutable captures",
+      "evidencePath": "artifacts/evidence/P03/p03-final-native-20261028-01/pause-resume-result.json"
+    },
+    {
+      "caseId": "native-restart",
+      "status": "PASS",
+      "actual": "New process/port restores exact changed save and all prior immutable run evidence hashes remain unchanged",
+      "evidencePath": "artifacts/evidence/P03/p03-final-restart-20261028-01/restart-result.json"
+    },
+    {
+      "caseId": "persistent-cookie",
+      "status": "PASS",
+      "actual": "New process and port in reused isolated store observed persistent cookie=yes; initial observed no",
+      "evidencePath": "artifacts/profiles/p03-core-native-20261028-01/page-inspection.jsonl"
+    },
+    {
+      "caseId": "popup-quit",
+      "status": "PASS",
+      "actual": "Application Quit with popup exits 0 and host stops; not a leak/performance claim",
+      "evidencePath": "artifacts/evidence/P03/p03-restart-native-20261028-01/process-result.json"
+    },
+    {
+      "caseId": "arm64-package",
+      "status": "PASS",
+      "actual": "Self-contained; 18 Mach-O only arm64, strict ad-hoc signature, locked graph, unsupported RID rejected",
+      "evidencePath": "artifacts/evidence/P03/p03-package-20261028-02/result.json"
+    }
+  ],
+  "priorImmutableFilesVerifiedAfterRestart": 10,
+  "knownEvidenceLoss": "Initial P03 screenshots 0/1 were overwritten before checkpoint. This is explicitly recorded and excluded from acceptance; original DOM/journal and final immutable reruns remain.",
+  "releaseMatrixBlocked": "macOS 15/27, second Apple Silicon generation and clean-account release checks require actual Q05 hardware; no simulated PASS",
+  "artifactHashes": {
+    "artifacts/evidence/P03/p03-core-native-20261028-01/download-result.json": "f1a17e41ddfde81c173df452bf269a506cdfe686b5f637f9b4db7b5d9a690311",
+    "artifacts/evidence/P03/p03-core-native-20261028-01/input-manifest.json": "56f7cb02556e7e337753ad80b7f91e0cad6b598e86883ffba997da23e916a2d7",
+    "artifacts/evidence/P03/p03-core-native-20261028-01/inputs/真实 SWF/captured-export.sol": "f680967f67a440d153d63cfd00c89ece1c0770d79531d51003afa3131758b978",
+    "artifacts/evidence/P03/p03-evidence-isolation-20261028-01/inputs.json": "2b6cd1bafe5f3e04ac9b9ce7e0a1403c5aed798aba9b7336f444a52efe694460",
+    "artifacts/evidence/P03/p03-evidence-isolation-20261028-01/result.json": "c38ca9c38c22b6788198ca8c1b1af050793fbd262dad29e117bf619342b809c7",
+    "artifacts/evidence/P03/p03-final-native-20261028-01/launch.json": "ed731cc9f31459b315f5b628805fd16c67a75759600ea5c82857c3a876c412e0",
+    "artifacts/evidence/P03/p03-final-native-20261028-01/pause-resume-result.json": "b951bf7f91e6e55c7576655afd36a052fdc55711b30e5a21cd96f2935f81605a",
+    "artifacts/evidence/P03/p03-final-native-20261028-01/process-result.json": "50db048ec75b2401aa6472b5ed4be9410dc5751d9c7deba109d1e882a09d0dc8",
+    "artifacts/evidence/P03/p03-final-restart-20261028-01/launch.json": "8e8b7196310e1af5c65744bb53d2584ddf099f5ce1e6d077f13d4eafd79c9f03",
+    "artifacts/evidence/P03/p03-final-restart-20261028-01/process-result.json": "f9ac509ebdf3613453fb41a547f38e86564ff634e256b98cf738c2ae956fbb83",
+    "artifacts/evidence/P03/p03-final-restart-20261028-01/restart-result.json": "5f91a72066334280ddec4e087de08479b268ec60411dab089775cfe5018de2e7",
+    "artifacts/evidence/P03/p03-final-tooling-20261028-01/result.json": "cd29edcf3305485c025a99265e583af8d65b571082d9f15b3d4ccabd186343f9",
+    "artifacts/evidence/P03/p03-package-20261028-02/result.json": "57cb60f8979eca3c6ed41a2c156a4a10d1118a33e0ff8f922b45328ca2bcfe28",
+    "artifacts/evidence/P03/p03-restart-native-20261028-01/evidence-collision.json": "d96316369ebc9c69b4ee47def184668bfbd0a143cdf365511c2cabad93858598",
+    "artifacts/evidence/P03/p03-restart-native-20261028-01/process-result.json": "3dbb2a1cf180fad6de78ac5996d042b59f469334769d1fe25a51051fc4c2fd3c",
+    "artifacts/evidence/P03/p03-restart-native-20261028-01/storage-import-result.json": "ec2c90256cd31595c48f0e598096efcabf39974cadf056e48e1fd22aeb755b36",
+    "artifacts/profiles/p03-core-native-20261028-01/logs/gate0-20261027T205518481Z-24575.jsonl": "0f9acd4a49fe7f5383edd8540f5049901f770fa5b0d3d64a75e3db3f2bcea8ab",
+    "artifacts/profiles/p03-core-native-20261028-01/logs/gate0-20261027T210519531Z-27216.jsonl": "75d02c238759b0144536205cefa28f68be722d71f1bb9a0590329a6a1f609ecc",
+    "artifacts/profiles/p03-core-native-20261028-01/page-inspection.jsonl": "b0753f4316900a1454a3c6f372631ee79538dbca18fe28c40a31021be553407c",
+    "artifacts/profiles/p03-final-native-20261028-01/logs/gate0-20261027T211409455Z-29516.jsonl": "63bddcbcbd156764cf20c298f1983eb8f99351dbdce1d6c8fcf78a3f6ffe10f2",
+    "artifacts/profiles/p03-final-native-20261028-01/logs/gate0-20261027T211703585Z-30013.jsonl": "363b309bdb838e3bd10aa0febd501b01e53b6cc82fd8071c0e715d85f02f3d52",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211410471Z-29516-c1b7dbdd60ec4b8d8b85bb8c161d6c12/native-snapshot-0.png": "edc33c9298d412e482aed47b40dffe1937b79828ee3a68fa53b8a20f39884689",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211410471Z-29516-c1b7dbdd60ec4b8d8b85bb8c161d6c12/native-snapshot-1.png": "edc33c9298d412e482aed47b40dffe1937b79828ee3a68fa53b8a20f39884689",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211410471Z-29516-c1b7dbdd60ec4b8d8b85bb8c161d6c12/native-snapshot-2.png": "edc33c9298d412e482aed47b40dffe1937b79828ee3a68fa53b8a20f39884689",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211410471Z-29516-c1b7dbdd60ec4b8d8b85bb8c161d6c12/native-snapshot-3.png": "317f81d3577b60ba6a53a13fb4a0d3000e155f69f6fe0951b16eb05ee4394d01",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211410471Z-29516-c1b7dbdd60ec4b8d8b85bb8c161d6c12/native-snapshot-4.png": "317f81d3577b60ba6a53a13fb4a0d3000e155f69f6fe0951b16eb05ee4394d01",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211410471Z-29516-c1b7dbdd60ec4b8d8b85bb8c161d6c12/native-snapshot-5.png": "317f81d3577b60ba6a53a13fb4a0d3000e155f69f6fe0951b16eb05ee4394d01",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211410471Z-29516-c1b7dbdd60ec4b8d8b85bb8c161d6c12/page-inspection.jsonl": "08dec6a8b7eb1d1634c1e125a56b8d65755c10e087d9c19e575b4609c077ebd2",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211410471Z-29516-c1b7dbdd60ec4b8d8b85bb8c161d6c12/run.json": "7ea10121e4a607d632df9f330903d84e3e42a92b024a91b7b190ae681d26a445",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211704547Z-30013-1c339ebb045f4a5d99f97f3ed5ac6a22/native-snapshot-0.png": "317f81d3577b60ba6a53a13fb4a0d3000e155f69f6fe0951b16eb05ee4394d01",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211704547Z-30013-1c339ebb045f4a5d99f97f3ed5ac6a22/native-snapshot-1.png": "317f81d3577b60ba6a53a13fb4a0d3000e155f69f6fe0951b16eb05ee4394d01",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211704547Z-30013-1c339ebb045f4a5d99f97f3ed5ac6a22/native-snapshot-2.png": "317f81d3577b60ba6a53a13fb4a0d3000e155f69f6fe0951b16eb05ee4394d01",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211704547Z-30013-1c339ebb045f4a5d99f97f3ed5ac6a22/native-snapshot-3.png": "317f81d3577b60ba6a53a13fb4a0d3000e155f69f6fe0951b16eb05ee4394d01",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211704547Z-30013-1c339ebb045f4a5d99f97f3ed5ac6a22/native-snapshot-4.png": "317f81d3577b60ba6a53a13fb4a0d3000e155f69f6fe0951b16eb05ee4394d01",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211704547Z-30013-1c339ebb045f4a5d99f97f3ed5ac6a22/page-inspection.jsonl": "0b155fce72fa0c317ec53204f22522f2f47d7e339a2917450eb17c435571d58c",
+    "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211704547Z-30013-1c339ebb045f4a5d99f97f3ed5ac6a22/run.json": "15a104fb97ffcb9fa4edb30dfb1ff4d2e62fe625dfcfec7a12358f64e068cead",
+    "docs/adr/0001-continue-wkwebview.zh-CN.md": "ffe3390b7ba4404a7637eb93502ba74be70b3f281caccaa43d727c9a3d56c0f4",
+    "docs/compatibility-matrix.json": "63764d1fc8ee2a5b39fa82adee9f162fb3d8f18473b2429b1c806e5d5f04f0b5",
+    "docs/evidence/P03/2026-10-28/legacy-data-preserved.json": "591537f8664e70a8e9218ee3a32de9717c7630c08ee65a823edfda97e39ed9f5",
+    "docs/evidence/P03/2026-10-28/source-preserved.json": "6ea9b125b0053948c30a2fa8247049bf4af05843cf7487e53955903c53bdea82",
+    "docs/performance-budget.json": "f2a771f5fc2ff8287d3d13272dd01012f6e5dc0961ba6d71cb834116e122de14",
+    "docs/provenance/P03-changes.json": "4c8596dfe650064e608e58c68c6d827fba9eb78a26ff00da09501e0e3a94ae26",
+    "docs/remaining-estimates.json": "4fa367bfec32a08bd7fa1a4608eab8648632e083992264e0850fde573573dcb4",
+    "docs/support-matrix.json": "cf0872caa2753e809cabfd9dc50f0f07e035f529d81e7502238cd9286624692c"
+  }
+}

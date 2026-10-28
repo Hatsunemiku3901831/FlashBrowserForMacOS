@@ -1,0 +1,33 @@
+# AMF 编解码契约
+
+`IAmfCodec.Decode`/`Encode` 处理一个完整的原始 AMF 值，根值位于 `AmfGraph.Entries[0]`，名字为空。输入尾随数据被拒绝；多条 SOL 属性由 S04 的文件会话处理，不能重复创建 raw codec 会话后拼接，因为引用表作用域不同。
+
+这是同步、有界 CPU 操作，文件/UI 调用方必须在后台运行并传递 CancellationToken。默认 `AmfLimits` 为产品硬上限，允许调小，不允许扩大到超过 64 MiB/深度 256/各 1,000,000。每个值计入元素预算，复杂节点另计节点预算；引用也计值但不重新展开节点。writer 在扩容/写入前检查剩余空间，reader 在分配集合前检查声明数量、最小编码大小及累计预算。编码和解码均不修改输入图或原字节。
+
+`AmfFormatException` 包含 Code、Encoding、Offset 和可用的 Marker，不支持/损坏不是正常 null 结果。UTF-8/UTF-16 采取严格错误模式；禁止用替代字符掩盖坏数据。整个文件的保留和是否可保存由 S04 的加载结果管理。
+
+## AMF0（S02）
+
+- 使用大端整数与原始浮点位模式。字符串长度按 UTF-8 字节，65535 字节以内采用短字符串，其上为长字符串。属性/类名只有短字符串格式，超长必须失败。
+- 000009 才结束对象属性；空键后若不是 09，继续按正常值解释。顺序、重复键和 typed object 的空类名均保留。
+- Object、Typed Object、Strict/ECMA Array 在读取子项前登记零基引用。Date/XMLDocument 是节点，但不占 AMF0 引用槽。无法保留共享 Date/XML 身份时拒绝默认写出；AMF3 类型或无法表示的类属性同样要求显式转换。
+- Strict Array 声明数量是精确值，最小元素只有一个字节；ECMA 声明数量保留为元数据，持续读到结束标记，不按其分配或固定次数循环。空数组及 0xffffffff advisory count 不会触发巨大分配。
+- Date 保留毫秒原位与读入的两个 reserved timezone 字节；新建日期默认写 0。没有 DateTime 本地时区转换或范围裁切。
+- 04/0D/0E、上下文外 09 和未知 marker 均拒绝；没有静默降级。
+- AVM+ 通过显式 `IAmf3ValueCodec` 委派一个值，然后继续 AMF0。S02 用受控整数替身锁定单值边界；未安装实现时返回 Amf3DelegateUnavailable，不能算实际 AMF3 支持。S03 负责真实接线与共享 AMF3 表。
+
+固定字节、Unicode/长字符串、引用/循环/空容器、IEEE-754 极值、截断和资源限制由 Amf0CodecTests 验证。SOL 文件级内容与原子编辑尚待 S04。
+
+## AMF3（S03）
+
+标准 00—11 marker 均有明确实现：有符号 29 位整数、位模式 Double、String、两类 XML、Date、混合 Array、密封/动态/typed Object、ByteArray、四类 Vector 及 Dictionary。U29 最多四个字节，前三个各七位、最后八位；Int32 超出 [-268435456,268435455] 必须先做显式 Number 转换，不能掩码截断。字符串、对象、trait 表在每个会话新建；空字符串不入池，名字/类名也参与字符串池；结构相同的 traits 可复用，密封顺序参与比较。
+
+所有复杂类型在读其子内容前登记身份。引用必须在表内并与 marker 类型匹配，不能把一个 Array 槽解释为 XML。Date/XML/ByteArray/Vector/Dictionary 同样保留引用；Dictionary 不按内容去重对象键或将 wire integer key 自动变成字符串。AMF0 中多次 AVM+ 委派共享一套 AMF3 表，同时独立于 AMF0 表；同一 Domain 身份若无法在两种独立 wire 表间保持则拒绝写出。
+
+Date inline 的高位及 Externalizable trait 的高位按规范为未使用/无意义，reader 忽略、writer 使用规范形式；这不作为损坏拒绝。fixed/weakKeys 的明确布尔字节必须是 0 或 1。AMF3 的空动态/关联名字是结束标记，所以用户构造的空名字属性必须拒绝转换，不能静默提前结束。
+
+Externalizable 只通过 `IAmfExternalizableCodec` 显式登记 class alias 和 CodecId；二者在注册时捕获，重复/空 alias 被拒绝。默认产品注册表为空，未声称支持任何未提供布局的真实外部类。测试登记的 T/B 分别使用一个 AMF 值、自定义 sentinel+长度+原字节的明确布局，以证明 paired reader/writer、对象回环、trait 复用和资源边界。它们不是将真实未知类当作某个通用布局。
+
+成功读取的节点记录 ExternalCodecId 与类型化 ExternalData；图层只允许有这两个信息的外部节点进入后续编辑，实际 encode 仍必须安装同 alias/版本 codec。类 codec 通过有界输入/输出端口读写，可为自定义逻辑载荷创建明确节点；不能绕过共同的大小、节点、取消和引用会话。未知类在对象 marker 偏移直接报 UnknownExternalizable，不读猜测的自定义体；注册类布局错误报 ExternalCodecFailure 并保留原异常，取消和已有格式诊断直接传播。writer 失败不返回部分输出。
+
+固定样例的类型值和规范字节、12 个 signed U29 边界、全部复合前缀截断、混合成员/共享二进制、空字符串不入池、非法表/长度/flag/UTF、并发会话隔离均有新仓库回归。普通 SOL 文件级保存及未知文件原件保留由 S04 验证。

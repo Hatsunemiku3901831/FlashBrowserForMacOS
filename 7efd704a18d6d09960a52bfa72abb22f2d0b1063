@@ -1,0 +1,11 @@
+# S02 AMF0
+
+状态 DONE。输入和原 SHA 在 provenance/S02-source-inputs.json；S01 的类型/固定字节作为验收基线。正式代码不读取参考仓库、PDF 或 Legacy oracle。
+
+实现有界、可取消的 AMF0 reader/writer：大端原位 Number、布尔、严格短/长 UTF-8、Null/Undefined、typed/plain object、有序重复/空键、Strict/ECMA Array、Date、XMLDocument、引用与循环。ECMA 按结束标记读取且保留 advisory count；严格数组允许合法一字节元素。Date/XML 不占 AMF0 对象槽；不能表达的类型/身份/类属性拒绝默认有损保存。AVM+ 通过明确接口和受控替身验证只消费一个 AMF3 值，实际 AMF3 接入待 S03。
+
+最终 `sh scripts/verify.sh --task S02 --run-id amf0-managed-20261028-03 --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser`：Apple M1 Pro/arm64/macOS 26.5.1、SDK 10.0.301，exit 0，275 托管+18 工具，0 跳过/警告/错误；原 107 按名保留，104 固定资产与锁未变。44 个新增参数化案例覆盖固定预期与规范字节、每个复合样例的全部截断前缀、UTF-8 非法/UTF-16 代理、引用越界/非法 marker/尾随内容、长度/深度/元素/节点/文件预算和取消、65535 UTF-8 边界、空容器、ECMA 最大 advisory count、负零/NaN payload/Infinity/有限极值。
+
+缺陷证据：amf0-red-metadata-20261028-01 两个新用例先失败，证明 plain AMF0 writer 曾丢弃非空类名或不兼容 trait 标志；修复后两个均通过。-01 的 CancellationToken 参数次序分析器失败也保留。没有删除或跳过失败用例，没有把原始 codec/SOL 文件 wrapper 测试误标已运行。
+
+代码/全部正式输入归档 source-inputs.tar.gz；代码变更、原来源路径/SHA、证据 hash 见 provenance/S02-changes.json 与 acceptance-index.json。原仓库 332 文件/HEAD/dirty 和四个旧数据根保持，未提交/推送/发布。下一任务 S03。

@@ -1,0 +1,13 @@
+# P01 原型隔离 profile 契约
+
+该契约仅覆盖 bootstrap。正式产品身份及数据迁移在 A03/W01/W04 实施。
+
+原型启动必须显式设置 `FLASHMACOS_TEST_PROFILE` 为独立目录的绝对路径。缺失或非法配置在创建 Avalonia/WebView 前退出 3；没有旧 CefFlashBrowser 路径回退。
+
+该目录下的 `data/` 保存 v1 存档 JSON，`cache/` 为测试缓存，`logs/` 为 session journal。不得选主目录根、其祖先、CefFlashBrowser 源码/数据目录、旧 WebKit 根或与这些目录重叠的位置。路径解析现存符号链接，别名得到同一 profile 身份。
+
+持久 WebKit store ID 由规范化 profile 根和固定 P01 命名域 SHA-256 的前 16 字节产生。同一 profile 跨进程稳定，不同 profile 独立；旧 store ID `852984bf-5e1e-4859-9fc3-cbf5f1a71a63` 和空 ID 均不接受。主窗口与 popup 继承同一个测试 ID。WebKit 自行管理系统下的命名 store，应用日志记录实际配置 ID。
+
+开发 bundle ID 为 `local.flashmacos.prototype`，与历史 Gate 0 bundle 分离。它不是正式发行身份。Ruffle 0.4.1、fixture、包版本和三份锁不因 profile 改变。
+
+真实 smoke：新 app 的 journal 必须包含 profile 根与 `browser.profile.configured`，确认 document-start、导航及固定 Hello World trace，并正常关闭服务。测试前后比对旧应用数据根文件 hash。托管单元测试不能代替这一步。

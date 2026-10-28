@@ -1,0 +1,206 @@
+{
+  "taskId": "P01",
+  "caseId": "profile-native-smoke",
+  "runId": "native-smoke-20261028-01",
+  "profileId": "164658b6-db18-9f4a-8813-a61a80ef0be2",
+  "status": "PASS",
+  "expected": "Dedicated data roots and persistent WK store, no old user data writes; document-start and Hello world; bounded normal close",
+  "actual": {
+    "oldDataUnchanged": true,
+    "missingProfileExitCode": 3,
+    "processNoLongerRunning": true,
+    "shutdownJournalComplete": true,
+    "processExitCode": "not collected by detached launcher; no exit-code claim",
+    "originalTestCasesRetained": 97,
+    "managedTestsPassed": 102,
+    "machoArm64Count": 18,
+    "locksUnchanged": true,
+    "references": [
+      {
+        "project": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+        "include": "../CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+        "include": "Assets/Ruffle/**",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/**"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+        "include": "Assets/Fixtures/**",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/**"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+        "include": "../../../../CefFlashBrowser.Tests/TestData/settings.sol",
+        "resolved": "bootstrap/legacy/CefFlashBrowser.Tests/TestData/settings.sol"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../../../CefFlashBrowser.Tests/TestData/*.sol",
+        "resolved": "bootstrap/legacy/CefFlashBrowser.Tests/TestData/*.sol"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/RuffleTest.sol",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/RuffleTest.sol"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/shared-object-avm1.swf",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/shared-object-avm1.swf"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/Test.as",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/Test.as"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/output.txt",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/output.txt"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.toml",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.toml"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/**",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/**"
+      },
+      {
+        "project": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+        "include": "../../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/**",
+        "resolved": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/**"
+      }
+    ],
+    "machO": [
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/createdump",
+        "description": "Mach-O 64-bit executable arm64",
+        "sha256": "9d745f26dffd2d5fe97a26742921add552ad93de09655c5fdf49cfe1db9977b1"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libcoreclr.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "183bf2ba258032622fe36134a0c72dd236ff7468745b515698b468887b12550d"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libSystem.Native.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "388da9838f26f00f6ab6b87624c36d676d1bb3923c74e182b10a9979b85dfa00"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libHarfBuzzSharp.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "7b8126f02d9cdb2a3913ef806ad4983fc2513a784840ea77318cb65d93663ac0"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libAvaloniaNative.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "97283af24161dd40eca88299a2d008d8ae41749dd8574bc738f612dfdac0c2d2"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libSystem.IO.Compression.Native.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "4aada7151c6a56ca5ee186f62f71e2a0c1945eb816b9b73b1233b5106b5aa4dd"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libclrgcexp.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "77e9076abf8b408503455264f770c7507bb6447cfb53263cdbd77af5da39e1a4"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libSkiaSharp.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "af2233fda6b45b8e99b4546a9e59f2fe369da0123e9d94998f4537e1375f48b2"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libSystem.Globalization.Native.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "13c942fdd23c2647e7d592b13587abc683b6b6c2da844abdce11768e57bd2290"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libSystem.Security.Cryptography.Native.Apple.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "301ff9feb1ab224bd97c76d641f4070ded5bd0e1ff2f48528a43be3d054a1737"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libmscordaccore.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "4975ae66baff8ec4466071954602dbce4940dab3dc15dd7a8fa78ccd9ec5eb2c"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libhostfxr.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "32a944963acadd93c7d3b533879d016e0d116394194f09a6a419b552923a24be"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libSystem.Net.Security.Native.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "b50b05ded14bbcf922dde567c31a459a845fc1f6bf180082113f2685053bf2e2"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libmscordbi.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "d035d2bf5ef3f73868b123bc2cdfdde575df3e17f42167ef61d9df87e97fa982"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/CefFlashBrowser.MacOS.Spike.Desktop",
+        "description": "Mach-O 64-bit executable arm64",
+        "sha256": "89b4f63ab249c585041ae897440dbbf5d5e51b31f33e69fdc6a6328646630f74"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libhostpolicy.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "c1cf1b0a67d24c93b4c1d7fd49f296bd0e6c144f5cd5fddd104adfdcb617e581"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libclrjit.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "f67e85747aa71f9af3c16775f20917ddaa6f0fafccb3c1c61baa79db95599913"
+      },
+      {
+        "file": "bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/libclrgc.dylib",
+        "description": "Mach-O 64-bit dynamically linked shared library arm64",
+        "sha256": "1f68fb7284f3b94f146d1a51c60ac48dfd10ac0173584bd462df0d6c600bcf01"
+      }
+    ]
+  },
+  "startedAt": "2026-10-27T19:33:09.149426+00:00",
+  "finishedAt": "2026-10-27T19:33:46.88407+00:00",
+  "environment": {
+    "architecture": "arm64",
+    "macOS": "26.5.1",
+    "sdk": "10.0.301",
+    "configuration": "Debug",
+    "targetHead": "UNBORN; all changes uncommitted"
+  },
+  "artifactHashes": {
+    "artifacts/profiles/P01-native-smoke-20261028-01/logs/gate0-20261027T193309144Z-1052.jsonl": "84a84a9e0fc9d750a1d5d601e2f023f412dad9fef56b649540d7c08c7d4ca277",
+    "artifacts/evidence/P01/native-smoke-20261028-01/process.log": "8d096b19800ac83343440f6c76e0661047c9b49becf63a3620cf660be94c976b",
+    "artifacts/evidence/P01/native-smoke-20261028-01/old-data-before.json": "67021418b52ccdf6818fc0794e5d8e14d701608fab09cd4bf789a0b26c0aa08d",
+    "artifacts/evidence/P01/native-smoke-20261028-01/no-profile.log": "a3c0f52cfe1bdf6155116b01165ab9686a41a63c496a48776f63c043a7739d1f",
+    "artifacts/evidence/P01/native-smoke-20261028-01/old-data-after.json": "67021418b52ccdf6818fc0794e5d8e14d701608fab09cd4bf789a0b26c0aa08d",
+    "artifacts/evidence/P01/native-smoke-20261028-01/launch.json": "9d3c80ec3913962e1819d5fabcaf1329ffee18652ca2458909f8fec420f29053",
+    "artifacts/evidence/P01/native-smoke-20261028-01/codesign.log": "9b0c253165ee35563ec70b0241a4b9ccc1b2cea62bcc8f3a8aee39194d36a4f1",
+    "artifacts/evidence/P01/native-smoke-20261028-01/package.log": "bceea93b2b46f5d49533f57c0888c849284d9437242b4e73e1e674b4d0d4b710"
+  },
+  "evidencePaths": [
+    "artifacts/evidence/P01/native-smoke-20261028-01",
+    "artifacts/profiles/P01-native-smoke-20261028-01/logs/gate0-20261027T193309144Z-1052.jsonl"
+  ]
+}

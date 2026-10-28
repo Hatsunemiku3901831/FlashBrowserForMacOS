@@ -1,0 +1,41 @@
+# 产品身份、路径与变量
+
+版本：A03。唯一身份源是根目录 Product.props；Directory.Build.props 生成 managed 版本和 AssemblyMetadata，Domain/ProductIdentity 只读随包元数据。打包器将同一配置代入 packaging/macos/Info.plist 模板，并保存 product-identity.json。运行不读取源码或 Product.props。
+
+| 属性 | 当前值 | 使用者 |
+|---|---|---|
+| ProductName | FlashMacOS | 应用名、初始窗口标题、诊断标题、UA |
+| ProductBundleId | local.flashmacos.app | bundle、产品数据命名空间 |
+| ProductVersion | 0.1.0 | managed 版本、bundle 短版本、UA、日志 |
+| ProductBuild | 1 | bundle build |
+| ProductMinimumMacOS | 15.0 | bundle 最低系统；实际设备矩阵仍待 Q05 |
+
+UA 追加 ProductName/ProductVersion，不把原型 UA 当作产品身份。只支持 osx-arm64，ARM64 限制仍在 restore 前拒绝其他 RID。这里的 local bundle 身份适用于开发；持有 Developer ID 后由 Q04 核对最终 Team/bundle 身份。
+
+## Profile 选择
+
+| 输入 | 行为 |
+|---|---|
+| FLASHMACOS_TEST_PROFILE=绝对专用路径 | 显式 Test，data/cache/logs 全在该根；保留 P01 已固定 WebKit GUID 算法，跨次启动稳定 |
+| 无测试变量，FLASHMACOS_PROFILE_MODE=development | 独立 Development 命名空间 |
+| 无测试变量，FLASHMACOS_PROFILE_MODE=product | Product 命名空间 |
+| 两个变量都没有 | Debug 默认 Development；Release 默认 Product，可直接启动 |
+| 非法值、相对测试路径、旧应用路径或不安全路径 | 明确启动错误；不回退到其他 profile |
+
+Product 默认路径（非 App Sandbox 的当前 macOS 包）：
+
+- support：~/Library/Application Support/local.flashmacos.app/profiles/default
+- cache：~/Library/Caches/local.flashmacos.app/profiles/default
+- logs：~/Library/Logs/local.flashmacos.app/profiles/default
+
+Development 对应命名空间加 `.development`。support 内存放 ruffle-saves.v1.json；settings.v2.json、favorites.v2.json 在 A04 建立，content-catalog.v1.json 在 W04 接入。标准目录取用户 home 下的 Library；canonical 检查拒绝旧应用重叠、来源/源码和 bundle 路径。显式测试目录可位于本项目 artifacts/profiles；普通产品运行数据不写源码、bundle 或工作目录。
+
+Product/Development 的 WebKit DataStoreIdentifier 从命名空间和 profile 名稳定派生，不依赖当前工作目录、app 移动路径、随机 HTTP 端口、版本或开发进程 ID。系统用户边界由 macOS 保持。Test 使用已冻结的 canonical 测试根 GUID，别名指向同一根时身份一致。IAppPaths 是应用端口，具体路径策略只在 Infrastructure 和 composition root。
+
+## 开发证据选项
+
+FLASHMACOS_COMPAT_CASE 选择固定语料；FLASHMACOS_PAGE_INSPECT=1 才开启完整页面采集；FLASHMACOS_NATIVE_CAPTURE_COUNT 限制为 1—120，默认 6，间隔 10 秒。原始兼容 recorder 只在显式 Test profile 且指定语料/采集时启动。普通 Product 启动只写有界摘要日志。开发 host、完整诊断和测试资产最终由 W03/Q03 的发布配置排除，当前开发包不代表发行包。
+
+`scripts/run-native.py --default-profile` 清除两个 profile 变量，验证正常 Release 路径；它记录实际 support/cache/logs 的前后 hash，并镜像该轮日志。该选项允许后续独立进程保留 Product 数据，不会删除数据。缺省 runner 仍使用每次新建的 Test 根。
+
+路径依据：[Apple 文件系统指南](https://developer.apple.com/documentation/foundation/using-the-file-system-effectively)；应用持久资料与可重建 cache 使用不同 Library 子目录。当前应用不启用 App Sandbox；若后续改为 App Sandbox，需单独实施系统容器目录的迁移与验收，不能套用现有路径证明。

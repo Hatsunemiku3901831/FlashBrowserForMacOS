@@ -1,0 +1,50 @@
+# A03 持久化与产品身份验收
+
+状态：DONE。实际日期：2026-10-28（Australia/Sydney）；原始 UTC 记录跨 10 月 27 日。目标为无提交 main；没有提交、推送或发布。本任务不替代设置界面、完整 AMF、实时编辑和发行门禁。
+
+## 输入与变更
+
+输入为已验收 A02 正式工程；修改前 hash 见 `docs/provenance/A03-before.json`。前后文件、继承来源及修改原因见 A03-changes.json。Product.props 成为名称、bundle、版本、build、最低系统的唯一来源：managed 元数据、UA、窗口/页面初始标题和生成 Info.plist 使用同一配置，运行只读随包元数据。没有更改 104 个固定资产或 13 份依赖锁。
+
+AppProfile 分离 Product、Development 和显式 Test。普通 Release 不要求测试环境变量；产品数据使用用户 Library 下独立命名空间，WebKit GUID 不随版本、工作目录或端口改变。显式非法配置返回启动错误，不回退。原型测试 profile 的 GUID 算法保持兼容；原仓库和旧数据路径均被拒绝。路径、变量及元数据契约见 `docs/contracts/variables.zh-CN.md`。
+
+存档读取先完整验证候选，写入先形成候选并以同目录临时文件、flush、原子替换、备份、租约及文件 hash 检查提交，成功后才发布内存。提供显式 Reload/备份恢复、原字节恢复副本、写入限额和可注入故障点。未知字段保留。Domain 增加显式 contentId/locationAliases 模型；当前 v1 key 到新索引的接入与迁移仍是 W04。完整事务、限制及非合作外部编辑器的边界见 `docs/contracts/storage.zh-CN.md`。
+
+有界日志具备队列、轮转、丢弃计数和关停期限，写入错误向关闭流程传播；白名单摘要不含会话/URL 秘密、原始异常、trace 或 SOL payload。原始兼容 recorder 只在显式 Test 且启用采集/固定语料时创建。既有原始证据保持完整，没有回溯删改。
+
+## 回归与故障证据
+
+Apple M1 Pro、arm64、macOS 26.5.1 (25F80)、SDK 10.0.301 / runtime 10.0.9。托管 Debug；native 为 Release self-contained。第三方版本保持 Avalonia 12.1.0、WebView 12.0.1 等原锁值。所有最终构建/运行禁读原仓库、reference、bootstrap；native PATH 只有系统目录且 DOTNET_ROOT 未设置。
+
+```sh
+sh scripts/verify.sh --task A03 --run-id persistence-managed-20261028-04 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+python3 scripts/package-development.py --task A03 --run-id product-package-20261028-02 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+python3 scripts/run-native.py --task A03 --package-task A03 \
+  --run-id product-default-native-20261028-03 --package-run product-package-20261028-02 \
+  --default-profile --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+```
+
+| 检查 | 实际结果与范围 | 原始证据 |
+|---|---|---|
+| 先复现缺陷 | 旧实现写失败后内存增加、删除后写失败却内存删除、损坏文件留下部分数据共 3 失败；日志隐私用例 1 失败 | persistence-red-20261028-01、journal-red-20261028-01；退出 1，FAIL 为预期 |
+| 最终正式回归 | 185/185 托管、16/16 工具；0 失败/跳过；0 构建警告，13 锁/所有输入不变 | persistence-managed-20261028-04，五个 TRX、result.json；各阶段退出 0 |
+| 失败与取消 | 三个提交阶段各有磁盘失败及取消；真实 macOS 目录权限拒绝，均保留旧文件/内存和清理自有临时文件 | AtomicPersistenceTests 与 PersistenceTransactionTests |
+| 并发与恢复 | 同实例 20 并发写不丢项；独立 writer 租约、旧 revision、最后阶段外部修改明确拒绝；合法备份恢复保留损坏原字节，坏备份拒绝 | 同上 |
+| 格式与边界 | null/缺失/未知 schema/重复成员拒绝，不覆盖；单 SOL、条目、key、候选总大小限额；未知字段继续保留 | 同上 |
+| 日志 | 队列满可观测、轮转不超过配置、并发关闭同一任务、磁盘错误传播、不合作 writer 期限失败；合成秘密不进摘要 | JournalPrivacyTests、JournalLifetimeTests |
+| 普通启动与重启 | 最终同一 package-02 两个进程正常启动，环境中无两个 profile 变量；恢复 845-byte 固定 settings，Cookie 界面显示 yes；稳定 WebKit GUID；退出 0、清理 failures=0 | product-default-native-20261028-03/04；native-result.json、完整普通日志镜像和目录前后 hash |
+| 显式测试隔离 | 同一 package-02 在独立 Test 根打开内置 Hello SWF，原生 UI 可见 Hello world trace；独立 GUID/空存档，普通 Product store 不变；退出 0 | product-isolated-native-20261028-01 |
+| 非法配置 | relative/invalid 在打开 GUI 前返回 3，不回退 | invalid-startup-profile-20261028-01，PASS 指正确拒绝 |
+| bundle/来源 | 启动前逐文件匹配归档，运行后 bundle 字节和严格开发签名保持；原仓库 332 文件/HEAD/dirty 及四个旧数据根不变 | bundle-preserved.json、source-preserved.json、legacy-data-preserved.json |
+
+普通 Product 首次创建与写入发生于 package-01 的 product-default-native-01，起始三个目录均不存在；第二个进程确认存档与 Cookie 恢复。该轮发现初始 BrowserState 仍短暂显示旧名，随后统一三个剩余标题并生成 package-02。最终 managed-04 及 package-02/两个普通进程/一个 Test 进程覆盖最终源码，不混同两份包的 hash。首轮 181 项通过、一次 CA1861 编译失败及后续 185 项通过均完整保留。
+
+一次在旧包退出后请求 CUA 状态导致额外启动 PID 69152，已通过原生 Command-Q 正常关闭，日志完整保留；它不计入 sandbox 来源禁读验收。默认诊断页中的 missing SWF 是原有负向 fixture，所显示错误不作为兼容通过；最终产品首页和错误体验仍由 W03/U02 实施。
+
+## 适用边界与下一任务
+
+A03 的 v1 store 校验 Base64/SOL 头，完整 AMF 内容校验仍由 S01—S05 实施。当前整体 JSON 序列化不代表通过性能预算；contentId 模型尚未自动替换旧 key。恢复用户入口、设置收藏界面和发行包资源收敛继续按对应任务执行。Flash 焦点 Command-Q、中文 IME 和 frame 地址栏问题保持 A02 的 FAIL，未据本任务改成通过。
+
+下一任务 A04：从已冻结 Legacy Settings、Favorites、GlobalData 和测试行为迁移 schema v2、默认值、未知/legacy 字段、搜索与收藏用例；先建立合成 golden fixture，保存失败保持已提交状态。工作目录仍本仓库，后续只维护正式 src/tests。

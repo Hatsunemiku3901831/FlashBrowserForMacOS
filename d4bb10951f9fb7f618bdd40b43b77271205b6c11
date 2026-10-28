@@ -1,0 +1,25 @@
+# Ruffle 产品播放器契约（W03）
+
+固定运行时仍为 Ruffle 0.4.1，全部原始 JS/WASM/许可由原 SHA-256 清单验证，缺失或损坏在启动 loopback 前报错；没有联网换版本或 CDN fallback。
+
+## 产品与测试资源
+
+普通 Product/Development/Test 无诊断开关时只创建产品 LoopbackContentHost：固定运行时、home、本地 player 和受限相对资源。启动不读取 SOL fixture、ExternalInterface 或 CompatibilityFixtures；home 说明打开方式和兼容边界。显式 Test profile + case/inspect 开关才创建诊断路由和第二个 CompatibilityContentHost。开发打包的 `--product-resources` 只携带运行时，不携带任何测试 SOL/SWF/兼容目录；原始资产在源目录保持不变。
+
+## 配置与状态
+
+Domain 的 RuffleGameConfiguration 表达 id、quality、scale、volume，在播放器/内容入口校验一次。OpenSwf 的配置随注册源进入播放器，当前音量在播放器重载中保持；本地重新打开采用该源配置。RuffleSiteProfile 与 BuiltIn 目录按精确 host 选择网页配置，未知站点使用 default；mole-login 只声明登录界面验证，后续玩法不外推。注入器和页面公开有效配置供诊断，开发外壳持续显示运行时版本及兼容范围；配置持久化和完整选择 UI 由 U02 承接。
+
+FlashPlayerState 的阶段为 Empty、Loading、Ready、Paused、Reloading、Faulted、Closed，携带 runId 与错误。导航失效旧运行；playerRunStarted 与 playerReady 驱动当前运行。`load()`/`reload()` 的 Promise 完成只代表已开始载入/stream，不能作为电影就绪。宿主等待公开 metadata/loadedmetadata，最长 15 秒；失败显示明确错误并进入 Faulted，不发 playerReady。退出/离页/取消移除等待、metadata/trace observer 与定时器。
+
+## 控制结果
+
+每个控制分配 commandId，绑定当前 runId，同一时刻串行执行。JS 立即返回可序列化 `{accepted:true|false}`，实际 suspend/resume/reload/volume/fullscreen 通过 `playerCommandResult` 返回完成或失败。Pause/Resume/Volume 校验实际 API 状态，Reload 等待新电影 metadata，Fullscreen 等待真实 fullscreenchange/错误事件，最长 5 秒。托管端最多等待 30 秒，拒绝、失败、取消、旧 run、离页和关闭不会成为成功。重载结果按发起 run 关联，允许新 run 在命令完成前建立。
+
+关闭先取消命令入口和等待，再排空已接受 bridge 写入；命令、脚本及事件的所有者各自解除订阅。文档 pagehide 清理控制 Promise、metadata 等待、loadedmetadata/trace observer 和存档扫描 timer；后台扫描 5 秒，前台 1 秒，visibilitychange 立即重扫并重设单个 timer。
+
+## 支持边界
+
+保留 P02 的固定上游边界：同步重入、Flash 策略解释器及额外 IME 路径没有因此变成已支持。普通 ASCII 和组合输入分别记录；输入法问题仍由 U04 跟踪。音频 API 与实际 WebAudio 输出、主文档与 frame、脚本成功与真实全屏分别验收。W03 的新正式宿主证据见对应报告，历史 P02/A02/W01 不充当本轮结果。
+
+API 依据为固定 [Ruffle PlayerV1](https://github.com/ruffle-rs/ruffle/blob/a1ac4ce8647352ad03044031cad0454a636427b8/web/packages/core/src/public/player/v1.ts) 与 [固定 load/metadata 实现](https://github.com/ruffle-rs/ruffle/blob/a1ac4ce8647352ad03044031cad0454a636427b8/web/packages/core/src/internal/player/inner.tsx)，本机保留完整原文和 Git 树于 W03/runtime-api-research-20261028-01。没有复制上游实现到产品源码。

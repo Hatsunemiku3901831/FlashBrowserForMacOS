@@ -1,0 +1,42 @@
+# P01 独立原型与隔离 profile
+
+状态：DONE。日期：2026-10-28（Australia/Sydney）。目标 HEAD：UNBORN，main，无提交。
+
+## 输入与变更
+
+输入为 P00 冻结快照，83 个原型/fixture 文件按原相对层级进入 bootstrap/legacy。来源 SHA-256、目标及原因见 docs/provenance/bootstrap-import.json；历史 AGENTS 和 docs 调度文件不进入工作副本。改动映射为 docs/provenance/P01-changes.json，当前代码 hash 为 P01-working-files.json。Ruffle 0.4.1 原字节、SDK、依赖、三份锁未改。
+
+新增 TestProfile 显式路径与稳定 WebKit store 身份，composition root 注入到主窗口和 popup；启动未配置 profile 时在 GUI 创建前退出 3。开发 bundle ID 改为 local.flashmacos.prototype，UA 标注原型。路径契约见 docs/contracts/prototype-profile.zh-CN.md。
+
+## 环境与实际执行
+
+本机 Apple Silicon arm64，macOS 26.5.1 (25F80)，SDK 10.0.301；原型固定 Avalonia 12.1.0、WebView 12.0.1、Ruffle 0.4.1。托管验证配置 Debug，开发 app 配置 Release/self-contained/ReadyToRun。
+
+根目录运行 `python3 scripts/verify-bootstrap.py --run-id pristine-20261028-01`：locked restore/build/test 各退出 0；0 warning/error，97/97 通过、0 跳过。逐名称映射见 docs/provenance/prototype-test-map.json。
+
+加入 profile 后首次回归 isolated-profile-20261028-01 为 101/102：符号链接别名经过 /var 与 /private 产生不同身份。保留失败 TRX 和日志。修复为逐段递归规范化链接目标后运行 isolated-profile-20261028-02：restore/build/test 均退出 0；0 warning/error，102/102 通过、0 跳过；原始 97 项逐名称全部保留。每阶段锁 hash 均未变。
+
+在 bootstrap/legacy/spike/macos-host 运行 `scripts/package-macos.sh osx-arm64`，退出 0。生成本仓库自己的开发 app；包内 18 个 Mach-O 全为 ARM64，严格 codesign 验证退出 0，打包后锁不变。此包不是公证发行包。
+
+真实 GUI smoke：
+
+1. 清除 FLASHMACOS_TEST_PROFILE 后运行新 Debug DLL，退出 3，尚未创建 GUI。
+2. 对旧 Application Support/Cache/Logs/WebKit 根逐文件建立 hash；设置 profile 为 artifacts/profiles/P01-native-smoke-20261028-01。移除 DOTNET_ROOT 并使用不含 dotnet 的 PATH，直接启动新 app 的主程序，PID 1052。
+3. 通过原生桌面工具读取实际窗口：诊断页 Ruffle ready，document-start 已注入。用原型地址栏打开新仓库固定 avm2-hello-world/test.swf；实际嵌入式 WKWebView 发回唯一 `trace: Hello world!`，窗口状态也显示该值。未用外部浏览器替代。
+4. journal 实际配置 WebKit ID 为 164658b6-db18-9f4a-8813-a61a80ef0be2。系统对应目录为 ~/Library/WebKit/local.flashmacos.prototype/WebsiteDataStore/164658b6-db18-9f4a-8813-a61a80ef0be2，与旧 bundle/store 分离。
+5. 点击真实窗口关闭按钮，journal 完成 browser dispose、host stopped、process.stopping；PID 消失。本次 detached launcher 没有收集进程退出码，因此不作 exit 0 声明；关闭完成由 journal 与进程状态判定。桌面工具在已关闭窗口上读取时超时，属于窗口已退出。
+6. 旧数据目录全部文件 hash 与存在状态不变；原仓库业务文件和 Git 状态也保持 P00 状态。
+
+## 证据与范围
+
+完整 restore/build/test 日志和 TRX 位于 artifacts/evidence/P01/<run-id>/，本目录保存四份完整结果 JSON（含日志、fixture/锁与程序 hash 索引）。真实 journal 位于 artifacts/profiles/P01-native-smoke-20261028-01/logs/gate0-20261027T193309144Z-1052.jsonl。机器结果包含输入、环境、预期、实际、时间、hash 与路径。原失败样本保留。
+
+ProjectReference/Content 已逐项解析，全部落在本仓库 bootstrap/legacy 内；源码工作副本无符号链接、不引用原仓库、reference 或 Legacy solution。源资产许可保留。目标 CLAUDE.md 在会话期间出现，未改写；其他用户文件保持。
+
+此次结论仅为独立原型和 profile 基线。完整浏览器、SOL 编辑、目标游戏和发行未验收。下一任务 P02：补齐官方固定版 AS3 输入/渲染/定时、音频、网络与策略语料，在真实 WKWebView 建立机器判定。
+
+## 用户独立运行目标补充验证
+
+用户要求最终只依赖本项目，原项目仅提供资源和参考。新增系统 sandbox 规则拒绝读取原仓库：直接读取源 LICENSE 返回 Operation not permitted（退出 1），在同一继承规则下运行独立原型 locked restore/build/test 全部退出 0，102/102、0 跳过、0 warning/error，三份锁不变。完整 sandbox 与负控位于 artifacts/evidence/P01/source-denied-20261028-01/，构建日志与 TRX 位于 artifacts/evidence/P01/source-denied-build-20261028-01/。这证明当前副本不依赖原项目读取；正式 solution、最终离线 app 与干净安装仍须各自验收。
+
+P01 开发 app 已在 P02 重打包前完整归档至 artifacts/evidence/P01/native-smoke-20261028-01/CefFlashBrowser-P01.zip；hash 与原主程序核对见 package-archive.json。后续同一路径重打包不覆盖这份冻结证据。

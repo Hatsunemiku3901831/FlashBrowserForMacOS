@@ -1,0 +1,14 @@
+{
+  "url": "https://raw.githubusercontent.com/dotnet/core/main/release-notes/10.0/supported-os.md",
+  "sha256": "168f8bf76fdcaad9a1083ce5a96329291c17ef4c51e850b99c83f6e0457963f7",
+  "architecture": "arm64",
+  "macOS": "26.5.1",
+  "chip": "Apple M1 Pro",
+  "memoryBytes": 17179869184,
+  "appleSdkHeader": {
+    "source": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKWebsiteDataStore.h",
+    "sha256": "02cb250148a3011b18925c43b5a45522802e58b637bf5dc4994d35b9421f91b1",
+    "requiredApi": "dataStoreForIdentifier:",
+    "availability": "macOS 14.0"
+  }
+}

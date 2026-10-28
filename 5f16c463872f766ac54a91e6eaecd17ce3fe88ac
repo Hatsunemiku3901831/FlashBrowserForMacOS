@@ -1,0 +1,18 @@
+{
+  "taskId": "P03",
+  "runId": "p03-final-restart-20261028-01",
+  "caseId": "native-restart-and-evidence-isolation",
+  "status": "PASS",
+  "expected": "New process and random port restore 289-byte changed save; previous immutable run evidence unchanged; snapshots in a new process directory",
+  "actual": {
+    "saveBytes": 289,
+    "saveSha256": "74cae55ec9aa6d4e26cd28d5b4a48389ee5090d75d47e3e6984a1bb8ce4b73b3",
+    "inspectionDirectories": [
+      "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211704547Z-30013-1c339ebb045f4a5d99f97f3ed5ac6a22",
+      "artifacts/profiles/p03-final-native-20261028-01/native-inspections/20261027T211410471Z-29516-c1b7dbdd60ec4b8d8b85bb8c161d6c12"
+    ],
+    "priorEvidenceChanges": {},
+    "profileCheckpoint": "artifacts/evidence/P03/p03-final-restart-20261028-01/profile-checkpoint.json"
+  },
+  "runtimeReads": "saved=true with full expected member traces; exact raw journal retained"
+}

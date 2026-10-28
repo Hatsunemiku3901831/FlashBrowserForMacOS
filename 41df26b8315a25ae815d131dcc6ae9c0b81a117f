@@ -1,0 +1,11 @@
+# ADR 0004：Ruffle 的电影就绪、控制结果与产品资源边界
+
+日期：2026-10-29，状态：已采用。固定 Ruffle/Avalonia 版本与原资产保持。
+
+W03 首轮在坏 SWF 已显示 panic 页时，宿主仍发出 playerReady。固定 PlayerV1 的 load/reload Promise 只等引擎实例准备并启动 stream；metadata/loadedmetadata 才表示电影有效。宿主保留 load 前后及 loadedmetadata 的 trace observer 绑定，在等待元数据时不丢首帧 trace；最长 15 秒，取消和 pagehide 清理监听与 timer。首轮假 Ready、即时检查误判正常 SWF、延迟绑定丢 Hello trace 的失败均保留，最终原生用例要求四种打开/重载各精确一次 Hello。
+
+控制方法不再把 `void api.reload()` 派发视为成功。每条命令绑定 commandId 与发起 runId，脚本只返回 JSON 派发确认，完成/失败由 bridge 单独回报。Reload 允许新的 run 在旧 run 的命令完成前建立；不接受其他运行的结果。Pause/Resume/Volume 比对真实 API 状态，全屏等待真实事件；取消、导航、关闭结束等待并释放相关事件。管理器排空命令后才释放其生命周期。
+
+普通启动只需固定运行时和用户 store。诊断 SOL/ExternalInterface/固定语料只在显式 Test profile 的诊断开关下出现；开发包支持仅产品运行时资源模式，以实物证明没有 fixture 依赖。未知/损坏资产在 loopback 启动前明确失败，不取远程替代版。
+
+所有技术实现为项目自有代码；固定上游原文仅用于 API 语义核对，原文及树见 `artifacts/evidence/W03/runtime-api-research-20261028-01/`。适用边界、配置与生命周期详见 [播放器契约](../contracts/ruffle-player.zh-CN.md)。完整 UI 与配置持久化由 U02 承接，存档身份/事务联动仍由 W04 实施。

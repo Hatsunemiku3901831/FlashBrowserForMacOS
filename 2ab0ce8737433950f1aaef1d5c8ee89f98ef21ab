@@ -1,0 +1,131 @@
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using Avalonia.Platform;
+using CefFlashBrowser.MacOS.Spike.Desktop.Browser;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Platform.MacOS;
+
+public sealed partial class MacDocumentStartInjector : IDocumentStartInjector
+{
+    public void Inject(IPlatformHandle platformHandle, string script)
+    {
+        ArgumentNullException.ThrowIfNull(platformHandle);
+        ArgumentException.ThrowIfNullOrWhiteSpace(script);
+
+        if (!OperatingSystem.IsMacOS())
+        {
+            throw new PlatformNotSupportedException("Document-start injection currently requires WKWebView on macOS.");
+        }
+
+        if (platformHandle is not IAppleWKWebViewPlatformHandle wkWebViewHandle)
+        {
+            throw new PlatformNotSupportedException(
+                $"Expected an {nameof(IAppleWKWebViewPlatformHandle)}, got {platformHandle.GetType().Name}.");
+        }
+
+        InjectOnMacOS(wkWebViewHandle.WKWebView, script);
+    }
+
+    [SupportedOSPlatform("macos")]
+    private static void InjectOnMacOS(nint webView, string script)
+    {
+        var configuration = SendIntPtr(webView, Selectors.Configuration);
+        var contentController = SendIntPtr(configuration, Selectors.UserContentController);
+        if (configuration == nint.Zero || contentController == nint.Zero)
+        {
+            throw new InvalidOperationException("WKWebView did not expose its user content controller.");
+        }
+
+        var source = SendString(Classes.NSString, Selectors.StringWithUtf8String, script);
+        if (source == nint.Zero)
+        {
+            throw new InvalidOperationException("Failed to create the WKUserScript source string.");
+        }
+
+        var allocated = SendIntPtr(Classes.WKUserScript, Selectors.Alloc);
+        var userScript = SendUserScriptInitializer(
+            allocated,
+            Selectors.InitWithSource,
+            source,
+            injectionTime: 0,
+            forMainFrameOnly: 0);
+        if (userScript == nint.Zero)
+        {
+            throw new InvalidOperationException("Failed to create a document-start WKUserScript.");
+        }
+
+        try
+        {
+            SendVoid(contentController, Selectors.AddUserScript, userScript);
+        }
+        finally
+        {
+            SendVoid(userScript, Selectors.Release);
+        }
+    }
+
+    private static class Classes
+    {
+        public static readonly nint NSString = GetClass("NSString");
+        public static readonly nint WKUserScript = GetClass("WKUserScript");
+    }
+
+    private static class Selectors
+    {
+        public static readonly nint Configuration = GetSelector("configuration");
+        public static readonly nint UserContentController = GetSelector("userContentController");
+        public static readonly nint StringWithUtf8String = GetSelector("stringWithUTF8String:");
+        public static readonly nint Alloc = GetSelector("alloc");
+        public static readonly nint InitWithSource =
+            GetSelector("initWithSource:injectionTime:forMainFrameOnly:");
+        public static readonly nint AddUserScript = GetSelector("addUserScript:");
+        public static readonly nint Release = GetSelector("release");
+    }
+
+    private static nint GetClass(string name)
+    {
+        var value = ObjcGetClass(name);
+        return value != nint.Zero
+            ? value
+            : throw new PlatformNotSupportedException($"Objective-C class '{name}' is unavailable.");
+    }
+
+    private static nint GetSelector(string name)
+    {
+        var value = SelRegisterName(name);
+        return value != nint.Zero
+            ? value
+            : throw new PlatformNotSupportedException($"Objective-C selector '{name}' is unavailable.");
+    }
+
+    private const string LibObjC = "/usr/lib/libobjc.A.dylib";
+
+    [LibraryImport(LibObjC, EntryPoint = "objc_getClass", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial nint ObjcGetClass(string name);
+
+    [LibraryImport(LibObjC, EntryPoint = "sel_registerName", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial nint SelRegisterName(string name);
+
+    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
+    private static extern nint SendIntPtr(nint receiver, nint selector);
+
+    [LibraryImport(LibObjC, EntryPoint = "objc_msgSend", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial nint SendString(
+        nint receiver,
+        nint selector,
+        string value);
+
+    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
+    private static extern nint SendUserScriptInitializer(
+        nint receiver,
+        nint selector,
+        nint source,
+        nint injectionTime,
+        byte forMainFrameOnly);
+
+    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
+    private static extern void SendVoid(nint receiver, nint selector, nint argument);
+
+    [DllImport(LibObjC, EntryPoint = "objc_msgSend")]
+    private static extern void SendVoid(nint receiver, nint selector);
+}
