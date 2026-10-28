@@ -1,0 +1,19 @@
+# S04 完整 SOL 与编辑事务
+
+状态 DONE。依赖 S03、A03 的成功结果及源码/输入已复核；原来源路径与 SHA 见 provenance/S04-source-inputs.json。产品不调用原工程、Legacy oracle 或 reference。
+
+完整 SOL 验证头、长度、严格名称/版本及逐条零尾字节，名字/值共用整文件池。五份原样本均与独立完整内容预期比较，再按完整图身份/顺序/类型/位模式往返。AMF0 oracle 的未初始化 classdef bool 不在 wire 上，仅这两个字段明确排除对比；所有原始输出保持，AMF3 trait 全比较。RuffleTest 的计数差异没有被降级丢字段。
+
+SolEditorSession 提供独立创建/加载、候选命令、完整类型节点修改、单调版本、undo/redo、Save/SaveAs、显式 Reload、打开时原件导出与备份恢复。未知/坏文件只读且原字节保持。保存使用 A03 版本检查和原子替换，失败保留整个草稿快照；提交后取消仍发布成功版本。恢复先验证好备份、归档当前原字节，再恢复且不覆盖好备份，失败可重试。资源所有者关闭后取消并排空。详情 contracts/sol-editor.zh-CN.md。
+
+转换先验证来源、报告表示变化/损失，候选再编码/解码并比较完整图；损失没有候选。已知 AMF3 的完整类型可通过明确选项使用 AMF0 AVM+ 封套，普通 native AMF0 的不兼容仍拒绝。预览绑定来源实例，不能用旧预览覆盖新编辑，转换参与 undo。没有未知类布局猜测。
+
+最终命令 `sh scripts/verify.sh --task S04 --run-id sol-final-managed-20261028-01 --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser`；M1 Pro/arm64/macOS 26.5.1、SDK 10.0.301/runtime 10.0.9；exit 0，384 托管+18 工具，0 警告/跳过/错误，104 固定资产和 13 锁不变。50 个新增案例覆盖五完整内容、所有类型标量边界的全文件语义、跨条目引用、文件尾/长度溢出、实际临时目录内编辑/重读、三个阶段失败和取消、提交后取消、外部版本冲突、目标已存在、只读导出、坏备份、恢复提交失败/重试、并发文档版本、undo/redo/历史上限、共享关闭和转换损失。
+
+原始失败：sol-container-managed-20261028-01 的 CA1859 字段类型分析器提示已修正；-02 容器 345 通过，sol-editor 368、sol-conversion 382、最终 384。无跳过测试，无降低锁定还原。全部原始日志保存。
+
+111 项 Legacy 格式/数据/类型断言有新 API 语义等价映射，6 项 CLR UI 类型说明/default 目录明确待 U03，详见 provenance/S04-legacy-test-map.json。新结果不声称运行过原 Windows C++/CLI 测试，也不声称桌面编辑器已验收。
+
+证据：artifacts/evidence/S04/sol-final-managed-20261028-01/ 的 TRX、阶段命令/退出码和输入；全部正式输入归档 source-inputs.tar.gz；acceptance-index.json 与 provenance/S04-changes.json 记录 hash 和来源。原仓库 332 文件/HEAD/dirty、四个旧数据根保持。无提交/推送/发布。
+
+下一任务 S05：固定随机种子、进程时间/内存边界、覆盖率及 10 MiB/30 次性能与取消；当前 G2 尚未通过。
