@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "taskId": "P03",
+  "frozenFor": "Q02 and S05",
+  "measurementStatus": "PARTIAL_S05_CODEC_MEASURED_OTHER_Q02_BUDGETS_PENDING",
+  "initialBudgets": [
+    {
+      "id": "shell-cold-start",
+      "target": "P95 <= 2000 ms",
+      "minimumSamples": 30,
+      "method": "Independent Release ARM64 processes; measure spawn to shell first render without WebView; record warm/cold OS file-cache conditions separately"
+    },
+    {
+      "id": "ui-main-thread-stall",
+      "target": "P95 < 50 ms",
+      "minimumSamples": 100,
+      "method": "Fixed UI operations including a large SOL tree; use UI-thread scheduling and timestamp samples"
+    },
+    {
+      "id": "sol-10mib-read-save",
+      "target": "Each <= 500 ms; peak managed allocation <= 3x input bytes",
+      "minimumSamples": 30,
+      "method": "Fixed independently specified 10 MiB structure after warmup; separate parse, serialize and tree presentation; retain allocations and cancellation latency"
+    },
+    {
+      "id": "swf-second-open",
+      "target": "At least 25% faster than the first open",
+      "minimumSamples": 30,
+      "method": "Paired same-content opens under identical process/page conditions and completion event; retain both durations"
+    },
+    {
+      "id": "60fps-extra-frame-delay",
+      "target": "P95 < 8 ms",
+      "minimumSamples": 30,
+      "method": "Fixed 60fps scene; separate engine script time from application overhead; if inseparable leave unverified"
+    },
+    {
+      "id": "long-running-resources",
+      "target": "At least 30 minutes and 50 open/close/reload cycles, no sustained growth",
+      "minimumSamples": 50,
+      "method": "Sample main and WebKit processes, CPU/RSS, windows, subscriptions/handles; retain cycle and idle-period samples"
+    }
+  ],
+  "resourceBudgetsWithoutThreshold": {
+    "memory": "Record measured real baseline and trend first; no invented pass number",
+    "backgroundCpu": "Record real idle baseline and trend first; no invented pass number"
+  },
+  "requiredMetadata": [
+    "hardware",
+    "macOS",
+    "power mode",
+    "configuration",
+    "artifact hash",
+    "input hash",
+    "raw samples",
+    "percentile method",
+    "phase timing boundaries"
+  ],
+  "currentPrototypeTimings": "Smoke journals are individual samples and exclude native executable spawn time; they are not P95 acceptance.",
+  "measurements": {
+    "sol-10mib-read-save": {
+      "evidence": "artifacts/evidence/S05/final-managed-release-20261028-02/measurements/sol-performance-12419-ecaba0272b4e45d59a09b12fa91b9a03.json",
+      "inputSha256": "5cdb57e61085cc9909d327f1c6a173033926e6852eae161a1b7325a156719bad",
+      "samplesEachReadSave": 30,
+      "readP95Ms": 8.709,
+      "saveP95Ms": 35.533,
+      "maxPhaseMs": 54.5502,
+      "maxReadAllocatedBytes": 21045376,
+      "maxSaveAllocatedBytes": 10503056,
+      "budgetMs": 500,
+      "budgetAllocatedBytes": 31457280
+    },
+    "sol-cancellation": {
+      "evidence": "artifacts/evidence/S05/final-managed-release-20261028-02/measurements/cancellation-12455-473659b58ddb46ad81978ad6e9b439ad.json",
+      "samples": 60,
+      "maxLatencyMs": 10.9064,
+      "budgetMs": 100,
+      "allCanceled": true
+    },
+    "smallGameProfiles": [
+      {
+        "name": "mao.sol",
+        "inputBytes": 34,
+        "inputSha256": "efd9d1d647fa1542e63e2aa57d824e9b3b82eac1f25f36ee64abf5f16a94fa0b",
+        "readP95Ms": 0.2938,
+        "saveP95Ms": 6.7729,
+        "evidence": "artifacts/evidence/S05/final-managed-release-20261028-02/measurements/sol-fixture-performance-12419-1281f232dd4344b2a7d189703bf2103a.json"
+      },
+      {
+        "name": "settings.sol",
+        "inputBytes": 845,
+        "inputSha256": "c1f9c4c1700f440596daee7f9d2725093c7539ddc6503a3ca2450d9b8a7df226",
+        "readP95Ms": 0.3078,
+        "saveP95Ms": 8.2126,
+        "evidence": "artifacts/evidence/S05/final-managed-release-20261028-02/measurements/sol-fixture-performance-12419-532d1b11e79242339258e9525d26fb89.json"
+      },
+      {
+        "name": "FBCookie.sol",
+        "inputBytes": 269,
+        "inputSha256": "5189e30cf485f3f6427ff275c942877cbdd29637907342ac8c8433aacf6df4a4",
+        "readP95Ms": 0.3203,
+        "saveP95Ms": 7.4817,
+        "evidence": "artifacts/evidence/S05/final-managed-release-20261028-02/measurements/sol-fixture-performance-12419-4d35f59d58d0486d90903e7cc7390219.json"
+      },
+      {
+        "name": "RuffleTest.sol",
+        "inputBytes": 279,
+        "inputSha256": "f680967f67a440d153d63cfd00c89ece1c0770d79531d51003afa3131758b978",
+        "readP95Ms": 0.304,
+        "saveP95Ms": 6.7843,
+        "evidence": "artifacts/evidence/S05/final-managed-release-20261028-02/measurements/sol-fixture-performance-12419-8f6414819df14d08ae7de559f20b0bc9.json"
+      },
+      {
+        "name": "pvz.sol",
+        "inputBytes": 95,
+        "inputSha256": "f87829c3be383331cd9c2895d42e4da57ded6cb7132ce03f8cad3dbbe4bd9ad7",
+        "readP95Ms": 0.3013,
+        "saveP95Ms": 6.7274,
+        "evidence": "artifacts/evidence/S05/final-managed-release-20261028-02/measurements/sol-fixture-performance-12419-dc555651796241318a84a7ff637dc611.json"
+      }
+    ],
+    "environment": {
+      "hardwareEvidence": "artifacts/evidence/S05/tool-bootstrap-20261028-01",
+      "configuration": "Release ARM64",
+      "framework": ".NET 10.0.9",
+      "cache": "Warm APFS file cache after 3 warmups; full managed GC outside timing"
+    },
+    "remaining": "Shell/UI/tree/SWF/frame/30-minute measurements remain U03/Q02; no result inferred from codec timings"
+  }
+}

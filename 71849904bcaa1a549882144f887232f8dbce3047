@@ -1,0 +1,57 @@
+using System.Collections.ObjectModel;
+using FlashMacOS.Domain.Configuration;
+
+namespace FlashMacOS.Application.Configuration;
+
+public sealed class FavoritesService(IFavoritesRepository repository) : IDisposable
+{
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    public ConfigurationSnapshot<IReadOnlyList<FavoriteEntry>>? Current { get; private set; }
+
+    public async ValueTask<ConfigurationSnapshot<IReadOnlyList<FavoriteEntry>>> LoadAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return Current = await repository.LoadAsync(cancellationToken).ConfigureAwait(false); }
+        finally { _gate.Release(); }
+    }
+
+    public ValueTask<ConfigurationSnapshot<IReadOnlyList<FavoriteEntry>>> AddAsync(string? name, string? url, CancellationToken cancellationToken = default)
+        => ChangeAsync(list => list.Add(FavoriteEntry.Create(name, url)), cancellationToken);
+
+    public ValueTask<ConfigurationSnapshot<IReadOnlyList<FavoriteEntry>>> UpdateAsync(Guid id, string? name, string? url, CancellationToken cancellationToken = default)
+        => ChangeAsync(list => { var index = RequiredIndex(list, id); list[index] = list[index] with { Name = name, Url = url }; }, cancellationToken);
+
+    public ValueTask<ConfigurationSnapshot<IReadOnlyList<FavoriteEntry>>> RemoveAsync(Guid id, CancellationToken cancellationToken = default)
+        => ChangeAsync(list => list.RemoveAt(RequiredIndex(list, id)), cancellationToken);
+
+    public ValueTask<ConfigurationSnapshot<IReadOnlyList<FavoriteEntry>>> MoveAsync(Guid id, int destination, CancellationToken cancellationToken = default)
+        => ChangeAsync(list =>
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(destination);
+            ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(destination, list.Count);
+            var index = RequiredIndex(list, id); var entry = list[index]; list.RemoveAt(index); list.Insert(destination, entry);
+        }, cancellationToken);
+
+    private async ValueTask<ConfigurationSnapshot<IReadOnlyList<FavoriteEntry>>> ChangeAsync(Action<List<FavoriteEntry>> edit, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var current = Current ?? await repository.LoadAsync(cancellationToken).ConfigureAwait(false);
+            var candidate = current.Value.ToList();
+            edit(candidate);
+            foreach (var entry in candidate) entry.Validate();
+            var saved = await repository.SaveAsync(new ReadOnlyCollection<FavoriteEntry>(candidate), current.Revision, cancellationToken).ConfigureAwait(false);
+            Current = saved;
+            return saved;
+        }
+        finally { _gate.Release(); }
+    }
+
+    private static int RequiredIndex(List<FavoriteEntry> list, Guid id)
+    {
+        var index = list.FindIndex(x => x.Id == id);
+        return index >= 0 ? index : throw new KeyNotFoundException("The favorite no longer exists.");
+    }
+    public void Dispose() => _gate.Dispose();
+}

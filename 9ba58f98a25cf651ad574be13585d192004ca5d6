@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Windows require composition arguments, as in the accepted prototype. -->
+    <NoWarn>$(NoWarn);AVLN3001</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../FlashMacOS.Domain/FlashMacOS.Domain.csproj" />
+    <ProjectReference Include="../FlashMacOS.Application/FlashMacOS.Application.csproj" />
+    <ProjectReference Include="../FlashMacOS.Infrastructure/FlashMacOS.Infrastructure.csproj" />
+    <ProjectReference Include="../FlashMacOS.Sol.Managed/FlashMacOS.Sol.Managed.csproj" />
+    <ProjectReference Include="../FlashMacOS.Browser.WebKit/FlashMacOS.Browser.WebKit.csproj" />
+    <ProjectReference Include="../FlashMacOS.Flash.Ruffle/FlashMacOS.Flash.Ruffle.csproj" />
+    <ProjectReference Include="../FlashMacOS.Platform.MacOS/FlashMacOS.Platform.MacOS.csproj" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../test-assets/flash/p02-project/**" Link="CompatibilityFixtures/p02-project/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../test-assets/flash/ruffle-v0.4.1/**" Link="CompatibilityFixtures/ruffle-v0.4.1/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../FlashMacOS.Flash.Ruffle/Assets/**" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../test-assets/legacy-sol/settings.sol" Link="Assets/Fixtures/settings.sol" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

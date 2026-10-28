@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""Freeze the selected working tree; never build or change the source repository."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import stat
+import subprocess
+import sys
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+
+def digest(path):
+    h = hashlib.sha256()
+    with path.open('rb') as f:
+        for block in iter(lambda: f.read(1024 * 1024), b''):
+            h.update(block)
+    return h.hexdigest()
+
+
+def git(root, *args):
+    return subprocess.check_output(['git', '-C', str(root), *args],
+                                   env={**os.environ, 'GIT_OPTIONAL_LOCKS': '0'})
+
+
+def validate_relative(value):
+    p = Path(value)
+    if p.is_absolute() or not p.parts or '..' in p.parts:
+        raise ValueError(f'Invalid relative path: {value!r}')
+    return p
+
+
+def safe_destination(target, relative):
+    path = target / validate_relative(relative)
+    for ancestor in (path, *path.parents):
+        if ancestor == target:
+            break
+        if ancestor.is_symlink():
+            raise ValueError(f'Destination contains symlink: {ancestor}')
+    return path
+
+
+def inventory(source, baseline):
+    tracked = set(git(source, 'ls-files', '-z').decode().split('\0'))
+    excluded_dirs = {s.lower() for s in baseline['excludedDirectoryNames']}
+    excluded_files = set(baseline['excludedFileNames'])
+    files, exclusions = {}, []
+
+    def visit(path):
+        rel = path.relative_to(source).as_posix()
+        if path.is_symlink():
+            exclusions.append({'path': rel, 'reason': 'symbolic link; not followed'})
+        elif path.is_dir():
+            if path.name.lower() in excluded_dirs:
+                exclusions.append({'path': rel, 'reason': 'generated/cache directory'})
+            else:
+                for child in sorted(path.iterdir()):
+                    visit(child)
+        elif not path.is_file():
+            raise ValueError(f'Missing or non-regular source: {rel}')
+        elif path.name in excluded_files:
+            exclusions.append({'path': rel, 'reason': 'generated metadata'})
+        elif path.suffix.lower() in {'.zip', '.7z', '.rar', '.dll', '.exe', '.pdb'}:
+            exclusions.append({'path': rel, 'reason': 'legacy binary/archive; not a source asset'})
+        else:
+            files[rel] = {'sourceRelativePath': rel,
+                          'snapshotRelativePath': 'reference/legacy/' + rel,
+                          'size': path.stat().st_size, 'sha256': digest(path),
+                          'gitState': 'tracked' if rel in tracked else 'untracked',
+                          'executable': bool(path.stat().st_mode & 0o111)}
+
+    for root in baseline['sourceRoots']:
+        rel = validate_relative(root)
+        for parent in (source / rel).parents:
+            if parent == source:
+                break
+            if parent.is_symlink():
+                raise ValueError(f'Source root contains symlink: {root}')
+        visit(source / rel)
+    return [files[k] for k in sorted(files)], exclusions
+
+
+def delta(old, new):
+    a = {f['sourceRelativePath']: f for f in old}
+    b = {f['sourceRelativePath']: f for f in new}
+    return {'added': sorted(b.keys() - a.keys()), 'removed': sorted(a.keys() - b.keys()),
+            'changed': [{'path': k, 'baselineSha256': a[k]['sha256'],
+                         'actualSha256': b[k]['sha256']} for k in sorted(a.keys() & b.keys())
+                        if any(a[k].get(x) != b[k].get(x) for x in ('sha256', 'size', 'executable'))]}
+
+
+def write_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = json.dumps(value, ensure_ascii=False, indent=2) + '\n'
+    if not path.exists() or path.read_text() != data:
+        path.write_text(data)
+
+
+def run(args):
+    # Reject a symlink target before resolving it.
+    if args.target.is_symlink():
+        raise ValueError('Target root is a symlink')
+    source, target = args.source.resolve(strict=True), args.target.resolve(strict=True)
+    if source == target or source in target.parents or target in source.parents:
+        raise ValueError('Source and target must be distinct, non-nested directories')
+    if Path(git(source, 'rev-parse', '--show-toplevel').decode().strip()).resolve() != source:
+        raise ValueError('Source must be the verified Git root')
+    baseline = json.loads(args.baseline.read_text())
+    status_before = git(source, 'status', '--short', '--untracked-files=normal').decode()
+    head = git(source, 'rev-parse', 'HEAD').decode().strip()
+    remote = git(source, 'remote', 'get-url', 'origin').decode().strip()
+    files, excluded = inventory(source, baseline)
+    manifest_path = safe_destination(target, 'docs/provenance/source-import.json')
+    previous = json.loads(manifest_path.read_text()) if manifest_path.exists() else None
+    conflicts, pending = [], []
+    for f in files:
+        dst = safe_destination(target, f['snapshotRelativePath'])
+        if dst.exists():
+            if not dst.is_file() or digest(dst) != f['sha256'] or bool(dst.stat().st_mode & 0o111) != f['executable']:
+                conflicts.append(f['snapshotRelativePath'])
+        else:
+            pending.append(f)
+    if previous and (previous['files'] != files or previous['sourceHead'] != head or
+                     previous['worktreeStatus'] != status_before or previous['sourceRoot'] != str(source)):
+        conflicts.append('docs/provenance/source-import.json (frozen input differs; use a separate snapshot)')
+    report = {'mode': 'apply' if args.apply else 'dry-run', 'sourceRoot': str(source),
+              'targetRoot': str(target), 'sourceHead': head, 'sourceRemote': remote,
+              'fileCount': len(files), 'totalBytes': sum(f['size'] for f in files),
+              'copyCount': len(pending), 'noOpCount': len(files) - len(pending),
+              'baselineDelta': delta(baseline['files'], files),
+              'baselineHeadMatches': baseline['sourceHead'] == head,
+              'baselineWorktreeStatus': baseline.get('worktreeStatus'),
+              'worktreeStatus': status_before, 'excluded': excluded, 'conflicts': conflicts}
+    if args.report:
+        report_path = args.report.resolve()
+        if target not in report_path.parents or 'reference' in report_path.relative_to(target).parts:
+            raise ValueError('Report must be inside target and outside the snapshot')
+    # Preflight the entire plan before writing a single snapshot file.
+    if not conflicts and args.apply:
+        for f in pending:
+            src, dst = source / f['sourceRelativePath'], target / f['snapshotRelativePath']
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            # Exclusive create guarantees even an unexpected conflict is never overwritten.
+            with src.open('rb') as inp, dst.open('xb') as out:
+                for block in iter(lambda: inp.read(1024 * 1024), b''):
+                    out.write(block)
+            dst.chmod(0o755 if f['executable'] else 0o644)
+            if digest(dst) != f['sha256']:
+                raise ValueError(f'Copy verification failed: {dst}')
+    files_after, _ = inventory(source, baseline)
+    status_after = git(source, 'status', '--short', '--untracked-files=normal').decode()
+    if files_after != files or status_after != status_before or git(source, 'rev-parse', 'HEAD').decode().strip() != head:
+        raise ValueError('Source changed during capture; this run is not accepted')
+    report['sourceUnchanged'] = True
+    if not conflicts and args.apply and previous is None:
+        write_json(manifest_path, {'schemaVersion': 1, 'sourceRoot': str(source),
+                   'sourceHead': head, 'sourceRemote': remote,
+                   'capturedAt': datetime.now(ZoneInfo('Australia/Sydney')).isoformat(),
+                   'worktreeStatus': status_before, 'baselineSha256': digest(args.baseline),
+                   'baselineDelta': report['baselineDelta'], 'files': files,
+                   'exclusions': excluded})
+    if args.report:
+        write_json(args.report, report)
+    print(json.dumps({k: v for k, v in report.items() if k not in
+                     ('worktreeStatus', 'baselineWorktreeStatus', 'excluded')}, ensure_ascii=False, indent=2))
+    return 1 if conflicts else 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--source', type=Path, required=True)
+    parser.add_argument('--target', type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument('--baseline', type=Path, default=Path(__file__).resolve().parents[1] / 'docs/source-baseline.json')
+    parser.add_argument('--report', type=Path)
+    parser.add_argument('--apply', action='store_true', help='Copy after full conflict preflight; otherwise only inspect')
+    try:
+        return run(parser.parse_args())
+    except (ValueError, OSError, subprocess.CalledProcessError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+
+if __name__ == '__main__':
+    sys.exit(main())

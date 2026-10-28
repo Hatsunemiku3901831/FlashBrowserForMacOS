@@ -1,0 +1,92 @@
+using FlashMacOS.Application.Browser;
+using FlashMacOS.Domain.Browser;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class BrowserBoundaryTests
+{
+    [TestMethod]
+    public async Task ReadinessCancellationOnlyCancelsTheCaller()
+    {
+        using var ready = new BrowserReadiness(TimeProvider.System);
+        using var cancellation = new CancellationTokenSource();
+        var first = ready.WaitAsync(cancellation.Token).AsTask();
+        await cancellation.CancelAsync();
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(async () => await first);
+        Assert.IsFalse(ready.Ready.IsCompleted);
+        Assert.IsTrue(ready.Complete());
+        await ready.WaitAsync(CancellationToken.None);
+    }
+
+    [TestMethod]
+    public async Task ReadyFailureCannotBeReplacedWithSuccess()
+    {
+        using var ready = new BrowserReadiness(TimeProvider.System);
+        var failure = new IOException("Controlled native initialization failure");
+        Assert.IsTrue(ready.Fail(failure)); Assert.IsFalse(ready.Complete());
+        Assert.AreSame(failure, await Assert.ThrowsExactlyAsync<IOException>(async () => await ready.WaitAsync(CancellationToken.None)));
+    }
+
+    [TestMethod]
+    public async Task ClosingCancelsPendingReadyAndRejectsLaterCalls()
+    {
+        using var ready = new BrowserReadiness(TimeProvider.System);
+        var waiting = ready.WaitAsync(CancellationToken.None).AsTask();
+        ready.Dispose(); ready.Dispose();
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(async () => await waiting);
+        Assert.IsFalse(ready.Complete());
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(async () => await ready.WaitAsync(CancellationToken.None));
+    }
+
+    [TestMethod]
+    public async Task MissingAdapterHasABoundedReadyWait()
+    {
+        using var ready = new BrowserReadiness(TimeProvider.System, TimeSpan.FromMilliseconds(50));
+        await Assert.ThrowsExactlyAsync<TimeoutException>(async () => await ready.WaitAsync(CancellationToken.None));
+    }
+
+    [TestMethod]
+    public void OldDocumentMessagesCannotCrossNavigationEvenAtTheSameUrl()
+    {
+        var gate = new NavigationMessageGate(); var url = new Uri("https://example.test/game");
+        var oldId = Guid.NewGuid().ToString("N"); var newId = Guid.NewGuid().ToString("N");
+        var first = gate.BeginNavigation(); gate.Commit(first, oldId, url);
+        Assert.IsTrue(gate.AcceptOrBuffer(Message(oldId)));
+        var second = gate.BeginNavigation();
+        gate.AcceptOrBuffer(Message(oldId)); gate.AcceptOrBuffer(Message(newId));
+        var accepted = gate.Commit(second, newId, url);
+        Assert.HasCount(1, accepted); Assert.AreEqual(newId, accepted[0].NavigationId);
+        Assert.IsEmpty(gate.Commit(first, oldId, url));
+        Assert.IsFalse(gate.AcceptOrBuffer(Message(oldId)));
+        Assert.IsTrue(gate.AcceptOrBuffer(Message(newId)));
+    }
+
+    [TestMethod]
+    public void WrongOriginsAndFramesAreRejectedButSameDocumentSpaPathsWork()
+    {
+        var gate = new NavigationMessageGate(); var id = Guid.NewGuid().ToString("N");
+        gate.Commit(gate.BeginNavigation(), id, new Uri("https://example.test/game"));
+        Assert.IsFalse(gate.AcceptOrBuffer(Message(id) with { Origin = "https://other.test" }));
+        Assert.IsFalse(gate.AcceptOrBuffer(Message(id) with { Href = "https://other.test/game" }));
+        Assert.IsFalse(gate.AcceptOrBuffer(Message(id) with { IsMainFrame = false }));
+        Assert.IsFalse(gate.AcceptOrBuffer(new WebBridgeMessage("trace", Message: "legacy")));
+        Assert.IsTrue(gate.AcceptOrBuffer(Message(id) with { Href = "https://example.test/spa#other" }));
+    }
+
+    [TestMethod]
+    public void NavigationBufferIsBoundedAndCloseClearsIt()
+    {
+        var gate = new NavigationMessageGate(); var id = Guid.NewGuid().ToString("N");
+        var sequence = gate.BeginNavigation();
+        for (var i = 0; i < BridgeLimits.MaximumPendingMessages; i++) gate.AcceptOrBuffer(Message(id));
+        Assert.ThrowsExactly<InvalidDataException>(() => gate.AcceptOrBuffer(Message(id)));
+        gate.Close(); gate.Close();
+        Assert.IsEmpty(gate.Commit(sequence, id, new Uri("https://example.test/game")));
+        Assert.IsFalse(gate.AcceptOrBuffer(Message(id)));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => gate.BeginNavigation());
+    }
+
+    private static WebBridgeMessage Message(string id) => new("trace", Message: "hello", ProtocolVersion: 1,
+        NavigationId: id, RunId: id, Origin: "https://example.test", Href: "https://example.test/game");
+}

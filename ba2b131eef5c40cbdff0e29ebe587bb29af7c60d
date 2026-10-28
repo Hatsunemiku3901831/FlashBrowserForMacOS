@@ -1,0 +1,102 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using FlashMacOS.Application.Configuration;
+using FlashMacOS.Domain.Configuration;
+using FlashMacOS.Infrastructure.Persistence;
+
+namespace FlashMacOS.Infrastructure.Configuration;
+
+public sealed class JsonSettingsRepository(string path,
+    Func<AtomicWriteStage, CancellationToken, ValueTask>? faultPoint = null)
+    : JsonConfigurationRepository<AppSettings>(path, 4 * 1024 * 1024, faultPoint), ISettingsRepository
+{
+    private static readonly string[] WindowsFields = ["proxySettings", "fakeFlashVersionSetting", "disableGpuAccelerationWPF", "disableGpuAcceleration"];
+    private static readonly JsonObject DefaultShape = JsonSerializer.SerializeToNode(AppSettings.Default with
+    {
+        MainWindowSizeInfo = new(), BrowserWindowSizeInfo = new(), SwfWindowSizeInfo = new(), SolSaveManagerSizeInfo = new(),
+    }, ConfigurationJson.Options)!.AsObject();
+    protected override AppSettings Defaults => AppSettings.Default;
+    protected override AppSettings PrepareCandidate(AppSettings value) { value.Validate(); return value; }
+
+    protected override (AppSettings Value, JsonObject Document, bool NeedsUpgrade) Decode(JsonObject document)
+    {
+        var version = ConfigurationJson.Schema(document);
+        JsonObject values;
+        JsonObject target;
+        if (version == 1)
+        {
+            values = ConfigurationJson.Canonicalize(document, DefaultShape);
+            var common = (JsonObject)document.DeepClone();
+            ConfigurationJson.CanonicalNames(common, DefaultShape);
+            var windows = new JsonObject();
+            foreach (var field in WindowsFields)
+            {
+                if (common[field] is { } stored) windows[field] = stored.DeepClone();
+                common.Remove(field);
+            }
+            foreach (var key in common.Select(x => x.Key).Where(x => x.Equals("schemaVersion", StringComparison.OrdinalIgnoreCase)).ToArray()) common.Remove(key);
+            target = new JsonObject { ["schemaVersion"] = 2, ["settings"] = common,
+                ["legacy"] = new JsonObject { ["windows"] = windows, ["sourceSettings"] = document.DeepClone() } };
+        }
+        else
+        {
+            target = (JsonObject)document.DeepClone();
+            ConfigurationJson.CanonicalNames(target, new JsonObject { ["schemaVersion"] = null, ["settings"] = DefaultShape.DeepClone(), ["legacy"] = new JsonObject() });
+            values = ConfigurationJson.Canonicalize(ConfigurationJson.RequiredObject(target, "settings"), DefaultShape);
+            if (ConfigurationJson.Get(target, "legacy") is { } legacyValue && legacyValue is not JsonObject)
+                throw new InvalidDataException("The legacy settings section must be an object.");
+            if (ConfigurationJson.Get(target, "legacy") is JsonObject legacyNames)
+                ConfigurationJson.CanonicalNames(legacyNames, new JsonObject
+                { ["windows"] = DefaultShape.DeepClone(), ["preserved"] = new JsonObject(), ["sourceSettings"] = null });
+            if (ConfigurationJson.Get(target, "legacy") is JsonObject legacy && ConfigurationJson.Get(legacy, "windows") is JsonObject windows)
+            {
+                ConfigurationJson.CanonicalNames(windows, DefaultShape);
+                foreach (var field in WindowsFields)
+                    if (ConfigurationJson.Get(windows, field) is { } stored)
+                        values[field] = stored is JsonObject storedObject && DefaultShape[field] is JsonObject fieldShape
+                            ? ConfigurationJson.Canonicalize(storedObject, fieldShape) : stored.DeepClone();
+            }
+        }
+        AppSettings model;
+        try { model = values.Deserialize<AppSettings>(ConfigurationJson.Options) ?? throw new InvalidDataException("Settings root is null."); }
+        catch (JsonException exception) { throw new InvalidDataException("A settings value has the wrong type.", exception); }
+        model = model with
+        {
+            MainWindowSizeInfo = FiniteWindow(model.MainWindowSizeInfo), BrowserWindowSizeInfo = FiniteWindow(model.BrowserWindowSizeInfo),
+            SwfWindowSizeInfo = FiniteWindow(model.SwfWindowSizeInfo), SolSaveManagerSizeInfo = FiniteWindow(model.SolSaveManagerSizeInfo),
+        };
+        try { model.Validate(); }
+        catch (ArgumentException exception) { throw new InvalidDataException("Settings validation failed.", exception); }
+        return (model, version == 1 ? Encode(model, target) : target, version == 1);
+    }
+
+    protected override JsonObject Encode(AppSettings value, JsonObject document)
+    {
+        document["schemaVersion"] = 2;
+        var known = JsonSerializer.SerializeToNode(value, ConfigurationJson.Options)!.AsObject();
+        var legacy = ConfigurationJson.Child(document, "legacy");
+        var windows = ConfigurationJson.Child(legacy, "windows");
+        var preserved = ConfigurationJson.Child(legacy, "preserved");
+        foreach (var field in WindowsFields)
+        {
+            var subset = new JsonObject { [field] = known[field]?.DeepClone() };
+            ConfigurationJson.Merge(windows, subset, preserved, "/legacy/windows");
+            known.Remove(field);
+        }
+        var common = ConfigurationJson.Child(document, "settings");
+        foreach (var field in WindowsFields)
+        {
+            if (common[field] is { } old) preserved["/settings/" + field] = old.DeepClone();
+            common.Remove(field);
+        }
+        ConfigurationJson.Merge(common, known, preserved, "/settings");
+        return document;
+    }
+
+    private static WindowSizeInfo? FiniteWindow(WindowSizeInfo? window)
+    {
+        if (window is null) return null;
+        static double? Finite(double? value) => value is { } number && double.IsFinite(number) ? number : null;
+        return window with { Left = Finite(window.Left), Top = Finite(window.Top), Width = Finite(window.Width), Height = Finite(window.Height) };
+    }
+}

@@ -1,0 +1,17 @@
+using FlashMacOS.Domain.Browser;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class DomainArchitectureTests
+{
+    [TestMethod]
+    public void DomainReferencesOnlyBaseClassLibraries()
+    {
+        var forbidden = typeof(BrowserState).Assembly.GetReferencedAssemblies()
+            .Where(reference => !reference.Name!.StartsWith("System.", StringComparison.Ordinal)
+                && reference.Name != "System" && reference.Name != "netstandard" && reference.Name != "mscorlib")
+            .Select(reference => reference.Name).ToArray();
+        Assert.IsEmpty(forbidden, string.Join(", ", forbidden));
+    }
+}

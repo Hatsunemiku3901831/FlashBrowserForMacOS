@@ -1,0 +1,69 @@
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using FlashMacOS.Desktop.Composition;
+using FlashMacOS.Domain.Identity;
+
+namespace FlashMacOS.Desktop;
+
+public sealed partial class App : Avalonia.Application, IAsyncDisposable
+{
+    private CompositionRoot? _compositionRoot;
+    private Task? _shutdownTask;
+    private bool _shutdownComplete;
+
+    public override void Initialize()
+    {
+        Name = ProductIdentity.Name;
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    public override void OnFrameworkInitializationCompleted()
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            _compositionRoot = new CompositionRoot(desktop.Args ?? [], requestQuit: () => { desktop.TryShutdown(); });
+            desktop.MainWindow = _compositionRoot.CreateMainWindow();
+            desktop.ShutdownRequested += OnShutdownRequested;
+            desktop.Exit += OnDesktopExit;
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnQuitClick(object? sender, EventArgs args)
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.TryShutdown();
+    }
+
+    private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs args)
+    {
+        if (sender is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.Exit -= OnDesktopExit;
+            desktop.ShutdownRequested -= OnShutdownRequested;
+        }
+
+        if (_shutdownTask is { IsCompleted: false })
+        {
+            Console.Error.WriteLine("The platform exited before application cleanup completed.");
+            args.ApplicationExitCode = 1;
+        }
+        if (_compositionRoot?.HasFailure == true) args.ApplicationExitCode = 1;
+    }
+
+    private async void OnShutdownRequested(object? sender, ShutdownRequestedEventArgs args)
+    {
+        if (_shutdownComplete || sender is not IClassicDesktopStyleApplicationLifetime desktop) return;
+        args.Cancel = true;
+        desktop.MainWindow?.Close();
+        var exitCode = 0;
+        try { await DisposeAsync(); }
+        catch (Exception exception) { Console.Error.WriteLine(exception); exitCode = 1; }
+        _shutdownComplete = true;
+        desktop.Shutdown(exitCode);
+    }
+
+    public ValueTask DisposeAsync()
+        => new(_shutdownTask ??= _compositionRoot?.DisposeAsync().AsTask() ?? Task.CompletedTask);
+}

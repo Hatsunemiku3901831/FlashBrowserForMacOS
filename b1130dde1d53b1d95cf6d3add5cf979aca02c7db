@@ -1,0 +1,24 @@
+namespace FlashMacOS.Application.Flash;
+
+/// <summary>Control methods acknowledge dispatch. A bridge result supplies actual runtime completion.</summary>
+public interface IFlashPlayer : IAsyncDisposable
+{
+    LocalSwfSource? CurrentSource { get; }
+    string? CurrentRunId { get; }
+    event Action<RuffleSaveEntry>? SaveChanged;
+    event Action<string>? SaveDeleted;
+    event Action<string>? TraceReceived;
+    event Action<string>? StatusChanged;
+    event Action<Exception>? Faulted;
+    ValueTask<LocalSwfSource> OpenSwfAsync(string filePath, CancellationToken cancellationToken = default);
+    ValueTask<IReadOnlyList<RuffleSaveEntry>> GetSavesAsync(CancellationToken cancellationToken = default);
+    ValueTask CapturePageSavesAsync(CancellationToken cancellationToken = default);
+    ValueTask<RuffleSaveEntry> ImportAsync(string sourcePath, string? replaceKey = null, CancellationToken cancellationToken = default);
+    ValueTask ExportAsync(RuffleSaveEntry entry, string destinationPath, CancellationToken cancellationToken = default);
+    ValueTask DeleteAsync(RuffleSaveEntry entry, CancellationToken cancellationToken = default);
+    ValueTask PauseAsync(CancellationToken cancellationToken = default);
+    ValueTask ResumeAsync(CancellationToken cancellationToken = default);
+    ValueTask ReloadAsync(CancellationToken cancellationToken = default);
+    ValueTask RequestFullscreenAsync(CancellationToken cancellationToken = default);
+    ValueTask SetVolumeAsync(double volume, CancellationToken cancellationToken = default);
+}

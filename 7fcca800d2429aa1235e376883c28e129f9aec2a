@@ -1,0 +1,51 @@
+using FlashMacOS.Domain.Identity;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class ContentIdentityTests
+{
+    [TestMethod]
+    public void MovingAddsAnAliasWithoutChangingExplicitIdentity()
+    {
+        var aliases = new List<LocationAlias> { new(new Uri("file:///games/old/test.swf"), DateTimeOffset.UnixEpoch) };
+        var original = new ContentIdentity(ContentId.Create(), "profile-one", ContentLocationKind.LocalPackage, aliases);
+        var moved = original.AddAlias(new LocationAlias(new Uri("file:///games/new/test.swf"), DateTimeOffset.UnixEpoch));
+        aliases.Clear();
+        Assert.AreEqual(original.ContentId, moved.ContentId);
+        Assert.HasCount(1, original.LocationAliases);
+        Assert.HasCount(2, moved.LocationAliases);
+    }
+
+    [TestMethod]
+    public void EqualNamesAndDigestsDoNotMergeIndependentGamesOrProfiles()
+    {
+        var hash = new string('a', 64);
+        var aliases = new[] { new LocationAlias(new Uri("file:///games/test.swf"), DateTimeOffset.UnixEpoch) };
+        var one = new ContentIdentity(ContentId.Create(), "one", ContentLocationKind.LocalPackage, aliases, hash);
+        var two = new ContentIdentity(ContentId.Create(), "two", ContentLocationKind.LocalPackage, aliases, hash);
+        Assert.AreNotEqual(one.ContentId, two.ContentId);
+        Assert.AreNotEqual(one.ProfileId, two.ProfileId);
+        Assert.AreEqual(one.ContentSha256, two.ContentSha256);
+    }
+
+    [TestMethod]
+    [DataRow("http://127.0.0.1:1234/")]
+    [DataRow("https://example.test/game?session=synthetic")]
+    [DataRow("https://name:synthetic@example.test/")]
+    [DataRow("https://example.test/game")]
+    public void EphemeralOrCredentialLocationsCannotBecomeWebIdentities(string url)
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => new ContentIdentity(ContentId.Create(), "one", ContentLocationKind.WebOrigin,
+            [new LocationAlias(new Uri(url), DateTimeOffset.UnixEpoch)]));
+    }
+
+    [TestMethod]
+    public void PublicOriginIsAnExplicitIdentityLocation()
+    {
+        var identity = new ContentIdentity(ContentId.Create(), "one", ContentLocationKind.WebOrigin,
+            [new LocationAlias(new Uri("http://mole.61.com/"), DateTimeOffset.UnixEpoch)]);
+        Assert.AreEqual("mole.61.com", identity.LocationAliases[0].Location.Host);
+        Assert.ThrowsExactly<ArgumentException>(() => new ContentId(Guid.Empty));
+    }
+}

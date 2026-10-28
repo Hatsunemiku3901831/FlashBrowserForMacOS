@@ -1,0 +1,8 @@
+namespace FlashMacOS.Application.Browser;
+
+public static class WebBridgeNames
+{
+    // The vendor owns its handler. Keep our trusted native transport on a separate registration.
+    public const string NativeHandler = "flashMacOSNativeBridgeV1";
+    public const string DefaultHandler = "cefFlashBrowserBridge";
+}

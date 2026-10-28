@@ -1,0 +1,19 @@
+namespace FlashMacOS.Application.Browser;
+
+/// <summary>Optional native capabilities. Dispatching print opens a sheet, not proof of printing.</summary>
+public interface IBrowserTools
+{
+    BrowserCapabilities Capabilities { get; }
+    double Zoom { get; }
+    ValueTask SetZoomAsync(double zoom, CancellationToken cancellationToken = default);
+    ValueTask<bool> FindAsync(BrowserFindRequest request, CancellationToken cancellationToken = default);
+    ValueTask SetUserAgentAsync(string? userAgent, CancellationToken cancellationToken = default);
+    ValueTask ShowPrintDialogAsync(CancellationToken cancellationToken = default);
+    ValueTask<byte[]> ExportPdfAsync(CancellationToken cancellationToken = default);
+    ValueTask SetInspectionEnabledAsync(bool enabled, CancellationToken cancellationToken = default);
+}
+
+public interface IJavaScriptExecutor
+{
+    ValueTask<string?> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default);
+}

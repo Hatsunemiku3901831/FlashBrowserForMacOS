@@ -1,0 +1,12 @@
+using FlashMacOS.Domain.Flash;
+
+namespace FlashMacOS.Flash.Ruffle.Runtime;
+
+public static class RuffleGameProfiles
+{
+    public static IReadOnlyList<RuffleSiteProfile> BuiltIn { get; } = Array.AsReadOnly(new[]
+    {
+        new RuffleSiteProfile("mole.61.com", new RuffleGameConfiguration("mole-login"),
+            "Login interface verified; later gameplay unverified. Ruffle 0.4.1 has incomplete Flash API compatibility."),
+    });
+}

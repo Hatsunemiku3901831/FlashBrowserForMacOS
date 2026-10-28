@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "inputs": [
+    {
+      "snapshotPath": "reference/legacy/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+      "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit",
+        "src/FlashMacOS.Application/Browser",
+        "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleDocumentStartScriptBuilder.cs",
+        "src/FlashMacOS.Desktop/Composition",
+        "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs"
+      ],
+      "reason": "W01 extends the already imported formal adapter and document-start behavior; no source file is read at build/runtime or newly copied from the original repository"
+    },
+    {
+      "snapshotPath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit",
+        "src/FlashMacOS.Application/Browser",
+        "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleDocumentStartScriptBuilder.cs",
+        "src/FlashMacOS.Desktop/Composition",
+        "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs"
+      ],
+      "reason": "W01 extends the already imported formal adapter and document-start behavior; no source file is read at build/runtime or newly copied from the original repository"
+    },
+    {
+      "snapshotPath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit",
+        "src/FlashMacOS.Application/Browser",
+        "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleDocumentStartScriptBuilder.cs",
+        "src/FlashMacOS.Desktop/Composition",
+        "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs"
+      ],
+      "reason": "W01 extends the already imported formal adapter and document-start behavior; no source file is read at build/runtime or newly copied from the original repository"
+    },
+    {
+      "snapshotPath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+      "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit",
+        "src/FlashMacOS.Application/Browser",
+        "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleDocumentStartScriptBuilder.cs",
+        "src/FlashMacOS.Desktop/Composition",
+        "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs"
+      ],
+      "reason": "W01 extends the already imported formal adapter and document-start behavior; no source file is read at build/runtime or newly copied from the original repository"
+    },
+    {
+      "snapshotPath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit",
+        "src/FlashMacOS.Application/Browser",
+        "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleDocumentStartScriptBuilder.cs",
+        "src/FlashMacOS.Desktop/Composition",
+        "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs"
+      ],
+      "reason": "W01 extends the already imported formal adapter and document-start behavior; no source file is read at build/runtime or newly copied from the original repository"
+    },
+    {
+      "snapshotPath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit",
+        "src/FlashMacOS.Application/Browser",
+        "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleDocumentStartScriptBuilder.cs",
+        "src/FlashMacOS.Desktop/Composition",
+        "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs"
+      ],
+      "reason": "W01 extends the already imported formal adapter and document-start behavior; no source file is read at build/runtime or newly copied from the original repository"
+    },
+    {
+      "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKWebView.h",
+      "originalSourceSha256": "73b5dc56e11b5ec0d46b6c3afea3e6fa779868534b0dd05a67d9a58d54426e04",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit/Native/FlashMacOSWebKit.m",
+        "src/FlashMacOS.Browser.WebKit/MacBrowserBridge.cs"
+      ],
+      "reason": "Public API declaration reference only; bridge implementation is project authored, no SDK header copied into product"
+    },
+    {
+      "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKNavigationDelegate.h",
+      "originalSourceSha256": "7b6ed34a794d7648e27874ea366106a7562650ccda21403b3564042f5f37c40d",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit/Native/FlashMacOSWebKit.m",
+        "src/FlashMacOS.Browser.WebKit/MacBrowserBridge.cs"
+      ],
+      "reason": "Public API declaration reference only; bridge implementation is project authored, no SDK header copied into product"
+    },
+    {
+      "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKUIDelegate.h",
+      "originalSourceSha256": "f24e7b09319df68eb2a82a89959dc619aeae4326b6f440691ec7bcffefc4aee1",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit/Native/FlashMacOSWebKit.m",
+        "src/FlashMacOS.Browser.WebKit/MacBrowserBridge.cs"
+      ],
+      "reason": "Public API declaration reference only; bridge implementation is project authored, no SDK header copied into product"
+    },
+    {
+      "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKScriptMessage.h",
+      "originalSourceSha256": "8e463f3a17ee20eadb0c46ae994d9a627efd36e6ed1c937433d643b86e3464e0",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit/Native/FlashMacOSWebKit.m",
+        "src/FlashMacOS.Browser.WebKit/MacBrowserBridge.cs"
+      ],
+      "reason": "Public API declaration reference only; bridge implementation is project authored, no SDK header copied into product"
+    },
+    {
+      "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKFrameInfo.h",
+      "originalSourceSha256": "25e6b7ad85ec4a54797a3ff9fe264e7d1a40f1f342265413ba6c94dd509beed6",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit/Native/FlashMacOSWebKit.m",
+        "src/FlashMacOS.Browser.WebKit/MacBrowserBridge.cs"
+      ],
+      "reason": "Public API declaration reference only; bridge implementation is project authored, no SDK header copied into product"
+    },
+    {
+      "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKFindConfiguration.h",
+      "originalSourceSha256": "28d4a7dccf57a8e61662831384a8b8d20801d2c2fac128422f78e650bae0b2c0",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit/Native/FlashMacOSWebKit.m",
+        "src/FlashMacOS.Browser.WebKit/MacBrowserBridge.cs"
+      ],
+      "reason": "Public API declaration reference only; bridge implementation is project authored, no SDK header copied into product"
+    },
+    {
+      "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKWebsiteDataStore.h",
+      "originalSourceSha256": "02cb250148a3011b18925c43b5a45522802e58b637bf5dc4994d35b9421f91b1",
+      "targetPaths": [
+        "src/FlashMacOS.Browser.WebKit/Native/FlashMacOSWebKit.m",
+        "src/FlashMacOS.Browser.WebKit/MacBrowserBridge.cs"
+      ],
+      "reason": "Public API declaration reference only; bridge implementation is project authored, no SDK header copied into product"
+    }
+  ],
+  "notes": "Fixed JS/WASM, golden files, package versions and locks were not changed. API exploration evidence is retained under artifacts/evidence/W01/api-20261028-01."
+}

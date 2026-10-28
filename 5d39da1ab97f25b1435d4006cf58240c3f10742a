@@ -1,0 +1,84 @@
+package {
+    import flash.display.Sprite;
+    import flash.events.Event;
+    import flash.events.IOErrorEvent;
+    import flash.events.SecurityErrorEvent;
+    import flash.events.TimerEvent;
+    import flash.external.ExternalInterface;
+    import flash.net.URLLoader;
+    import flash.net.URLRequest;
+    import flash.system.Security;
+    import flash.utils.Timer;
+
+    [SWF(width="550", height="400", frameRate="30")]
+    public class NetworkProbe extends Sprite {
+        private var cases:Array;
+        private var results:Array = [];
+        private var index:int = 0;
+        private var loader:URLLoader;
+        private var active:Object;
+        private var deadline:Timer;
+        private var secondaryBase:String;
+        private var started:Boolean = false;
+
+        public function NetworkProbe() {
+            var primary:String = String(loaderInfo.parameters.primaryBase);
+            var secondary:String = String(loaderInfo.parameters.secondaryBase);
+            secondaryBase = secondary;
+            cases = [
+                {id:"as3-relative",url:"data.txt",fail:false},
+                {id:"as3-absolute",url:primary+"allowed/data.txt",fail:false},
+                {id:"as3-redirect",url:primary+"redirect/data.txt",fail:false},
+                {id:"as3-cookie",url:primary+"cookie/data.txt",fail:false},
+                {id:"as3-missing",url:primary+"allowed/missing.txt",fail:true},
+                {id:"as3-cross-origin-allowed",url:secondary+"allowed/data.txt",fail:false},
+                {id:"as3-cross-origin-denied",url:secondary+"denied/data.txt",fail:true}
+            ];
+            if (ExternalInterface.available) ExternalInterface.addCallback("p02NetworkStart", start);
+        }
+
+        private function start():Boolean {
+            if (started) return false;
+            started = true;
+            Security.loadPolicyFile(secondaryBase + "allowed/crossdomain.xml");
+            Security.loadPolicyFile(secondaryBase + "denied/crossdomain.xml");
+            next();
+            return true;
+        }
+
+        private function next():void {
+            if (index == cases.length) {
+                var summary:Object = {cases:results,
+                    policyScope:"Security.loadPolicyFile invoked for fixed allow/deny resources; CORS transport outcomes are asserted, not Adobe policy enforcement"};
+                if (ExternalInterface.available) ExternalInterface.call("P02NetworkResult", JSON.stringify(summary));
+                trace("P02_NETWORK_COMPLETE");
+                return;
+            }
+            active = cases[index++];
+            loader = new URLLoader();
+            loader.addEventListener(Event.COMPLETE, completed);
+            loader.addEventListener(IOErrorEvent.IO_ERROR, failed);
+            loader.addEventListener(SecurityErrorEvent.SECURITY_ERROR, denied);
+            deadline = new Timer(2000,1);
+            deadline.addEventListener(TimerEvent.TIMER,function(event:TimerEvent):void { finish(true,"TIMEOUT: no completion or error event",true); });
+            deadline.start();
+            try { loader.load(new URLRequest(active.url)); }
+            catch (error:Error) { finish(true, error.toString()); }
+        }
+
+        private function completed(event:Event):void { finish(false, String(loader.data)); }
+        private function failed(event:IOErrorEvent):void { finish(true, event.text); }
+        private function denied(event:SecurityErrorEvent):void { finish(true,event.text); }
+        private function finish(failure:Boolean, value:String, timeout:Boolean=false):void {
+            deadline.stop();
+            var passed:Boolean = !timeout && failure == active.fail && (failure || value == "Hello, world!\n");
+            results.push({caseId:active.id,status:passed?"PASS":"FAIL",url:active.url,
+                expected:{failure:active.fail,text:active.fail?null:"Hello, world!\n"},actual:{failure:failure,value:value}});
+            loader.removeEventListener(Event.COMPLETE, completed);
+            loader.removeEventListener(IOErrorEvent.IO_ERROR, failed);
+            loader.removeEventListener(SecurityErrorEvent.SECURITY_ERROR, denied);
+            if (timeout) {try {loader.close();} catch(error:Error) {}}
+            next();
+        }
+    }
+}

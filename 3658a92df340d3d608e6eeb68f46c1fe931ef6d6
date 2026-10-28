@@ -1,0 +1,227 @@
+using System.Text.Json;
+
+namespace FlashMacOS.Flash.Ruffle.Runtime;
+
+public static class RuffleDocumentStartScriptBuilder
+{
+    public const string DefaultBridgeName = "cefFlashBrowserBridge";
+
+    public static string Build(
+        string ruffleJavaScript,
+        Uri publicPath,
+        string bridgeName = DefaultBridgeName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruffleJavaScript);
+        ArgumentNullException.ThrowIfNull(publicPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(bridgeName);
+
+        var publicPathJson = JsonSerializer.Serialize(publicPath.AbsoluteUri);
+        var versionJson = JsonSerializer.Serialize(RuffleAssetManifest.Version);
+        var bridgeNameJson = JsonSerializer.Serialize(bridgeName);
+        using var compatibilitySource = new StreamReader(typeof(RuffleDocumentStartScriptBuilder).Assembly.GetManifestResourceStream(
+            "FlashMacOS.Flash.Ruffle.Runtime.MoleCompatibility.js")!);
+        var moleCompatibility = compatibilitySource.ReadToEnd();
+
+        return $$"""
+            (() => {
+              "use strict";
+              if (globalThis.__cefFlashBrowserDocumentStart) return;
+
+              const bridgeName = {{bridgeNameJson}};
+              const createIdentifier = () => {
+                const words = new Uint32Array(4);
+                if (globalThis.crypto?.getRandomValues) crypto.getRandomValues(words);
+                else for (let index = 0; index < words.length; index++) words[index] = Math.floor(Math.random() * 4294967296);
+                return [...words].map(word => word.toString(16).padStart(8, "0")).join("");
+              };
+              const navigationId = createIdentifier();
+              Object.defineProperty(globalThis, "__flashMacOSNavigationId", { value: navigationId });
+              const post = payload => {
+                try {
+                  const handler = globalThis.webkit?.messageHandlers?.[bridgeName];
+                  const envelope = { protocolVersion: 1, navigationId,
+                    runId: payload.runId || globalThis.__flashMacOSRunId || navigationId,
+                    messageType: payload.type, origin: location.origin, href: location.href,
+                    isMainFrame: globalThis === globalThis.top, payload };
+                  if (handler) handler.postMessage(JSON.stringify(envelope));
+                } catch (_) { }
+              };
+
+              globalThis.__cefFlashBrowserPost = post;
+              Object.defineProperty(globalThis, "__flashMacOSBeginRun", { value: () => {
+                const runId = createIdentifier();
+                globalThis.__flashMacOSRunId = runId;
+                post({ type: "playerRunStarted", runId });
+                return runId;
+              } });
+              globalThis.__cefFlashBrowserDocumentStart = {
+                version: {{versionJson}},
+                timestamp: performance.now()
+              };
+
+              {{moleCompatibility}}
+
+              const looksLikeSol = value => {
+                if (typeof value !== "string" || value.length < 24) return false;
+                try {
+                  const bytes = atob(value.slice(0, 24));
+                  return bytes.length >= 2 && bytes.charCodeAt(0) === 0 && bytes.charCodeAt(1) === 191;
+                } catch (_) {
+                  return false;
+                }
+              };
+
+              if (!globalThis.__cefFlashBrowserStoragePatched && typeof Storage !== "undefined") {
+                globalThis.__cefFlashBrowserStoragePatched = true;
+                let nativeLocalStorage = null;
+                try { nativeLocalStorage = globalThis.localStorage; } catch (_) { }
+
+                if (nativeLocalStorage) {
+                  const observedSaves = new Map();
+                  const reportSave = (key, value) => {
+                    const normalizedKey = String(key);
+                    const normalizedValue = String(value);
+                    if (!looksLikeSol(normalizedValue)) return;
+                    if (observedSaves.get(normalizedKey) === normalizedValue) return;
+                    observedSaves.set(normalizedKey, normalizedValue);
+                    post({ type: "saveChanged", key: normalizedKey, data: normalizedValue });
+                  };
+                  const reportDelete = key => {
+                    const normalizedKey = String(key);
+                    if (!observedSaves.delete(normalizedKey)) return;
+                    post({ type: "saveDeleted", key: normalizedKey });
+                  };
+
+                  const originalSetItem = Storage.prototype.setItem;
+                  const originalRemoveItem = Storage.prototype.removeItem;
+                  const originalClear = Storage.prototype.clear;
+                  Storage.prototype.setItem = function(key, value) {
+                    originalSetItem.call(this, key, value);
+                    if (this === nativeLocalStorage) reportSave(key, value);
+                  };
+                  Storage.prototype.removeItem = function(key) {
+                    originalRemoveItem.call(this, key);
+                    if (this === nativeLocalStorage) reportDelete(key);
+                  };
+                  Storage.prototype.clear = function() {
+                    originalClear.call(this);
+                    if (this === nativeLocalStorage) {
+                      for (const key of [...observedSaves.keys()]) reportDelete(key);
+                    }
+                  };
+
+                  try {
+                    const storageProxy = new Proxy(nativeLocalStorage, {
+                      get(target, property) {
+                        if (property === "setItem") {
+                          return (key, value) => {
+                            originalSetItem.call(target, key, value);
+                            reportSave(key, value);
+                          };
+                        }
+                        if (property === "removeItem") {
+                          return key => {
+                            originalRemoveItem.call(target, key);
+                            reportDelete(key);
+                          };
+                        }
+                        if (property === "clear") {
+                          return () => {
+                            originalClear.call(target);
+                            for (const key of [...observedSaves.keys()]) reportDelete(key);
+                          };
+                        }
+                        const value = Reflect.get(target, property, target);
+                        return typeof value === "function" ? value.bind(target) : value;
+                      }
+                    });
+                    Object.defineProperty(globalThis, "localStorage", {
+                      configurable: true,
+                      enumerable: true,
+                      get: () => storageProxy
+                    });
+                  } catch (_) { }
+
+                  const scanStorage = () => {
+                    try {
+                      const currentKeys = new Set();
+                      for (let index = 0; index < nativeLocalStorage.length; index++) {
+                        const key = nativeLocalStorage.key(index);
+                        const value = key === null ? null : nativeLocalStorage.getItem(key);
+                        if (key !== null && looksLikeSol(value)) {
+                          currentKeys.add(key);
+                          reportSave(key, value);
+                        }
+                      }
+                      for (const key of [...observedSaves.keys()]) {
+                        if (!currentKeys.has(key)) reportDelete(key);
+                      }
+                    } catch (_) { }
+                    setTimeout(scanStorage, document.hidden ? 5000 : 1000);
+                  };
+                  setTimeout(scanStorage, 0);
+                }
+              }
+
+              // Downloads (download attribute, blob, data, attachments) stay native WKDownloads of the original request.
+
+              window.RufflePlayer = window.RufflePlayer || {};
+              window.RufflePlayer.config = {
+                ...(window.RufflePlayer.config || {}),
+                publicPath: {{publicPathJson}},
+                polyfills: true,
+                autoplay: "auto",
+                unmuteOverlay: "visible",
+                warnOnUnsupportedContent: true,
+                upgradeToHttps: location.protocol === "https:"
+              };
+
+              try {
+                {{ruffleJavaScript}}
+                post({ type: "ruffleInjected", message: {{versionJson}} });
+              } catch (error) {
+                post({ type: "bridgeError", message: String(error?.stack || error) });
+              }
+
+              document.addEventListener("DOMContentLoaded", () => {
+                queueMicrotask(() => post({
+                  type: "diagnostics",
+                  ruffleAvailable: Boolean(window.RufflePlayer?.newest),
+                  flashElementCount: document.querySelectorAll("ruffle-object, ruffle-embed, ruffle-player").length,
+                  documentStartMilliseconds: globalThis.__cefFlashBrowserDocumentStart.timestamp
+                }));
+              }, { once: true });
+            })();
+            """;
+    }
+
+    public static string BuildPageBootstrap(Uri publicPath)
+    {
+        ArgumentNullException.ThrowIfNull(publicPath);
+        var publicPathJson = JsonSerializer.Serialize(publicPath.AbsoluteUri);
+
+        return $$"""
+            window.RufflePlayer = window.RufflePlayer || {};
+            window.RufflePlayer.config = {
+              ...(window.RufflePlayer.config || {}),
+              publicPath: {{publicPathJson}},
+              polyfills: true,
+              autoplay: "on",
+              unmuteOverlay: "visible",
+              warnOnUnsupportedContent: true,
+              allowFullscreen: true,
+              upgradeToHttps: false
+            };
+
+            window.__cefFlashBrowserPost = window.__cefFlashBrowserPost || (payload => {
+              try {
+                const handler = window.webkit?.messageHandlers?.[{{JsonSerializer.Serialize(DefaultBridgeName)}}];
+                if (handler) handler.postMessage(JSON.stringify(payload));
+                else if (typeof window.invokeCSharpAction === "function") {
+                  window.invokeCSharpAction(JSON.stringify(payload));
+                }
+              } catch (_) { }
+            });
+            """;
+    }
+}

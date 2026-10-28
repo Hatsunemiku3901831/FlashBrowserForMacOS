@@ -1,0 +1,7 @@
+# 旧 HANDOFF.md 压缩摘要（W01 历史，非当前任务状态）
+
+P00—P03、A01—A04、S01—S05、W01 共 14 项在旧交接时已验收。来源按未提交工作树完整冻结；G0 原型、正式八模块、A03 双用途持久身份和原子仓储、A04 设置收藏模型、SOL AMF0/3 全图/事务/质量、W01 原生浏览器/焦点退出均有各自报告。正式构建和运行禁读 CefFlashBrowser/reference/bootstrap；固定 104 资产、13 锁、107 原型测试名称保留。
+
+旧 W01 最终 420+21、package04、两次各 12 原生检查及新摩尔庄园空账号登录 UI/焦点 Quit 通过。较长驻留不算 Q02，中文 IME、Safari Inspector 独立窗口、完整 U 系列 UI 与签名公证仍待后续。W02/W03 当时未完成，其旧状态只作历史；当前结果由新 HANDOFF2 和状态表取代。
+
+旧 Git unborn、Linux VM/需要用户代跑、包05候选及 NSWindow 未定论均只描述旧会话，不能当作当前事实。全部原文保存在本目录 HANDOFF.md / HANDOFF2.md，HANDOFF.md.gz 可无损解压；详细历史证据仍在各任务目录。

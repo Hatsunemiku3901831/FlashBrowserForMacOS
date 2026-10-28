@@ -1,0 +1,22 @@
+namespace FlashMacOS.Application.Browser;
+
+public static class BrowserNavigationPolicy
+{
+    public static bool CanNavigate(Uri address)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+        return address.IsAbsoluteUri && (address.Scheme is "http" or "https"
+            || (address.Scheme == "about" && address.AbsolutePath == "blank"));
+    }
+
+    public static void RequireAllowed(Uri address)
+    {
+        if (!CanNavigate(address)) throw new NotSupportedException("Unsupported browser address: " + address.Scheme);
+    }
+
+    public static void ValidateUserAgent(string? value)
+    {
+        if (value is not null && (value.Length > 2048 || value.Any(char.IsControl)))
+            throw new ArgumentException("A user agent must be at most 2048 characters without control characters.", nameof(value));
+    }
+}

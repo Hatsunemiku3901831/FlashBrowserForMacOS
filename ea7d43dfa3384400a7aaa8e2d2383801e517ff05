@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Launch the real ARM64 prototype with a fresh dedicated profile and preserve its exit code."""
+import argparse
+from datetime import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import shutil
+import sys
+import zipfile
+from zoneinfo import ZoneInfo
+
+
+def now():
+    return datetime.now(ZoneInfo('Australia/Sydney')).isoformat()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--run-id', required=True)
+    parser.add_argument('--task', choices=['P02','P03'], default='P02')
+    parser.add_argument('--url')
+    parser.add_argument('--case', dest='case_id')
+    parser.add_argument('--inspect-page', action='store_true')
+    parser.add_argument('--deny-source', type=Path)
+    parser.add_argument('--package-run', help='Verify the complete app bundle against this archived P02 package before launch')
+    parser.add_argument('--package-task', choices=['P02','P03'], default='P02')
+    parser.add_argument('--reuse-profile-from', help='P03 restart only: reuse a completed native run profile from this same task')
+    args = parser.parse_args()
+    if not args.run_id or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in args.run_id):
+        parser.error('run-id must be a simple directory name')
+    root = Path(__file__).resolve().parents[1]
+    if subprocess.check_output(['uname', '-m']).decode().strip() != 'arm64':
+        print('BLOCKED: a physical Apple Silicon desktop session is required', file=sys.stderr)
+        return 3
+    app = root / 'bootstrap/legacy/spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app'
+    executable = app / 'Contents/MacOS/CefFlashBrowser.MacOS.Spike.Desktop'
+    if not executable.is_file():
+        print('BLOCKED: package the imported prototype before running native checks', file=sys.stderr)
+        return 3
+    output = root / 'artifacts/evidence' / args.task / args.run_id
+    output.mkdir(parents=True, exist_ok=False)
+    profile = root / 'artifacts/profiles' / args.run_id
+    profile_checkpoint = None
+    if args.reuse_profile_from:
+        previous = args.reuse_profile_from
+        if any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in previous):
+            parser.error('reuse-profile-from must be a simple recorded run name')
+        previous_result = json.loads((root / 'artifacts/evidence' / args.task / previous / 'process-result.json').read_text())
+        profile = root / 'artifacts/profiles' / previous
+        if previous_result['exitCode'] != 0 or Path(previous_result['profile']) != profile or not profile.is_dir():
+            raise ValueError('Only a completed, normally exited profile from this task may be reused')
+        for launch_path in (root / 'artifacts/evidence').glob('*/*/launch.json'):
+            previous_launch = json.loads(launch_path.read_text())
+            if previous_launch.get('profile') == str(profile) and not launch_path.with_name('process-result.json').exists():
+                raise ValueError('A recorded process may still own this test profile: ' + str(launch_path))
+        if any(p.is_symlink() for p in profile.rglob('*')):
+            raise ValueError('Recorded test profile contains unexpected symbolic links')
+        checkpoint = output / 'profile-before-restart'
+        shutil.copytree(profile, checkpoint, symlinks=True)
+        profile_checkpoint = {'path': str(checkpoint.relative_to(root)),
+                              'files': {str(p.relative_to(checkpoint)): hashlib.sha256(p.read_bytes()).hexdigest()
+                                        for p in sorted(checkpoint.rglob('*')) if p.is_file()}}
+        (output / 'profile-checkpoint.json').write_text(json.dumps(profile_checkpoint, ensure_ascii=False, indent=2) + '\n')
+    elif profile.exists():
+        raise ValueError('Use a fresh run-id; existing profiles and evidence are preserved')
+    env = {k: v for k, v in os.environ.items() if k not in ('DOTNET_ROOT', 'DOTNET_ROOT_ARM64')}
+    env['PATH'] = '/usr/bin:/bin:/usr/sbin:/sbin'
+    env['FLASHMACOS_TEST_PROFILE'] = str(profile)
+    env.pop('FLASHMACOS_COMPAT_CASE', None)
+    env.pop('FLASHMACOS_PAGE_INSPECT', None)
+    if args.case_id:
+        if args.url:
+            parser.error('--case and --url are mutually exclusive')
+        env['FLASHMACOS_COMPAT_CASE'] = args.case_id
+    if args.inspect_page:
+        env['FLASHMACOS_PAGE_INSPECT'] = '1'
+    command = [str(executable)] + ([args.url] if args.url else [])
+    if args.deny_source:
+        source = str(args.deny_source.resolve())
+        if source == str(root) or Path(source) in root.parents:
+            raise ValueError('Cannot deny the target project itself')
+        sandbox = '(version 1) (allow default) (deny file-read* (subpath ' + json.dumps(source) + '))'
+        (output / 'source-denial.sb').write_text(sandbox + '\n')
+        command = ['sandbox-exec', '-p', sandbox, *command]
+    start = now()
+    bundle_hashes = {str(p.relative_to(app)): hashlib.sha256(p.read_bytes()).hexdigest()
+                     for p in sorted(app.rglob('*')) if p.is_file()}
+    package_evidence = None
+    if args.package_run:
+        if any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in args.package_run):
+            parser.error('package-run must be a simple directory name')
+        package_result = root / 'artifacts/evidence' / args.package_task / args.package_run / 'result.json'
+        package = json.loads(package_result.read_text())
+        if package['status'] != 'PASS':
+            raise ValueError('Selected package did not pass its checks')
+        archive = root / package['archive']
+        archive_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
+        if archive_hash != package['artifactHashes']['archive']:
+            raise ValueError('Archived package hash changed')
+        with zipfile.ZipFile(archive) as zip_stream:
+            prefix = app.name + '/'
+            archived = {name[len(prefix):]: hashlib.sha256(zip_stream.read(name)).hexdigest()
+                        for name in zip_stream.namelist() if name.startswith(prefix) and not name.endswith('/')}
+        if archived != bundle_hashes:
+            raise ValueError('Current app does not exactly match the selected archived package')
+        package_evidence = {'path': str(package_result.relative_to(root)), 'archiveSha256': archive_hash,
+                            'allBundleFilesEqualArchive': True}
+    record = {'taskId': args.task, 'caseId': args.run_id, 'runId': args.run_id,
+              'profileId': profile.name, 'reuseProfileFrom': args.reuse_profile_from,
+              'profileCheckpoint': profile_checkpoint, 'startedAt': start, 'command': command,
+              'workingDirectory': str(output), 'profile': str(profile),
+              'environment': {'architecture': 'arm64', 'macOS': subprocess.check_output(['sw_vers', '-productVersion']).decode().strip(),
+                              'configuration': 'Release, self-contained', 'DOTNET_ROOT': 'unset', 'PATH': env['PATH']},
+              'artifactHashes': {'mainExecutable': hashlib.sha256(executable.read_bytes()).hexdigest(), 'bundleFiles': bundle_hashes},
+              'packageEvidence': package_evidence}
+    with (output / 'process.log').open('wb') as log:
+        process = subprocess.Popen(command, cwd=output, env=env, stdout=log, stderr=subprocess.STDOUT)
+        record['pid'] = process.pid
+        (output / 'launch.json').write_text(json.dumps(record, ensure_ascii=False, indent=2) + '\n')
+        print(f'Native prototype PID {process.pid}; run {args.run_id}', flush=True)
+        code = process.wait()
+    record.update({'finishedAt': now(), 'exitCode': code,
+                   'status': 'EXITED' if code == 0 else 'FAIL',
+                   'note': 'Exit code alone is not a compatibility PASS; inspect the actual UI and case results.'})
+    (output / 'process-result.json').write_text(json.dumps(record, ensure_ascii=False, indent=2) + '\n')
+    print(f'Native process exit {code}', flush=True)
+    return code
+
+
+if __name__ == '__main__':
+    sys.exit(main())

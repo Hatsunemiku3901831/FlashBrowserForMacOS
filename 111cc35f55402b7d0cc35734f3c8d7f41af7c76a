@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "inputs": [
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/Settings.cs",
+      "originalSourceSha256": "87df9d3e61bc28fb0c26510bb6f8e7f1695ca3246837aff9031e189a49c459a1",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/Settings.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/AppSettings.cs",
+        "src/FlashMacOS.Infrastructure/Configuration/JsonSettingsRepository.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/ProxySettings.cs",
+      "originalSourceSha256": "f6ac9916a7bc4bd2ff24db062cee6b5c47be3d1bc9888b45100600173d84b3a6",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/ProxySettings.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/AppSettings.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/UserAgentSetting.cs",
+      "originalSourceSha256": "a20c34a79ee786761d3999490f1eccc1e2fc13e66d5e799f3ac6afaf3edf85b9",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/UserAgentSetting.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/AppSettings.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/FakeFlashVersionSetting.cs",
+      "originalSourceSha256": "d5316dcce827a7083cc280f65273b5e5c42a994654752c994bdbe7ac18a04630",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/FakeFlashVersionSetting.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/AppSettings.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/WindowSizeInfo.cs",
+      "originalSourceSha256": "62dfe0707957d6e76104d6906d8ffcf64ac2ad213adfb28936c4705c2d2c927b",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/WindowSizeInfo.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/AppSettings.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/FavoritesFile.cs",
+      "originalSourceSha256": "36df5927ee00336190dab72cd740dffd561c245cca4a316857f2b661bae23ee1",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/FavoritesFile.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Infrastructure/Configuration/JsonFavoritesRepository.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/Website.cs",
+      "originalSourceSha256": "451fc10044cb989d603bcbc57e78b4e27aa821783cef71c0200441e25c9f31bb",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/Website.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/FavoriteEntry.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/Theme.cs",
+      "originalSourceSha256": "042e616f52d22605ec3563c8ecb1336cce6ae5c03b137ea5809f5e803acff2fc",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/Theme.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/AppSettings.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/SearchEngine.cs",
+      "originalSourceSha256": "7e8ffb696479bd59e9039e26d01519d884c3965069a6b7de071f18dee68e5b44",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/SearchEngine.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/AppSettings.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/NavigationType.cs",
+      "originalSourceSha256": "07670ad2fbf6110655c3a59b6954bfa8f4903d76eeba6e1c69ad599aa8f1213b",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/NavigationType.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/AppSettings.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Models/NewPageBehavior.cs",
+      "originalSourceSha256": "7aa6b2161611a023448c43cade60b13f4dac38305d74abb57536e3fc8794fb4f",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Models/NewPageBehavior.cs",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Configuration/AppSettings.cs"
+      ],
+      "reason": "A04 extract pure immutable model and preserve legacy values; platform implementation/capabilities remain separate"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Data/GlobalData.cs",
+      "originalSourceSha256": "e75d8ab3849a574ef5669bf88d2b434152f556af9b7023a63cf85818da046b7a",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Data/GlobalData.cs",
+      "targetPaths": [],
+      "reason": "A04 behavior/test reference; no direct global state, Messenger or mutable WPF code copied"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser/Utils/UrlHelper.cs",
+      "originalSourceSha256": "48a5454b62dcf98546349c32d1d6587aebc614c0b9671248345b3d87d734edd0",
+      "snapshotPath": "reference/legacy/CefFlashBrowser/Utils/UrlHelper.cs",
+      "targetPaths": [],
+      "reason": "A04 behavior/test reference; no direct global state, Messenger or mutable WPF code copied"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser.Tests/SettingsTests.cs",
+      "originalSourceSha256": "3e54457cbce8d4f88ff1cc2c9f40e4e215ff129d54582b0e5a7c8ee68444b188",
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Tests/SettingsTests.cs",
+      "targetPaths": [],
+      "reason": "A04 behavior/test reference; no direct global state, Messenger or mutable WPF code copied"
+    },
+    {
+      "originalSourcePath": "CefFlashBrowser.Tests/UrlHelperTests.cs",
+      "originalSourceSha256": "a954af0935443d8ffeb93344fe36fb7bf4b3ce2145d486a28297f89d6f69bc56",
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Tests/UrlHelperTests.cs",
+      "targetPaths": [],
+      "reason": "A04 behavior/test reference; no direct global state, Messenger or mutable WPF code copied"
+    }
+  ]
+}

@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "stage": "desktop",
+  "files": [
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "src/FlashMacOS.Platform.MacOS/FlashMacOS.Platform.MacOS.csproj",
+      "targetSha256": "edbddd3cb0298c76932ae65c3656cef6188e938d2f399355092069e3d4b73fb2",
+      "reason": "A01 authored desktop composition through application ports"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "bootstrapSourceSha256": "e21e5ef698d0416146f2546222ff684b48c118d19c7d5dbceeac83453d64c40c",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "originalSourceSha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "targetPath": "src/FlashMacOS.Platform.MacOS/MacFileDialogs.cs",
+      "targetSha256": "d6e4b6d7c5b400d0b957ed5181544ed2337e2573f82a2ff733e96e1c7249d6e5",
+      "reason": "A01 move actual native file panel behavior to platform implementation of IFileDialogs"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "src/FlashMacOS.Desktop/FlashMacOS.Desktop.csproj",
+      "targetSha256": "50ac2606e5dec46d1bf78185a6858e7e51280722395e8e2374f4d53e8a20a30e",
+      "reason": "A01 authored desktop composition through application ports"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "src/FlashMacOS.Desktop/GlobalUsings.cs",
+      "targetSha256": "bf601d449bc4349a5a3bf7bcc1bbca5a7c4bccea445a7fe0475ccd11f65cbcdd",
+      "reason": "A01 authored desktop composition through application ports"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/Commands.cs",
+      "bootstrapSourceSha256": "ea1a9249a6189d84ab69442dbf0435383a55b60f1c1c53aa79f492cfcc0c3d2c",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/Commands.cs",
+      "originalSourceSha256": "ea1a9249a6189d84ab69442dbf0435383a55b60f1c1c53aa79f492cfcc0c3d2c",
+      "targetPath": "src/FlashMacOS.Desktop/ViewModels/Commands.cs",
+      "targetSha256": "3bbd83e783feea6466d4adf7bfdddb5a0faa7cf4b3e2c57f6cd012cafc2113bb",
+      "reason": "A01 migrate ViewModel against Application/Domain only; async file-classification port"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "bootstrapSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96",
+      "targetPath": "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs",
+      "targetSha256": "c7d5611b7251c3a623cc5e1c9e01d1634380e2d4b1ccc6f3b42a86baeee98c67",
+      "reason": "A01 migrate ViewModel against Application/Domain only; async file-classification port"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/ObservableObject.cs",
+      "bootstrapSourceSha256": "0b7425b38d20f8976ff343fcd43033a8d3bcf38a5fbd62fb0fb9aa33ce57eba9",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/ObservableObject.cs",
+      "originalSourceSha256": "0b7425b38d20f8976ff343fcd43033a8d3bcf38a5fbd62fb0fb9aa33ce57eba9",
+      "targetPath": "src/FlashMacOS.Desktop/ViewModels/ObservableObject.cs",
+      "targetSha256": "9d68c303282151bddb3d6aef8f0eb3b04104db6b2cf4724c55bb0cd94aac4845",
+      "reason": "A01 migrate ViewModel against Application/Domain only; async file-classification port"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml",
+      "bootstrapSourceSha256": "e02adcd561dad9b77ba164f388c03740cd70d9bd2c1ec4db4119f835534ffc86",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml",
+      "originalSourceSha256": "e02adcd561dad9b77ba164f388c03740cd70d9bd2c1ec4db4119f835534ffc86",
+      "targetPath": "src/FlashMacOS.Desktop/App.axaml",
+      "targetSha256": "29a6748b2727a5ffa4cd4a66b43d3913fd7d4367e773ee8807e4b2ca68700a00",
+      "reason": "A01 migrate desktop resource namespace; concrete setup remains composition only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "bootstrapSourceSha256": "ce0cff3b8b93de2f677e3df2c0a821fe4b7365bae14847f8195e1065fd236dde",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "originalSourceSha256": "ce0cff3b8b93de2f677e3df2c0a821fe4b7365bae14847f8195e1065fd236dde",
+      "targetPath": "src/FlashMacOS.Desktop/App.axaml.cs",
+      "targetSha256": "a0b9618938f337800dd59a3f29f5796f4d822e264c661e7e09c91aa802fa1d05",
+      "reason": "A01 migrate desktop resource namespace; concrete setup remains composition only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "bootstrapSourceSha256": "cb3d11fbb9027a3a0fe5666ac13b3d032194147e6b9fbc0fd6cbd22696f46e36",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "originalSourceSha256": "91b677b904d0029b4cc148257c4de0e1434a14818b339c16c665577bf99906c1",
+      "targetPath": "src/FlashMacOS.Desktop/Program.cs",
+      "targetSha256": "6412c23bd3bfbd8046e013a52735a1d2c96ca3e951dd2d1670fc5d9a5ec6004b",
+      "reason": "A01 migrate desktop resource namespace; concrete setup remains composition only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml",
+      "bootstrapSourceSha256": "b6d58cc8254c3f699e8933efa8216e96d1a9d46259f28b3f4daa9fe98e82ab39",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml",
+      "originalSourceSha256": "b6d58cc8254c3f699e8933efa8216e96d1a9d46259f28b3f4daa9fe98e82ab39",
+      "targetPath": "src/FlashMacOS.Desktop/Views/MainWindow.axaml",
+      "targetSha256": "6cfe7287c9c7402af24b051eee4f2a40596adc5af1140195b68ae95309792948",
+      "reason": "A01 migrate desktop resource namespace; concrete setup remains composition only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml",
+      "bootstrapSourceSha256": "aa42196f266db8e99b41a3e5f19d1b786857021275332ed205ff9a262942c478",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml",
+      "originalSourceSha256": "aa42196f266db8e99b41a3e5f19d1b786857021275332ed205ff9a262942c478",
+      "targetPath": "src/FlashMacOS.Desktop/Views/PopupWindow.axaml",
+      "targetSha256": "e67d07c2b7649775a5d961c1fdf203f9b65b581bc22cf7d96704c6335c93ba81",
+      "reason": "A01 migrate desktop resource namespace; concrete setup remains composition only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "bootstrapSourceSha256": "e21e5ef698d0416146f2546222ff684b48c118d19c7d5dbceeac83453d64c40c",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "originalSourceSha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "targetPath": "src/FlashMacOS.Desktop/Views/MainWindow.axaml.cs",
+      "targetSha256": "3bdb8d9829a20c313524d8db61105525319d72f6f7bb0eef5eed6cd4ce4d31a4",
+      "reason": "A01 view uses browser/file-dialog ports and root-owned control factory; preserve panel titles and default extensions"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "bootstrapSourceSha256": "d0c7cd111eea2784bdfb67a82ac4b2ee56ad77d304bfe00c5e966be1563e968f",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "originalSourceSha256": "d0c7cd111eea2784bdfb67a82ac4b2ee56ad77d304bfe00c5e966be1563e968f",
+      "targetPath": "src/FlashMacOS.Desktop/Views/PopupWindow.axaml.cs",
+      "targetSha256": "6db61f387ca4ab7f46cf780c7b016de8403a2718e1b93741018da3e1102805ce",
+      "reason": "A01 popup view takes browser port/control factory; lifetime ownership follow-up A02"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "bootstrapSourceSha256": "aa583bd1e2c85dbad24f0d4d2a5cd0cfece48099d413954e9d13b6ad616951ac",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "targetPath": "src/FlashMacOS.Desktop/Composition/CompositionRoot.cs",
+      "targetSha256": "41d0651665547ad916e7097a9e89e76fcf6ab83cfdcabb5e755da3f14aed3c29",
+      "reason": "A01 sole concrete composition; share ports and isolated profile across native windows"
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+namespace FlashMacOS.Application.Sol;
+
+public sealed class SolEditorSession : IAsyncDisposable
+{
+    private sealed record State(Guid Id, SolDocument Document, long Cost);
+    private readonly ISolCodec _codec;
+    private readonly ISolFileStorage _files;
+    private readonly AmfLimits _limits;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly object _stopSync = new();
+    private readonly List<State> _history = [];
+    private readonly int _maximumHistoryStates;
+    private int _index;
+    private Guid? _savedState;
+    private SolEditorSnapshot _current;
+    private Task? _stopTask;
+    private int _stopping;
+    private const long MaximumHistoryBytes = 256L * 1024 * 1024;
+
+    private SolEditorSession(ISolCodec codec, ISolFileStorage files, AmfLimits limits, string? path,
+        SolFileImage image, SolDocument? document, IReadOnlyList<SolDiagnostic> diagnostics, long documentCost, bool isNew, int maximumHistoryStates)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(maximumHistoryStates, 2);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(maximumHistoryStates, 32);
+        _codec = codec; _files = files; _limits = limits; _maximumHistoryStates = maximumHistoryStates;
+        OriginalBytes = image.Bytes; OriginalRevision = image.Revision;
+        if (document is not null)
+        {
+            var state = new State(Guid.NewGuid(), document, documentCost); _history.Add(state);
+            if (!isNew) _savedState = state.Id;
+        }
+        _current = new(path, document, 0, image.Revision, isNew, false, false, diagnostics);
+    }
+    public SolEditorSnapshot Current => Volatile.Read(ref _current);
+    public ReadOnlyMemory<byte> OriginalBytes { get; }
+    public SolFileRevision OriginalRevision { get; }
+
+    public static SolEditorSession Create(ISolCodec codec, ISolFileStorage files, string name, SolEncoding encoding,
+        AmfLimits? limits = null, int maximumHistoryStates = 32)
+    {
+        ArgumentNullException.ThrowIfNull(codec); ArgumentNullException.ThrowIfNull(files);
+        var effective = limits ?? AmfLimits.Default; effective.Validate();
+        return new(codec, files, effective, null, new(ReadOnlyMemory<byte>.Empty, SolFileRevision.Missing),
+            new(name, encoding, new AmfGraph([])), [], 256 + name.Length * 2L, true, maximumHistoryStates);
+    }
+    public static async ValueTask<SolEditorSession> OpenAsync(ISolCodec codec, ISolFileStorage files, string path,
+        AmfLimits? limits = null, int maximumHistoryStates = 32, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(codec); ArgumentNullException.ThrowIfNull(files); ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var effective = limits ?? AmfLimits.Default; effective.Validate();
+        var image = await files.ReadAsync(path, effective.MaximumFileBytes, cancellationToken).ConfigureAwait(false);
+        if (!image.Revision.Exists) throw new FileNotFoundException("The SOL file does not exist.", path);
+        var loaded = await DecodeAsync(codec, image.Bytes, effective, cancellationToken).ConfigureAwait(false);
+        return new(codec, files, effective, path, image, loaded.Document, loaded.Diagnostics, loaded.Cost, false, maximumHistoryStates);
+    }
+
+    public ValueTask<SolEditorSnapshot> ApplyAsync(ISolEdit edit, long expectedVersion, CancellationToken cancellationToken = default) =>
+        RunAsync(async token =>
+        {
+            ArgumentNullException.ThrowIfNull(edit); CheckVersion(expectedVersion); var source = Editable();
+            var prepared = await Task.Run(() =>
+            {
+                var edited = edit.Apply(source);
+                if (edited.Graph.FindUnsupported(token).Count != 0) throw new InvalidOperationException("Unsupported content cannot enter an editable document.");
+                return (Document: edited, Cost: EstimateCost(edited, token));
+            }, token).ConfigureAwait(false);
+            var candidate = prepared.Document; var cost = prepared.Cost; token.ThrowIfCancellationRequested();
+            _history.RemoveRange(_index + 1, _history.Count - _index - 1);
+            _history.Add(new(Guid.NewGuid(), candidate, cost)); _index = _history.Count - 1;
+            while (_history.Count > 1 && (_history.Count > _maximumHistoryStates || _history.Sum(state => state.Cost) > MaximumHistoryBytes))
+            { _history.RemoveAt(0); _index--; }
+            return Publish(candidate, Current.Path, Current.FileRevision, []);
+        }, cancellationToken);
+
+    public ValueTask<SolEditorSnapshot> UndoAsync(long expectedVersion, CancellationToken cancellationToken = default) =>
+        MoveAsync(-1, expectedVersion, cancellationToken);
+    public ValueTask<SolEditorSnapshot> RedoAsync(long expectedVersion, CancellationToken cancellationToken = default) =>
+        MoveAsync(1, expectedVersion, cancellationToken);
+    private ValueTask<SolEditorSnapshot> MoveAsync(int delta, long expectedVersion, CancellationToken cancellationToken) =>
+        RunAsync(token =>
+        {
+            CheckVersion(expectedVersion); Editable(); token.ThrowIfCancellationRequested();
+            var next = _index + delta;
+            if (next < 0 || next >= _history.Count) throw new InvalidOperationException("No further undo or redo state is available.");
+            _index = next; return ValueTask.FromResult(Publish(_history[_index].Document, Current.Path, Current.FileRevision, []));
+        }, cancellationToken);
+
+    public ValueTask<SolEditorSnapshot> SaveAsync(long expectedVersion, CancellationToken cancellationToken = default) =>
+        RunAsync(token => SaveCoreAsync(Current.Path ?? throw new InvalidOperationException("Choose a destination for the new SOL."),
+            Current.FileRevision, expectedVersion, token), cancellationToken);
+    public ValueTask<SolEditorSnapshot> SaveAsAsync(string destination, long expectedVersion, SolFileRevision? expectedDestination = null,
+        CancellationToken cancellationToken = default) => RunAsync(token => SaveCoreAsync(destination,
+            expectedDestination ?? SolFileRevision.Missing, expectedVersion, token), cancellationToken);
+    private async ValueTask<SolEditorSnapshot> SaveCoreAsync(string destination, SolFileRevision expectedDestination, long expectedVersion, CancellationToken token)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(destination); CheckVersion(expectedVersion); var document = Editable();
+        var bytes = await Task.Run(() => _codec.Encode(document, _limits, token), token).ConfigureAwait(false);
+        var revision = await _files.CommitAsync(destination, bytes, expectedDestination, cancellationToken: token).ConfigureAwait(false);
+        // The commit has happened. Cancellation must not hide it or leave the baseline in memory stale.
+        _savedState = _history[_index].Id;
+        return Publish(document, destination, revision, []);
+    }
+
+    public ValueTask<SolEditorSnapshot> ReloadAsync(long expectedVersion, CancellationToken cancellationToken = default) => RunAsync(async token =>
+    {
+        CheckVersion(expectedVersion); var path = Current.Path ?? throw new InvalidOperationException("A new file has no disk source.");
+        var image = await _files.ReadAsync(path, _limits.MaximumFileBytes, token).ConfigureAwait(false);
+        if (!image.Revision.Exists) throw new FileNotFoundException("The SOL file no longer exists.", path);
+        var loaded = await DecodeAsync(_codec, image.Bytes, _limits, token).ConfigureAwait(false); token.ThrowIfCancellationRequested();
+        ResetHistory(loaded.Document, loaded.Cost); return Publish(loaded.Document, path, image.Revision, loaded.Diagnostics);
+    }, cancellationToken);
+
+    public async ValueTask<SolRecoveryResult> RecoverBackupAsync(long expectedVersion, CancellationToken cancellationToken = default)
+    {
+        string? archived = null;
+        var snapshot = await RunAsync(async token =>
+        {
+            CheckVersion(expectedVersion); var path = Current.Path ?? throw new InvalidOperationException("A new file has no backup.");
+            var current = await _files.ReadAsync(path, _limits.MaximumFileBytes, token).ConfigureAwait(false);
+            if (current.Revision != Current.FileRevision) throw new SolEditConflictException("The current SOL changed before backup recovery.");
+            var backup = await _files.ReadAsync(path + ".bak", _limits.MaximumFileBytes, token).ConfigureAwait(false);
+            if (!backup.Revision.Exists) throw new FileNotFoundException("No SOL backup is available.", path + ".bak");
+            var prepared = await Task.Run(() =>
+            {
+                var decoded = _codec.Decode(backup.Bytes, _limits, token);
+                if (decoded.Graph.FindUnsupported(token).Count != 0) throw new InvalidOperationException("An unsupported backup cannot be recovered through the editor.");
+                return (Document: decoded, Cost: EstimateCost(decoded, token));
+            }, token).ConfigureAwait(false);
+            if (current.Revision.Exists)
+            {
+                archived = path + ".recovery-" + Guid.NewGuid().ToString("N") + ".sol";
+                await _files.CommitAsync(archived, current.Bytes, SolFileRevision.Missing, cancellationToken: token).ConfigureAwait(false);
+            }
+            var revision = await _files.CommitAsync(path, backup.Bytes, current.Revision, createBackup: false, cancellationToken: token).ConfigureAwait(false);
+            ResetHistory(prepared.Document, prepared.Cost); return Publish(prepared.Document, path, revision, []);
+        }, cancellationToken).ConfigureAwait(false);
+        return new(snapshot, archived);
+    }
+
+    public ValueTask<SolEditorSnapshot> ExportOriginalAsync(string destination, CancellationToken cancellationToken = default) => RunAsync(async token =>
+        {
+            if (!OriginalRevision.Exists) throw new InvalidOperationException("A new file has no original byte image.");
+            await _files.CommitAsync(destination, OriginalBytes, SolFileRevision.Missing, cancellationToken: token).ConfigureAwait(false);
+            return Current;
+        }, cancellationToken);
+
+    private void CheckVersion(long expected)
+    { if (Current.Version != expected) throw new SolEditConflictException("The SOL document changed before this operation; refresh the editor state."); }
+    private SolDocument Editable() => Current.Document is { } document ? document :
+        throw new InvalidOperationException("This file is read-only because its content is damaged or unsupported.");
+    private void ResetHistory(SolDocument? document, long cost)
+    {
+        _history.Clear(); _index = 0; _savedState = null;
+        if (document is not null) { var state = new State(Guid.NewGuid(), document, cost); _history.Add(state); _savedState = state.Id; }
+    }
+    private SolEditorSnapshot Publish(SolDocument? document, string? path, SolFileRevision revision, IReadOnlyList<SolDiagnostic> diagnostics)
+    {
+        var snapshot = new SolEditorSnapshot(path, document, checked(Current.Version + 1), revision,
+            document is not null && _history[_index].Id != _savedState, _index > 0, _index + 1 < _history.Count, diagnostics);
+        Volatile.Write(ref _current, snapshot); return snapshot;
+    }
+    private async ValueTask<SolEditorSnapshot> RunAsync(Func<CancellationToken, ValueTask<SolEditorSnapshot>> work, CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _stopping) != 0, this);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
+        await _gate.WaitAsync(linked.Token).ConfigureAwait(false);
+        try { ObjectDisposedException.ThrowIf(Volatile.Read(ref _stopping) != 0, this); return await work(linked.Token).ConfigureAwait(false); }
+        finally { _gate.Release(); }
+    }
+    public ValueTask DisposeAsync()
+    { lock (_stopSync) return new(_stopTask ??= StopAsync()); }
+    private async Task StopAsync()
+    {
+        Interlocked.Exchange(ref _stopping, 1); await _lifetime.CancelAsync().ConfigureAwait(false);
+        if (!await _gate.WaitAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false)) throw new TimeoutException("SOL editor work did not stop within 15 seconds.");
+        _gate.Release(); _gate.Dispose(); _lifetime.Dispose();
+    }
+    private static async ValueTask<(SolDocument? Document, IReadOnlyList<SolDiagnostic> Diagnostics, long Cost)> DecodeAsync(
+        ISolCodec codec, ReadOnlyMemory<byte> bytes, AmfLimits limits, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await Task.Run<(SolDocument?, IReadOnlyList<SolDiagnostic>, long)>(() =>
+            {
+                var document = codec.Decode(bytes, limits, cancellationToken);
+                if (document.Graph.FindUnsupported(cancellationToken).Count != 0) return (null, Array.AsReadOnly(new[] { new SolDiagnostic("Unsupported", document.Encoding, null, null, "The decoded graph contains unsupported content.") }), 0);
+                return (document, [], EstimateCost(document, cancellationToken));
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (AmfFormatException error) { return (null, Array.AsReadOnly(new[] { new SolDiagnostic(error.Code, error.Encoding, error.Offset, error.Marker, error.Message) }), 0); }
+        catch (InvalidDataException error) { return (null, Array.AsReadOnly(new[] { new SolDiagnostic("InvalidHeader", null, 0, null, error.Message) }), 0); }
+    }
+    private static long EstimateCost(SolDocument document, CancellationToken cancellationToken)
+    {
+        long cost = 256 + document.Name.Length * 2L + document.Graph.Entries.Count * 64L + document.Graph.Nodes.Count * 128L;
+        var pending = new Stack<AmfValue>(document.Graph.Entries.Select(entry => entry.Value));
+        foreach (var entry in document.Graph.Entries) { cancellationToken.ThrowIfCancellationRequested(); cost += entry.Name.Length * 2L; }
+        foreach (var node in document.Graph.Nodes.Values)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (node is AmfByteArrayNode bytes) cost += bytes.Bytes.Length;
+            if (node is AmfXmlNode xml) cost += xml.Text.Length * 2L;
+            if (node is AmfVectorIntNode ints) cost += ints.Values.Count * 4L;
+            if (node is AmfVectorUIntNode uints) cost += uints.Values.Count * 4L;
+            if (node is AmfVectorNumberNode doubles) cost += doubles.Values.Count * 32L;
+            if (node is AmfVectorObjectNode objects) cost += objects.TypeName.Length * 2L;
+            if (node is AmfArrayNode array) foreach (var entry in array.Associative) cost += entry.Name.Length * 2L;
+            if (node is AmfObjectNode item)
+            {
+                cost += item.Traits.ClassName.Length * 2L;
+                foreach (var name in item.Traits.SealedNames) cost += name.Length * 2L;
+                foreach (var entry in item.Properties) cost += entry.Name.Length * 2L;
+            }
+            foreach (var value in node.Children) { cost += 32; pending.Push(value); }
+        }
+        while (pending.TryPop(out var value))
+        { cancellationToken.ThrowIfCancellationRequested(); if (value is AmfString text) cost += text.Value.Length * 2L; else if (value is AmfAvmPlus avm) pending.Push(avm.Value); }
+        return cost;
+    }
+}

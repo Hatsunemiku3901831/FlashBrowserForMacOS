@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "sourceRelativePath": "spike/macos-host/packaging/macos/Info.plist",
+      "sourceSha256": "b57bb9aa6951c13e5c38cc267edfaf5977b2eda9810182c01b8dbf283624ce2b",
+      "previousP02Sha256": "0fe5061a62362ecd1242f58d6fb023dbc13e2ca7312e39491986f786566ba144",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/packaging/macos/Info.plist",
+      "targetSha256": "c88426e63b060f28c80475a1eda7b9613f5be461d89686427fe1139389e6d8f9",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+      "sourceSha256": "49d01e621981c698a339e69ccf9977e99895b4147066d28f4c8d95a188b7a9a7",
+      "previousP02Sha256": "3195dfb642ac85cf967d117c6836180c914c95a5b4ed141498c8a26ae93222c9",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+      "targetSha256": "bff093026f2876aad95eab812e19260b8f5bbecb02253f3d6c3a4bb735f4ea05",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "sourceSha256": "e94a26aa8a8ae810b924d90092b59cdf74349dcd67c7ff1ac384695a53507d6d",
+      "previousP02Sha256": "e94a26aa8a8ae810b924d90092b59cdf74349dcd67c7ff1ac384695a53507d6d",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "targetSha256": "7f84f60397bc9832c753a124be6bfd06241f3638f885289f3ec79a4523cd5312",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs",
+      "sourceSha256": "4fe0d8aa09405c28a7eee189348a8bd1c88e0e29fb77094d265a557e364f881a",
+      "previousP02Sha256": "4fe0d8aa09405c28a7eee189348a8bd1c88e0e29fb77094d265a557e364f881a",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs",
+      "targetSha256": "dbe67240b5f897eab1cf2c40be66c7b507c6aebf33ef795a6cfb3de6ef70e9c3",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP02Sha256": null,
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleStorageReload.js",
+      "targetSha256": "8e94b280c5d33805f19ff08f230594a54880b9711102bbede9dd509d936342f6",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP02Sha256": "0ad23ab4defd952109e22eae81f7e110b195aef29ac1945b7e5272063bf22efc",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/NativePageProbe.cs",
+      "targetSha256": "e319f94945e9b94d147585dc5fa90df51a4a14459574053b196a216e2e33ff28",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "sourceSha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "previousP02Sha256": "87e5733b43e40078aa6234b1514dfe8e5d1d9dee458fbf22afe97135ea0f599e",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "targetSha256": "e21e5ef698d0416146f2546222ff684b48c118d19c7d5dbceeac83453d64c40c",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/LoopbackContentHostTests.cs",
+      "sourceSha256": "b95834e006a88ed0ae8a8b012d15a530955ee835a279fc3e157a7e28b19ce185",
+      "previousP02Sha256": "b95834e006a88ed0ae8a8b012d15a530955ee835a279fc3e157a7e28b19ce185",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/LoopbackContentHostTests.cs",
+      "targetSha256": "e52e5a1cb4acfd3981302bc4641c7c3624d1e307cba4bdb38e16cbefb6ad0243",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RufflePlayerCoordinatorTests.cs",
+      "sourceSha256": "7aa036f20f66a154de37483746603049c681d224a3de026bdac442cf1cc63c46",
+      "previousP02Sha256": "7aa036f20f66a154de37483746603049c681d224a3de026bdac442cf1cc63c46",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RufflePlayerCoordinatorTests.cs",
+      "targetSha256": "39ea7cf902974c5a81997f436d7de0b0de3e6ad804427086b5eeda35f1f2619e",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP02Sha256": "8a92760f1e263272241532f2b499b76bcb7d71f9875de8da4980871b5766ab10",
+      "targetRelativePath": "scripts/package-bootstrap.py",
+      "targetSha256": "f843565bb514c2bd3587d8a8420bc5284d974c1dc4c815775469a8d9c06374ce",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP02Sha256": "2aa962dd3cb202dcef3e5f3e0bf495635a670b842e3dd817f5b38dc43b858f19",
+      "targetRelativePath": "scripts/run-native-prototype.py",
+      "targetSha256": "6f7d170eec4e6415049724d48a1861bb4d371426543d57682517cb26ad61d653",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP02Sha256": null,
+      "targetRelativePath": "scripts/tests/storage-reload.cjs",
+      "targetSha256": "f2c72c3c0bd7f7dd2f7893b41c74ca7e5b0b72430e2a61bdeb071be54d03b5f8",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP02Sha256": "bf921ee83fc28d3ecc8f57fea8a7f7b98a7ca798407ea946ed4b8f4b5fa0edf4",
+      "targetRelativePath": "scripts/verify-bootstrap.py",
+      "targetSha256": "87e060fb292ca83c1461e07fca6ce33f2f72da964ef9ff8b965a77ed6d0115a3",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP02Sha256": null,
+      "targetRelativePath": "tests/tooling/test_storage_reload.py",
+      "targetSha256": "7b43171b028230c28ed3dfe2aa07303fd5e4a5c86296abede7038e1e443ad538",
+      "reason": "P03 native import teardown-before-candidate boundary, single export extension, per-process immutable diagnostics, safe restart checkpoint and current supported-system floor. Fixed runtime and dependency versions unchanged."
+    }
+  ]
+}

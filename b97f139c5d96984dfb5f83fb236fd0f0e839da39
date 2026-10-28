@@ -1,0 +1,161 @@
+using System.Buffers.Binary;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text.Json;
+using FlashMacOS.Application.Sol;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class SolFuzzTests
+{
+    private sealed record Input(string Name, bool File, SolEncoding Encoding, byte[] Bytes);
+    private struct Generator(uint seed)
+    {
+        private uint _state = seed;
+        public uint Next() { _state ^= _state << 13; _state ^= _state >> 17; _state ^= _state << 5; return _state; }
+        public int Pick(int maximum) => (int)(Next() % (uint)maximum);
+    }
+
+    [TestMethod]
+    public void FixedSeedByteMutationsStayWithinFormatDiagnosticsAndPreserveInput()
+    {
+        var seedText = Environment.GetEnvironmentVariable("FLASHMACOS_FUZZ_SEED") ?? "5eed1234";
+        var seed = uint.Parse(seedText, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        var iterations = int.Parse(Environment.GetEnvironmentVariable("FLASHMACOS_FUZZ_ITERATIONS") ?? "4000", CultureInfo.InvariantCulture);
+        Assert.IsTrue(seed != 0 && iterations is > 0 and <= 100000);
+        var random = new Generator(seed); var cases = Inputs(); var accepted = 0; var rejected = 0;
+        var errors = new Dictionary<string, int>(StringComparer.Ordinal); var journalPath = TestEvidence.NewPath("fuzz-raw", ".jsonl");
+        using var journal = new StreamWriter(new FileStream(journalPath, FileMode.CreateNew, FileAccess.Write));
+        try
+        {
+            for (var index = 0; index < iterations; index++)
+            {
+                var input = Mutate(cases[random.Pick(cases.Count)], ref random, index); var hash = Hash(input.Bytes);
+                journal.WriteLine(JsonSerializer.Serialize(new { stage = "START", seed = seedText, index, input.Name, input.File, encoding = (int)input.Encoding, inputHex = Convert.ToHexStringLower(input.Bytes), sha256 = hash })); journal.Flush();
+                try
+                {
+                    if (input.File)
+                    {
+                        var codec = new SolCodec(); var document = codec.Decode(input.Bytes);
+                        var read = codec.Decode(codec.Encode(document)); Assert.IsTrue(AmfGraphEquality.Equivalent(document.Graph, read.Graph));
+                    }
+                    else
+                    {
+                        var codec = new AmfCodec(); var graph = codec.Decode(input.Bytes, input.Encoding);
+                        var read = codec.Decode(codec.Encode(graph, input.Encoding), input.Encoding); Assert.IsTrue(AmfGraphEquality.Equivalent(graph, read));
+                    }
+                    accepted++; journal.WriteLine(JsonSerializer.Serialize(new { stage = "END", index, outcome = "accepted-semantic-roundtrip" }));
+                }
+                catch (AmfFormatException error)
+                {
+                    Assert.IsTrue(error.Offset >= 0 && error.Offset <= input.Bytes.Length); rejected++;
+                    errors[error.Code] = errors.GetValueOrDefault(error.Code) + 1;
+                    journal.WriteLine(JsonSerializer.Serialize(new { stage = "END", index, outcome = "format-diagnostic", error.Code, error.Offset, error.Marker }));
+                }
+                catch (InvalidDataException error) when (input.File)
+                { rejected++; errors["InvalidHeader"] = errors.GetValueOrDefault("InvalidHeader") + 1; journal.WriteLine(JsonSerializer.Serialize(new { stage = "END", index, outcome = "header-diagnostic", error.Message })); }
+                catch (Exception error)
+                {
+                    var path = TestEvidence.NewPath("fuzz-failure", ".bin"); System.IO.File.WriteAllBytes(path, input.Bytes);
+                    TestEvidence.Write("fuzz-failure", new { seed = seedText, index, input.Name, input.File, encoding = (int)input.Encoding, raw = path, exception = error.ToString() });
+                    throw;
+                }
+                Assert.AreEqual(hash, Hash(input.Bytes));
+            }
+        }
+        finally { journal.Flush(); TestEvidence.Write("fuzz-summary", new { seed = seedText, iterations, accepted, rejected, errors, rawJournal = journalPath,
+            runtimeGcAvailableBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes, runtimeGcConfiguration = GC.GetConfigurationVariables() }); }
+        Assert.IsTrue(accepted > 0 && rejected > 0);
+    }
+
+    [TestMethod]
+    public void GeneratedGraphsKeepIdentityTypesAndAllStandardCollectionAttributes()
+    {
+        var random = new Generator(0x9e3779b9); var codec = new SolCodec(); var journalPath = TestEvidence.NewPath("graph-properties", ".jsonl");
+        using var journal = new StreamWriter(new FileStream(journalPath, FileMode.CreateNew, FileAccess.Write));
+        for (var index = 0; index < 128; index++)
+        {
+            var nodes = new List<AmfNode>();
+            AmfNodeId Id(int value) => new(100 + value);
+            AmfReference Reference() => new(Id(random.Pick(12)));
+            AmfValue Value() => random.Pick(8) switch
+            {
+                0 => AmfUndefined.Instance, 1 => AmfNull.Instance, 2 => new AmfBoolean(random.Pick(2) != 0),
+                3 => new AmfInteger((int)(random.Next() & 0x0fffffff)),
+                4 => AmfNumber.FromBits(unchecked((long)(((ulong)random.Next() << 32) | random.Next()))),
+                5 => new AmfString("你好🎮"), 6 => new AmfString(""), _ => Reference()
+            };
+            nodes.Add(new AmfObjectNode(Id(0), new AmfTraits("Node", true, ["x", "y"]), [Value(), Value()], [new("self", new AmfReference(Id(0))), new("next", Reference())]));
+            nodes.Add(new AmfArrayNode(Id(1), AmfArrayKind.Amf3Mixed, [Value(), Value(), Value()], [new("k", Value())]));
+            nodes.Add(new AmfDictionaryNode(Id(2), [new(Reference(), Value()), new(Value(), Reference())], random.Pick(2) != 0));
+            nodes.Add(new AmfVectorObjectNode(Id(3), [Reference(), Reference(), AmfNull.Instance], random.Pick(2) != 0));
+            nodes.Add(new AmfDateNode(Id(4), new AmfNumber(unchecked((int)random.Next()) + 0.25)));
+            nodes.Add(new AmfXmlNode(Id(5), "<doc>内容</doc>", true)); nodes.Add(new AmfXmlNode(Id(6), "<x/>", false));
+            nodes.Add(new AmfByteArrayNode(Id(7), Enumerable.Range(0, 32).Select(_ => (byte)random.Next()).ToArray()));
+            nodes.Add(new AmfVectorIntNode(Id(8), [unchecked((int)random.Next()), int.MinValue], random.Pick(2) != 0));
+            nodes.Add(new AmfVectorUIntNode(Id(9), [random.Next(), uint.MaxValue], random.Pick(2) != 0));
+            nodes.Add(new AmfVectorNumberNode(Id(10), [AmfNumber.FromBits(long.MinValue), AmfNumber.FromBits(0x7ff8000000000042)], random.Pick(2) != 0));
+            nodes.Add(new AmfObjectNode(Id(11), new AmfTraits("Sealed", false, ["p"]), [Reference()]));
+            var graph = new AmfGraph(Enumerable.Range(0, 12).Select(value => new AmfProperty("root" + value.ToString(CultureInfo.InvariantCulture), new AmfReference(Id(value)))), nodes);
+            var source = new SolDocument("property", SolEncoding.Amf3, graph); var bytes = codec.Encode(source);
+            journal.WriteLine(JsonSerializer.Serialize(new { index, seed = "9e3779b9", origin = "property-generated; normative golden remains independent", inputHex = Convert.ToHexStringLower(bytes) })); journal.Flush();
+            var read = codec.Decode(bytes); Assert.IsTrue(AmfGraphEquality.Equivalent(graph, read.Graph), "property graph " + index);
+            var raw = new AmfCodec(); var single = new AmfGraph([new("", new AmfReference(Id(0)))], nodes);
+            Assert.IsTrue(AmfGraphEquality.Equivalent(single, raw.Decode(raw.Encode(single, SolEncoding.Amf3), SolEncoding.Amf3)));
+        }
+        TestEvidence.Write("graph-property-summary", new { cases = 128, rawJournal = journalPath, semanticEquality = true });
+    }
+
+    [TestMethod]
+    public void HugeDeclarationsDeepNestingAndInvalidUtf8RejectWithoutLargeAllocation()
+    {
+        var raw = new AmfCodec();
+        foreach (var hex in new[] { "0affffffff", "0cffffffff", "0800000000000009" })
+        {
+            var bytes = Convert.FromHexString(hex);
+            if (hex.StartsWith("08", StringComparison.Ordinal)) raw.Decode(bytes, SolEncoding.Amf0);
+            else Assert.ThrowsExactly<AmfFormatException>(() => raw.Decode(bytes, SolEncoding.Amf0));
+        }
+        var deep0 = Convert.FromHexString(string.Concat(Enumerable.Repeat("0a00000001", 10000)) + "05");
+        var deep3 = Convert.FromHexString(string.Concat(Enumerable.Repeat("090301", 10000)) + "01");
+        Assert.AreEqual("DepthLimit", Assert.ThrowsExactly<AmfFormatException>(() => raw.Decode(deep0, SolEncoding.Amf0)).Code);
+        Assert.AreEqual("DepthLimit", Assert.ThrowsExactly<AmfFormatException>(() => raw.Decode(deep3, SolEncoding.Amf3)).Code);
+        var oversized = new byte[AmfLimits.Default.MaximumFileBytes + 1];
+        Assert.AreEqual("FileLimit", Assert.ThrowsExactly<AmfFormatException>(() => raw.Decode(oversized, SolEncoding.Amf0)).Code);
+        Assert.ThrowsExactly<InvalidDataException>(() => new SolCodec().Decode(oversized));
+    }
+
+    private static List<Input> Inputs()
+    {
+        using var manifest = JsonDocument.Parse(System.IO.File.ReadAllText(Path.Combine(AmfGolden.DirectoryPath, "manifest.json")));
+        var sources = manifest.RootElement.GetProperty("fixtures").EnumerateArray().Select(item =>
+            new Input(item.GetProperty("id").GetString()!, false, (SolEncoding)item.GetProperty("encoding").GetInt32(), AmfGolden.Bytes(item))).ToList();
+        foreach (var name in new[] { "settings.sol", "mao.sol", "pvz.sol", "FBCookie.sol", "RuffleTest.sol" })
+        { var bytes = System.IO.File.ReadAllBytes(TestAssets.Sol(name)); sources.Add(new(name, true, SolFileInspector.ReadHeader(bytes).Encoding, bytes)); }
+        return sources;
+    }
+    private static Input Mutate(Input original, ref Generator random, int index)
+    {
+        var bytes = (byte[])original.Bytes.Clone(); var file = original.File; var encoding = original.Encoding;
+        switch (index % 8)
+        {
+            case 0: bytes = bytes.AsSpan(0, random.Pick(bytes.Length + 1)).ToArray(); break;
+            case 1: if (bytes.Length != 0) bytes[random.Pick(bytes.Length)] ^= (byte)(1 << random.Pick(8)); break;
+            case 2: if (bytes.Length >= 4) bytes.AsSpan(random.Pick(bytes.Length - 3), 4).Fill(255); break;
+            case 3: bytes = bytes.Concat(new[] { (byte)random.Next(), (byte)random.Next() }).ToArray(); break;
+            case 4:
+                var offset = random.Pick(bytes.Length + 1); bytes = bytes[..offset].Concat(new[] { (byte)random.Next() }).Concat(bytes[offset..]).ToArray(); break;
+            case 5: break; // Unchanged controls must remain among accepted cases.
+            case 6: bytes = new byte[random.Pick(64)]; for (var i = 0; i < bytes.Length; i++) bytes[i] = (byte)random.Next(); break;
+            default:
+                file = false; encoding = random.Pick(2) == 0 ? SolEncoding.Amf0 : SolEncoding.Amf3;
+                var prefix = encoding == SolEncoding.Amf0 ? "0a00000001" : "090301";
+                bytes = Convert.FromHexString(string.Concat(Enumerable.Repeat(prefix, random.Pick(300))) + (encoding == SolEncoding.Amf0 ? "05" : "01")); break;
+        }
+        if (file && bytes.Length >= 6 && index % 2 == 0) BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(2, 4), (uint)(bytes.Length - 6));
+        return new(original.Name, file, encoding, bytes);
+    }
+    private static string Hash(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
+}

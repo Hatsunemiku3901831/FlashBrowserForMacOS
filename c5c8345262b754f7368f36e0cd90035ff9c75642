@@ -1,0 +1,11 @@
+namespace FlashMacOS.Domain.Configuration;
+
+public sealed record FavoriteEntry(Guid Id, string? Name, string? Url)
+{
+    public static FavoriteEntry Create(string? name, string? url) => new(Guid.NewGuid(), name, url);
+    public void Validate()
+    {
+        if (Id == Guid.Empty) throw new ArgumentException("A favorite needs its own identity, including duplicate URLs.");
+        if (Name?.Length > 16 * 1024 || Url?.Length > 16 * 1024) throw new ArgumentException("Favorite text exceeds its limit.");
+    }
+}

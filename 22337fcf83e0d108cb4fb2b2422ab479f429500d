@@ -1,0 +1,88 @@
+using System.Security.Cryptography;
+using System.Text;
+using FlashMacOS.Application.Paths;
+using FlashMacOS.Domain.Identity;
+using FlashMacOS.Domain.Browser;
+
+namespace FlashMacOS.Infrastructure.Paths;
+
+public enum ProfileKind { Product, Development, Test }
+
+public sealed class AppProfile : IAppPaths
+{
+    public const string ModeEnvironmentVariable = "FLASHMACOS_PROFILE_MODE";
+    private AppProfile(ProfileKind kind, string root, string support, string cache, string logs, Guid store, string id)
+    {
+        Kind = kind; RootDirectory = root; ApplicationSupportDirectory = support; CacheDirectory = cache;
+        LogDirectory = logs; DataStoreIdentifier = store; ProfileId = id;
+    }
+
+    public ProfileKind Kind { get; }
+    public string RootDirectory { get; }
+    public string ProfileId { get; }
+    public string ApplicationSupportDirectory { get; }
+    public string CacheDirectory { get; }
+    public string LogDirectory { get; }
+    public Guid DataStoreIdentifier { get; }
+    public Guid GetWebKitDataStoreIdentifier(BrowserPurpose purpose) => purpose switch
+    {
+        BrowserPurpose.Web => DataStoreIdentifier,
+        BrowserPurpose.LocalPlayer => new Guid(SHA256.HashData(Encoding.UTF8.GetBytes("FlashMacOS.WebKit.LocalPlayer.v1\0" + ProfileId)).AsSpan(0, 16)),
+        _ => throw new ArgumentOutOfRangeException(nameof(purpose)),
+    };
+    public string RuffleSaveStorePath => Path.Combine(ApplicationSupportDirectory, "ruffle-saves.v1.json");
+    public string SettingsPath => Path.Combine(ApplicationSupportDirectory, "settings.v2.json");
+    public string FavoritesPath => Path.Combine(ApplicationSupportDirectory, "favorites.v2.json");
+    public string ContentCatalogPath => Path.Combine(ApplicationSupportDirectory, "content-catalog.v1.json");
+
+    public static AppProfile FromEnvironment()
+    {
+        var mode = Environment.GetEnvironmentVariable(ModeEnvironmentVariable);
+        var kind = mode switch
+        {
+            "product" => ProfileKind.Product,
+            "development" => ProfileKind.Development,
+#if DEBUG
+            null or "" => ProfileKind.Development,
+#else
+            null or "" => ProfileKind.Product,
+#endif
+            _ => throw new ArgumentException("FLASHMACOS_PROFILE_MODE must be product or development."),
+        };
+        return Resolve(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), kind,
+            Environment.GetEnvironmentVariable(TestProfile.EnvironmentVariable));
+    }
+
+    public static AppProfile Resolve(string homeDirectory, ProfileKind kind, string? testRoot = null)
+    {
+        if (testRoot is not null)
+        {
+            var test = new TestProfile(testRoot);
+            return new AppProfile(ProfileKind.Test, test.RootDirectory, test.ApplicationSupportDirectory,
+                test.CacheDirectory, test.LogDirectory, test.DataStoreIdentifier, "test:" + test.DataStoreIdentifier.ToString("N"));
+        }
+        if (kind is not (ProfileKind.Product or ProfileKind.Development)) throw new ArgumentException("An explicit test root is required.", nameof(kind));
+        if (!Path.IsPathFullyQualified(homeDirectory)) throw new ArgumentException("An absolute user home is required.", nameof(homeDirectory));
+        var name = ProductIdentity.BundleId + (kind == ProfileKind.Development ? ".development" : "");
+        var library = Path.Combine(homeDirectory, "Library");
+        string Safe(string section)
+        {
+            var path = new TestProfile(Path.Combine(library, section, name, "profiles", "default")).RootDirectory;
+            for (var ancestor = new DirectoryInfo(path); ancestor is not null; ancestor = ancestor.Parent)
+                if (File.Exists(Path.Combine(ancestor.FullName, "FlashMacOS.slnx")) || Directory.Exists(Path.Combine(ancestor.FullName, "Contents", "MacOS")))
+                    throw new ArgumentException("Product data cannot be placed in a source checkout or application bundle.");
+            return path;
+        }
+        var support = Safe("Application Support");
+        var id = name + ":default";
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes("FlashMacOS.WebKit.v1\0" + id));
+        return new AppProfile(kind, support, support, Safe("Caches"), Safe("Logs"), new Guid(hash.AsSpan(0, 16)), id);
+    }
+
+    public void EnsureCreated()
+    {
+        Directory.CreateDirectory(ApplicationSupportDirectory);
+        Directory.CreateDirectory(CacheDirectory);
+        Directory.CreateDirectory(LogDirectory);
+    }
+}

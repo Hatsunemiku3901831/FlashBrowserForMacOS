@@ -1,0 +1,143 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
+using FlashMacOS.Application.Flash;
+using FlashMacOS.Domain.Flash;
+
+namespace FlashMacOS.Browser.WebKit.Diagnostics;
+
+public sealed record RuffleVerificationHarness(IBrowserSession Workspace, IBrowserSession Local, IFlashPlayer Player,
+    ILocalContentHost Content, string HelloPath, string RelativeMoviePath, Uri Embeds, string Root);
+
+/// <summary>Actual product player and WK surfaces, with fixed offline fixtures. Test-profile only.</summary>
+public static class RuffleNativeVerification
+{
+    private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
+
+    public static async Task RunAsync(RuffleVerificationHarness h, CancellationToken token)
+    {
+        var directory = Path.Combine(h.Root, "player-verification"); Directory.CreateDirectory(directory);
+        var records = new List<object>(); var failures = 0;
+        var traces = new ConcurrentQueue<string>(); var statuses = new ConcurrentQueue<string>();
+        h.Player.TraceReceived += traces.Enqueue; h.Player.StatusChanged += statuses.Enqueue;
+        async Task Until(Func<bool> condition)
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromSeconds(30));
+            while (!condition()) await Task.Delay(25, timeout.Token).ConfigureAwait(false);
+        }
+        async Task UntilScript(IBrowserSession session, string expression)
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token); timeout.CancelAfter(TimeSpan.FromSeconds(30));
+            while (await session.ExecuteScriptAsync(expression, timeout.Token).ConfigureAwait(false) != "true")
+                await Task.Delay(50, timeout.Token).ConfigureAwait(false);
+        }
+        async Task Check(string name, string expected, Func<Task<object>> action)
+        {
+            object record;
+            try { record = new { name, status = "PASS", expected, actual = await action().ConfigureAwait(false) }; }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            catch (Exception exception) { failures++; record = new { name, status = "FAIL", expected, error = exception.ToString() }; }
+            records.Add(record);
+            await File.AppendAllTextAsync(Path.Combine(directory, "checks.jsonl"), JsonSerializer.Serialize(record) + "\n", token).ConfigureAwait(false);
+        }
+        static void Require(bool value, object actual) { if (!value) throw new InvalidDataException(JsonSerializer.Serialize(actual)); }
+        async Task OpenHello()
+        {
+            traces.Clear();
+            await h.Player.OpenSwfAsync(h.HelloPath, new RuffleGameConfiguration("native-profile", "low", "noScale", .27), token).ConfigureAwait(false);
+            await Until(() => h.Player.State.Phase == FlashPlayerPhase.Ready).ConfigureAwait(false);
+            await Until(() => traces.Contains("Hello world!")).ConfigureAwait(false);
+            await Task.Delay(200, token).ConfigureAwait(false);
+            Require(traces.Count(t => t == "Hello world!") == 1, traces.ToArray());
+        }
+        try
+        {
+            await Check("offline-local-cold", "Product OpenSwf loads the offline Hello with one exact trace, a run ID and per-game options", async () =>
+            {
+                await OpenHello().ConfigureAwait(false);
+                var effective = await h.Local.ExecuteScriptAsync("JSON.stringify({profile:__flashMacOSGameConfiguration,volume:__cefFlashBrowserPlayerApi.volume,suspended:__cefFlashBrowserPlayerApi.suspended})", token).ConfigureAwait(false);
+                using var parsed = JsonDocument.Parse(effective!);
+                Require(parsed.RootElement.GetProperty("profile").GetProperty("id").GetString() == "native-profile"
+                    && Math.Abs(parsed.RootElement.GetProperty("volume").GetDouble() - .27) < .00001, effective!);
+                return new { h.Player.CurrentSource, h.Player.State, effective, traces = traces.ToArray() };
+            });
+            await Check("pause-resume-volume", "Completed product commands change actual Ruffle suspended/volume state", async () =>
+            {
+                await h.Player.PauseAsync(token).ConfigureAwait(false);
+                Require(h.Player.State.Phase == FlashPlayerPhase.Paused, h.Player.State);
+                await UntilScript(h.Local, "__cefFlashBrowserPlayerApi.suspended === true").ConfigureAwait(false);
+                await h.Player.ResumeAsync(token).ConfigureAwait(false);
+                await h.Player.SetVolumeAsync(.42, token).ConfigureAwait(false);
+                await UntilScript(h.Local, "!__cefFlashBrowserPlayerApi.suspended && Math.abs(__cefFlashBrowserPlayerApi.volume-.42)<.00001").ConfigureAwait(false);
+                return new { h.Player.State };
+            });
+            await Check("player-reload-trace", "Product Reload completes in a new run with exactly one Hello and preserves the current volume", async () =>
+            {
+                var oldRun = h.Player.CurrentRunId; traces.Clear();
+                await h.Player.ReloadAsync(token).ConfigureAwait(false);
+                await Until(() => traces.Contains("Hello world!")).ConfigureAwait(false); await Task.Delay(200, token).ConfigureAwait(false);
+                Require(h.Player.CurrentRunId != oldRun && traces.Count(t => t == "Hello world!") == 1, new { oldRun, h.Player.CurrentRunId, traces = traces.ToArray() });
+                await UntilScript(h.Local, "Math.abs(__cefFlashBrowserPlayerApi.volume-.42)<.00001").ConfigureAwait(false);
+                return new { oldRun, h.Player.CurrentRunId, traces = traces.ToArray() };
+            });
+            await Check("browser-reload-trace", "Browser reload creates a new document/run with exactly one Hello", async () =>
+            {
+                var oldRun = h.Player.CurrentRunId; traces.Clear();
+                await h.Workspace.ReloadAsync(token).ConfigureAwait(false);
+                await Until(() => h.Player.State.Phase == FlashPlayerPhase.Ready && h.Player.CurrentRunId != oldRun && traces.Contains("Hello world!")).ConfigureAwait(false);
+                await Task.Delay(200, token).ConfigureAwait(false); Require(traces.Count(t => t == "Hello world!") == 1, traces.ToArray());
+                return new { oldRun, h.Player.CurrentRunId, traces = traces.ToArray() };
+            });
+            await Check("static-dynamic-frame-csp", "Injected pinned Ruffle replaces static object, dynamic embed and frame object under explicit nonce CSP", async () =>
+            {
+                await h.Workspace.NavigateAsync(h.Embeds, token).ConfigureAwait(false);
+                await UntilScript(h.Workspace, "[document.getElementById('static-movie'),document.getElementById('dynamic-movie'),document.getElementById('child')?.contentDocument?.getElementById('frame-movie')].every(e=>e?.tagName.startsWith('RUFFLE-') && e.ruffle(1).metadata?.swfVersion>0)").ConfigureAwait(false);
+                return new { address = h.Workspace.State.Address, document = await h.Workspace.ExecuteScriptAsync("JSON.stringify({tags:[document.getElementById('static-movie').tagName,document.getElementById('dynamic-movie').tagName],frame:document.getElementById('child').contentDocument.getElementById('frame-movie').tagName,profile:__flashMacOSGameProfile})", token).ConfigureAwait(false) };
+            });
+            await Check("offline-local-hot", "A second product OpenSwf after web navigation emits one Hello in a fresh run", async () =>
+            {
+                await OpenHello().ConfigureAwait(false); return new { h.Player.State, traces = traces.ToArray() };
+            });
+            await Check("relative-local-resources", "A local URLLoader SWF loads its relative data.txt from its registered parent directory", async () =>
+            {
+                traces.Clear(); await h.Player.OpenSwfAsync(h.RelativeMoviePath, token).ConfigureAwait(false);
+                await Until(() => traces.Any(t => t.Contains("Loaded using constructor: Fetched from disk!", StringComparison.Ordinal))).ConfigureAwait(false);
+                Require(!traces.Any(t => t.StartsWith("ERROR:", StringComparison.Ordinal)), traces.ToArray());
+                return new { h.Player.CurrentSource, traces = traces.ToArray() };
+            });
+            await Check("async-command-failure", "An actual rejected runtime command throws and never emits a completed status", async () =>
+            {
+                await OpenHello().ConfigureAwait(false); statuses.Clear();
+                await h.Local.ExecuteScriptAsync("globalThis.__savedSuspend=__cefFlashBrowserPlayerApi.suspend;__cefFlashBrowserPlayerApi.suspend=()=>{throw new Error('W03 rejected fixture')};true", token).ConfigureAwait(false);
+                try
+                {
+                    try { await h.Player.PauseAsync(token).ConfigureAwait(false); throw new InvalidDataException("Command returned success"); }
+                    catch (InvalidOperationException exception) { Require(exception.Message.Contains("W03 rejected fixture", StringComparison.Ordinal), exception.Message); }
+                    Require(!statuses.Any(s => s.Contains("completed", StringComparison.Ordinal)), statuses.ToArray());
+                }
+                finally { await h.Local.ExecuteScriptAsync("__cefFlashBrowserPlayerApi.suspend=__savedSuspend;true", token).ConfigureAwait(false); }
+                return new { h.Player.State, statuses = statuses.ToArray() };
+            });
+            await Check("active-command-cancellation", "Cancellation ends an already-dispatched pending reload and a new document recovers", async () =>
+            {
+                await h.Local.ExecuteScriptAsync("__cefFlashBrowserPlayerApi.reload=()=>new Promise(()=>{});true", token).ConfigureAwait(false);
+                using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token); cancellation.CancelAfter(200);
+                try { await h.Player.ReloadAsync(cancellation.Token).ConfigureAwait(false); throw new InvalidDataException("Pending command returned success"); }
+                catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+                await OpenHello().ConfigureAwait(false); return new { recovered = h.Player.State };
+            });
+            await Check("malformed-movie-visible-error", "Invalid SWF yields a Faulted state and visible error, followed by a successful local reopen", async () =>
+            {
+                var bad = Path.Combine(directory, "invalid.swf"); await File.WriteAllTextAsync(bad, "W03 invalid SWF", token).ConfigureAwait(false);
+                await h.Player.OpenSwfAsync(bad, token).ConfigureAwait(false);
+                await Until(() => h.Player.State.Phase == FlashPlayerPhase.Faulted).ConfigureAwait(false);
+                var error = h.Player.State;
+                await UntilScript(h.Local, "document.getElementById('player').textContent.includes('Unable to play this SWF')").ConfigureAwait(false);
+                await OpenHello().ConfigureAwait(false); return new { error, recovered = h.Player.State };
+            });
+            await File.WriteAllTextAsync(Path.Combine(directory, "result.json"), JsonSerializer.Serialize(new
+            { taskId = "W03", status = failures == 0 ? "PASS" : "FAIL", failures, process = Environment.ProcessId, checks = records }, Options), token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        finally { h.Player.TraceReceived -= traces.Enqueue; h.Player.StatusChanged -= statuses.Enqueue; }
+    }
+}

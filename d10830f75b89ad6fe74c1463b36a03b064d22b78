@@ -1,0 +1,133 @@
+namespace FlashMacOS.Application.Lifecycle;
+
+public enum LifecycleState { Created, Starting, Running, Stopping, Stopped, Faulted }
+
+/// <summary>One initializer and one cleanup owner; callers cancel their wait independently.</summary>
+public sealed class AsyncLifecycle : IAsyncDisposable
+{
+    private readonly object _gate = new();
+    private readonly Func<CancellationToken, ValueTask> _initialize;
+    private readonly Func<CancellationToken, ValueTask> _release;
+    private readonly TimeProvider _clock;
+    private readonly TimeSpan _startTimeout;
+    private readonly TimeSpan _stopTimeout;
+    private readonly CancellationTokenSource _lifetime = new();
+    private Task? _start;
+    private Task? _initializationWork;
+    private Task? _stop;
+    private LifecycleState _state;
+
+    public AsyncLifecycle(Func<CancellationToken, ValueTask> initialize,
+        Func<CancellationToken, ValueTask> release, TimeProvider clock,
+        TimeSpan? startTimeout = null, TimeSpan? stopTimeout = null)
+    {
+        _initialize = initialize ?? throw new ArgumentNullException(nameof(initialize));
+        _release = release ?? throw new ArgumentNullException(nameof(release));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        _startTimeout = startTimeout ?? TimeSpan.FromSeconds(30);
+        _stopTimeout = stopTimeout ?? TimeSpan.FromSeconds(15);
+        if (_startTimeout <= TimeSpan.Zero || _stopTimeout <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(startTimeout));
+        LastTransitionAt = _clock.GetUtcNow();
+    }
+
+    public LifecycleState State { get { lock (_gate) return _state; } }
+    public DateTimeOffset LastTransitionAt { get; private set; }
+    public Exception? InitializationError { get; private set; }
+
+    public ValueTask StartAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_stop is not null, this);
+            if (_start is null)
+            {
+                SetState(LifecycleState.Starting);
+                // The caller cancels its wait; only the owner's token cancels shared initialization.
+                _start = Task.Run(StartCoreAsync, CancellationToken.None);
+            }
+            return new ValueTask(_start.WaitAsync(cancellationToken));
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_gate)
+        {
+            if (_stop is null)
+            {
+                SetState(LifecycleState.Stopping);
+                _stop = Task.Run(StopCoreAsync);
+            }
+            return new ValueTask(_stop);
+        }
+    }
+
+    private async Task StartCoreAsync()
+    {
+        using var deadline = new CancellationTokenSource(_startTimeout, _clock);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token, deadline.Token);
+        try
+        {
+            linked.Token.ThrowIfCancellationRequested();
+            var work = _initialize(linked.Token).AsTask();
+            lock (_gate) _initializationWork = work;
+            await work.WaitAsync(linked.Token).ConfigureAwait(false);
+            lock (_gate) { if (_stop is null) SetState(LifecycleState.Running); }
+        }
+        catch (OperationCanceledException exception) when (deadline.IsCancellationRequested && !_lifetime.IsCancellationRequested)
+        {
+            InitializationError = new TimeoutException("Initialization exceeded its deadline.", exception);
+            lock (_gate) { if (_stop is null) SetState(LifecycleState.Faulted); }
+            throw InitializationError;
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { throw; }
+        catch (Exception exception)
+        {
+            InitializationError = exception;
+            lock (_gate) { if (_stop is null) SetState(LifecycleState.Faulted); }
+            throw;
+        }
+    }
+
+    private async Task StopCoreAsync()
+    {
+        var errors = new List<Exception>();
+        try { await _lifetime.CancelAsync().ConfigureAwait(false); }
+        catch (Exception exception) { errors.Add(exception); }
+        Task? start;
+        lock (_gate) start = _start;
+        if (start is not null)
+        {
+            try { await start.WaitAsync(_stopTimeout, _clock).ConfigureAwait(false); }
+            catch (Exception exception) when (exception == InitializationError || exception is OperationCanceledException) { }
+            catch (Exception exception) { errors.Add(exception); }
+        }
+        Task? actualInitialization;
+        lock (_gate) actualInitialization = _initializationWork;
+        if (actualInitialization is not null)
+        {
+            try { await actualInitialization.WaitAsync(_stopTimeout, _clock).ConfigureAwait(false); }
+            catch (Exception exception) when (exception == InitializationError || exception is OperationCanceledException) { }
+            catch (Exception exception) { errors.Add(exception); }
+        }
+        using var deadline = new CancellationTokenSource(_stopTimeout, _clock);
+        try { await _release(deadline.Token).AsTask().WaitAsync(deadline.Token).ConfigureAwait(false); }
+        catch (OperationCanceledException exception) when (deadline.IsCancellationRequested)
+        { errors.Add(new TimeoutException("Cleanup exceeded its deadline.", exception)); }
+        catch (Exception exception) { errors.Add(exception); }
+        finally
+        {
+            _lifetime.Dispose();
+            lock (_gate) SetState(errors.Count == 0 ? LifecycleState.Stopped : LifecycleState.Faulted);
+        }
+        if (errors.Count != 0) throw new AggregateException("Lifecycle cleanup failed.", errors);
+    }
+
+    private void SetState(LifecycleState state)
+    {
+        _state = state;
+        LastTransitionAt = _clock.GetUtcNow();
+    }
+}

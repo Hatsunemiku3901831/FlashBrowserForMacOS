@@ -1,0 +1,686 @@
+using System.Text.Json;
+using System.Threading.Channels;
+using Avalonia.Controls;
+using Avalonia.Platform;
+using Avalonia.Threading;
+using FlashMacOS.Application.Browser;
+
+namespace FlashMacOS.Browser.WebKit;
+
+public sealed class AvaloniaNativeWebViewSession : IBrowserSession, IBrowserTools, IBrowserDownloads
+{
+    private readonly Guid _dataStoreIdentifier;
+    // Native downloads waiting for their single terminal update; UI-thread only.
+    private readonly Dictionary<long, TaskCompletionSource> _downloads = [];
+    private readonly IDocumentStartInjector _documentStartInjector;
+    private readonly Func<string> _documentStartScriptProvider;
+    private readonly Action<string, string?>? _eventSink;
+    private readonly BrowserReadiness _readiness;
+    private readonly TimeProvider _clock;
+    private readonly Action? _requestQuit;
+    private readonly Action<string>? _diagnosticSink;
+    private readonly List<Task> _pdfCompletions = [];
+    private readonly NavigationMessageGate _navigation = new();
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly object _disposeGate = new();
+    private readonly object _rawBridgeGate = new();
+    private sealed record RawNativeMessage(string Body, string Origin);
+    private readonly Channel<RawNativeMessage> _rawBridge = Channel.CreateBounded<RawNativeMessage>(new BoundedChannelOptions(BridgeLimits.MaximumPendingMessages)
+    {
+        FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = false,
+    });
+    private readonly Task _bridgeReader;
+    private long _rawBridgeCharacters;
+    private readonly TaskCompletionSource _nativeDestroyed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private Task? _disposeTask;
+    private Task? _boundedReady;
+    private bool _adapterCreated;
+    private NativeWebView? _webView;
+    private MacBrowserBridge? _native;
+    private long _nativeGeneration;
+    private bool _waitingForNativeNavigationStart;
+    private BrowserState? _committed;
+    public BrowserCapabilities Capabilities { get; } = new(true, true, true, true, true, true);
+    public double Zoom { get; private set; } = 1;
+    private Action? _detachControl;
+    private volatile bool _disposed;
+
+    public AvaloniaNativeWebViewSession(
+        IDocumentStartInjector documentStartInjector,
+        Func<string> documentStartScriptProvider,
+        Guid dataStoreIdentifier,
+        BrowserPurpose purpose,
+        Action<string, string?>? eventSink = null,
+        TimeProvider? clock = null,
+        TimeSpan? readyTimeout = null, Action? requestQuit = null, Action<string>? diagnosticSink = null)
+    {
+        ArgumentNullException.ThrowIfNull(documentStartInjector);
+        ArgumentNullException.ThrowIfNull(documentStartScriptProvider);
+        if (dataStoreIdentifier == Guid.Empty || dataStoreIdentifier == new Guid("852984bf-5e1e-4859-9fc3-cbf5f1a71a63"))
+        {
+            throw new ArgumentException("A separate test WebKit data store is required.", nameof(dataStoreIdentifier));
+        }
+
+        _dataStoreIdentifier = dataStoreIdentifier;
+        _clock = clock ?? TimeProvider.System;
+        _requestQuit = requestQuit;
+        _diagnosticSink = diagnosticSink;
+        _readiness = new BrowserReadiness(_clock, readyTimeout);
+        if (!Enum.IsDefined(purpose)) throw new ArgumentOutOfRangeException(nameof(purpose));
+        Purpose = purpose;
+        _documentStartInjector = documentStartInjector;
+        _documentStartScriptProvider = documentStartScriptProvider;
+        _eventSink = eventSink;
+        _bridgeReader = Task.Run(ReadBridgeAsync);
+    }
+
+    private volatile BrowserState _state = BrowserState.Empty;
+    public BrowserState State => _state;
+
+    /// <summary>The data-store purpose; popups opened by this page inherit it.</summary>
+    public BrowserPurpose Purpose { get; }
+
+    public Task Ready
+    {
+        get
+        {
+            lock (_disposeGate)
+                return _boundedReady ??= _disposed ? _readiness.Ready : _readiness.WaitAsync(_lifetime.Token).AsTask();
+        }
+    }
+
+    public event Action<BrowserState>? StateChanged;
+
+    public event Action<BrowserPopupRequest>? PopupRequested;
+
+    public event Action? CloseRequested;
+
+    public event Action<BrowserDownloadRequest>? DownloadRequested;
+
+    public event Action<BrowserDownloadUpdate>? DownloadUpdated;
+
+    public event Action<WebBridgeMessage>? BridgeMessageReceived;
+
+    public event Action<Exception>? Faulted;
+
+    public void Attach(NativeWebView webView, Action detachControl)
+    {
+        lock (_disposeGate)
+        {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(webView);
+        ArgumentNullException.ThrowIfNull(detachControl);
+        if (!Dispatcher.UIThread.CheckAccess()) throw new InvalidOperationException("Attach must run on the UI thread.");
+        if (_webView is not null)
+        {
+            throw new InvalidOperationException("This browser session is already attached.");
+        }
+
+        _webView = webView;
+        _detachControl = detachControl;
+        Record("browser.attached");
+        webView.EnvironmentRequested += OnEnvironmentRequested;
+        webView.AdapterCreated += OnAdapterCreated;
+        webView.AdapterDestroyed += OnAdapterDestroyed;
+        }
+    }
+
+    public ValueTask NavigateAsync(Uri address, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+        BrowserNavigationPolicy.RequireAllowed(address);
+        Record("browser.navigate.requested", address.AbsoluteUri);
+        return DispatchAsync(webView => { MarkNavigationRequested(); webView.Navigate(address); }, cancellationToken);
+    }
+
+    public ValueTask NavigateAsync(BrowserRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.Method == "GET" && request.Body is null) return NavigateAsync(request.Address, cancellationToken);
+        BrowserNavigationPolicy.RequireAllowed(request.Address);
+        Record("browser.navigate.requested", request.Method + " " + request.Address.AbsoluteUri);
+        return DispatchAsync(_ => { MarkNavigationRequested(); _native!.Load(request); }, cancellationToken);
+    }
+
+    public ValueTask GoBackAsync(CancellationToken cancellationToken = default)
+        => DispatchAsync(webView => { if (webView.CanGoBack) { MarkNavigationRequested(); if (!webView.GoBack()) SetState(State with { IsLoading = false }); } }, cancellationToken);
+    public ValueTask GoForwardAsync(CancellationToken cancellationToken = default)
+        => DispatchAsync(webView => { if (webView.CanGoForward) { MarkNavigationRequested(); if (!webView.GoForward()) SetState(State with { IsLoading = false }); } }, cancellationToken);
+    public ValueTask ReloadAsync(CancellationToken cancellationToken = default)
+        => DispatchAsync(webView => { MarkNavigationRequested(); if (!webView.Refresh()) SetState(State with { IsLoading = false }); }, cancellationToken);
+    public ValueTask StopAsync(CancellationToken cancellationToken = default)
+        => DispatchAsync(webView => { _waitingForNativeNavigationStart = false; webView.Stop(); SetState(State with { IsLoading = false }); }, cancellationToken);
+
+    private void MarkNavigationRequested()
+    {
+        _waitingForNativeNavigationStart = true;
+        SetState(State with { IsLoading = true, Error = null });
+    }
+
+    public ValueTask SetZoomAsync(double zoom, CancellationToken cancellationToken = default)
+    {
+        if (!double.IsFinite(zoom) || zoom is < .25 or > 5) throw new ArgumentOutOfRangeException(nameof(zoom));
+        return DispatchAsync(_ => { _native!.SetZoom(zoom); Zoom = zoom; Record("browser.zoom", zoom.ToString(System.Globalization.CultureInfo.InvariantCulture)); }, cancellationToken);
+    }
+
+    public async ValueTask<bool> FindAsync(BrowserFindRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (string.IsNullOrEmpty(request.Text) || request.Text.Length > 4096) throw new ArgumentException("Find text must contain 1–4096 characters.", nameof(request));
+        using var linked = LinkCancellation(cancellationToken);
+        await GetReadyWebViewAsync(linked.Token).ConfigureAwait(false);
+        var found = await Dispatcher.UIThread.InvokeAsync(() => _native!.FindAsync(request.Text, request.Backwards, request.CaseSensitive, linked.Token).AsTask())
+            .WaitAsync(linked.Token).ConfigureAwait(false);
+        Record("browser.find", found ? "match" : "no-match");
+        return found;
+    }
+
+    public ValueTask SetUserAgentAsync(string? userAgent, CancellationToken cancellationToken = default)
+    {
+        BrowserNavigationPolicy.ValidateUserAgent(userAgent);
+        return DispatchAsync(view => { view.UserAgent = string.IsNullOrWhiteSpace(userAgent) ? null! : userAgent; Record("browser.userAgent.changed"); }, cancellationToken);
+    }
+
+    public ValueTask SetInspectionEnabledAsync(bool enabled, CancellationToken cancellationToken = default)
+        => DispatchAsync(_ => { _native!.SetInspection(enabled); Record("browser.inspection", enabled.ToString()); }, cancellationToken);
+
+    public ValueTask ShowPrintDialogAsync(CancellationToken cancellationToken = default)
+        => DispatchAsync(view => { Record("browser.print.requested"); view.ShowPrintUI(); Record("browser.print.dispatched"); }, cancellationToken);
+
+    public async ValueTask<byte[]> ExportPdfAsync(CancellationToken cancellationToken = default)
+    {
+        TaskCompletionSource released = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellationTokenSource linked;
+        lock (_disposeGate)
+        {
+            linked = LinkCancellation(cancellationToken);
+            _pdfCompletions.RemoveAll(task => task.IsCompleted);
+            if (_pdfCompletions.Count >= 4) { linked.Dispose(); throw new InvalidOperationException("Four PDF requests are already pending."); }
+            _pdfCompletions.Add(released.Task);
+        }
+        using (linked)
+        {
+            var late = false;
+            try
+            {
+                var view = await GetReadyWebViewAsync(linked.Token).ConfigureAwait(false);
+                // One owned task includes UI dispatch and native creation; cancellation cannot orphan a late Stream.
+                var pending = CreatePdfStreamAsync(view, linked.Token);
+                Stream stream;
+                try { stream = await pending.WaitAsync(TimeSpan.FromSeconds(30), linked.Token).ConfigureAwait(false); }
+                catch
+                {
+                    late = true;
+                    _ = DisposeLatePdfAsync(pending, released);
+                    throw;
+                }
+                await using (stream.ConfigureAwait(false))
+                {
+                    using var result = new MemoryStream();
+                    var buffer = new byte[64 * 1024];
+                    while (true)
+                    {
+                        var count = await stream.ReadAsync(buffer, linked.Token).ConfigureAwait(false);
+                        if (count == 0) break;
+                        if (result.Length + count > 64 * 1024 * 1024) throw new InvalidDataException("Printed PDF exceeds 64 MiB.");
+                        result.Write(buffer, 0, count);
+                    }
+                    Record("browser.pdf.completed", result.Length.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    return result.ToArray();
+                }
+            }
+            finally { if (!late) released.TrySetResult(); }
+        }
+    }
+
+    private static async Task<Stream> CreatePdfStreamAsync(NativeWebView view, CancellationToken token)
+    {
+        Task<Stream>? pending = null;
+        await Dispatcher.UIThread.InvokeAsync(() => { token.ThrowIfCancellationRequested(); pending = view.PrintToPdfStreamAsync(); });
+        return await pending!.ConfigureAwait(false);
+    }
+
+    private async Task DisposeLatePdfAsync(Task<Stream> pending, TaskCompletionSource released)
+    {
+        try { await using var stream = await pending.ConfigureAwait(false); }
+        catch (Exception exception) { Record("browser.pdf.lateCompletion.failed", exception.ToString()); }
+        finally { released.TrySetResult(); }
+    }
+
+    private async ValueTask DispatchAsync(Action<NativeWebView> action, CancellationToken cancellationToken)
+    {
+        using var linked = LinkCancellation(cancellationToken);
+        var webView = await GetReadyWebViewAsync(linked.Token).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            linked.Token.ThrowIfCancellationRequested();
+            action(webView);
+        }).GetTask().WaitAsync(linked.Token).ConfigureAwait(false);
+    }
+
+    public async ValueTask<string?> ExecuteScriptAsync(
+        string script,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(script);
+        using var linked = LinkCancellation(cancellationToken);
+        cancellationToken = linked.Token;
+        var webView = await GetReadyWebViewAsync(cancellationToken).ConfigureAwait(false);
+        return await Dispatcher.UIThread
+            .InvokeAsync(() =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return webView.InvokeScript(script);
+            })
+            .WaitAsync(TimeSpan.FromSeconds(15), cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async ValueTask<long> StartDownloadAsync(Uri address, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+        if (!address.IsAbsoluteUri || address.Scheme is not ("http" or "https")) throw new NotSupportedException("A started download requires an HTTP(S) address.");
+        using var linked = LinkCancellation(cancellationToken);
+        await GetReadyWebViewAsync(linked.Token).ConfigureAwait(false);
+        var id = await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            linked.Token.ThrowIfCancellationRequested();
+            var started = _native!.StartDownload(address);
+            _downloads.Add(started, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
+            return started;
+        }).GetTask().WaitAsync(linked.Token).ConfigureAwait(false);
+        Record("browser.download.started", id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return id;
+    }
+
+    public ValueTask SetDownloadDestinationAsync(long downloadId, string? stagingPath, CancellationToken cancellationToken = default)
+    {
+        if (stagingPath is not null && (!Path.IsPathFullyQualified(stagingPath) || Path.GetFileName(stagingPath).Length == 0))
+            throw new ArgumentException("A download staging path must be an absolute file path.", nameof(stagingPath));
+        return DispatchAsync(_ =>
+        {
+            // A download cancelled meanwhile already reported its terminal update.
+            if (_downloads.ContainsKey(downloadId)) _native!.SetDownloadDestination(downloadId, stagingPath);
+        }, cancellationToken);
+    }
+
+    public ValueTask CancelDownloadAsync(long downloadId, CancellationToken cancellationToken = default)
+        => DispatchAsync(_ => { if (_downloads.ContainsKey(downloadId)) _native!.CancelDownload(downloadId); }, cancellationToken);
+
+    public async Task<byte[]> CaptureDiagnosticSnapshotAsync(CancellationToken cancellationToken)
+    {
+        if (!OperatingSystem.IsMacOS()) throw new PlatformNotSupportedException("Native snapshot requires macOS.");
+        using var linked = LinkCancellation(cancellationToken);
+        cancellationToken = linked.Token;
+        var webView = await GetReadyWebViewAsync(cancellationToken).ConfigureAwait(false);
+        return await Dispatcher.UIThread.InvokeAsync(() => OperatingSystem.IsMacOS() ? MacWebViewSnapshot.CaptureAsync(
+            webView.TryGetPlatformHandle() ?? throw new InvalidOperationException("No native WebView handle."))
+            : throw new PlatformNotSupportedException("Native snapshot requires macOS."))
+            .WaitAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_disposeGate)
+        {
+            if (_disposeTask is null)
+            {
+                _disposed = true;
+                _readiness.Dispose();
+                _navigation.Close();
+                _rawBridge.Writer.TryComplete();
+                _disposeTask = Task.Run(DisposeCoreAsync);
+            }
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        var failures = new List<Exception>();
+        try { await CancelDownloadsAsync().ConfigureAwait(false); }
+        catch (Exception exception) { failures.Add(exception); }
+        try { await _lifetime.CancelAsync().ConfigureAwait(false); }
+        catch (Exception exception) { failures.Add(exception); }
+        try { await _bridgeReader.WaitAsync(TimeSpan.FromSeconds(3), _clock).ConfigureAwait(false); }
+        catch (Exception exception) { failures.Add(exception); }
+        var webView = _webView;
+        _webView = null;
+        try
+        {
+            if (webView is not null)
+            {
+                Exception? nativeCleanupFailure = null;
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    webView.EnvironmentRequested -= OnEnvironmentRequested;
+                    webView.AdapterCreated -= OnAdapterCreated;
+                    if (_adapterCreated && !_nativeDestroyed.Task.IsCompleted) webView.Stop();
+                    try { _native?.Dispose(); }
+                    catch (Exception exception) { nativeCleanupFailure = exception; }
+                    finally { _native = null; }
+                    _detachControl?.Invoke();
+                    _detachControl = null;
+                    if (!_adapterCreated) _nativeDestroyed.TrySetResult();
+                });
+                await _nativeDestroyed.Task.WaitAsync(TimeSpan.FromSeconds(3), _clock).ConfigureAwait(false);
+                await Dispatcher.UIThread.InvokeAsync(() => webView.AdapterDestroyed -= OnAdapterDestroyed);
+                if (nativeCleanupFailure is not null) failures.Add(nativeCleanupFailure);
+            }
+            Task[] late; lock (_disposeGate) late = _pdfCompletions.ToArray();
+            await Task.WhenAll(late).WaitAsync(TimeSpan.FromSeconds(3), _clock).ConfigureAwait(false);
+            Record("browser.disposed");
+        }
+        catch (Exception exception) { failures.Add(exception); }
+        finally { _lifetime.Dispose(); }
+        if (failures.Count != 0) throw new AggregateException("Browser cleanup failed.", failures);
+    }
+
+    /// <summary>Closing a surface cancels its unfinished downloads and waits for each terminal update.</summary>
+    private async Task CancelDownloadsAsync()
+    {
+        if (_webView is null) return;
+        var pending = await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            if (_native is null || _downloads.Count == 0) return Array.Empty<Task>();
+            Record("browser.download.cancelAll", _native.CancelAllDownloads().ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return _downloads.Values.Select(completion => completion.Task).ToArray();
+        });
+        await Task.WhenAll(pending).WaitAsync(TimeSpan.FromSeconds(3), _clock).ConfigureAwait(false);
+    }
+
+    private CancellationTokenSource LinkCancellation(CancellationToken cancellationToken)
+    {
+        lock (_disposeGate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            return CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token);
+        }
+    }
+
+    private async ValueTask<NativeWebView> GetReadyWebViewAsync(CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await Ready.WaitAsync(cancellationToken).ConfigureAwait(false);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _webView ?? throw new InvalidOperationException("The browser surface is not attached.");
+    }
+
+    private void OnEnvironmentRequested(object? sender, WebViewEnvironmentRequestedEventArgs args)
+    {
+        if (_disposed) return;
+        Record("browser.environment.requested");
+        args.EnableDevTools = false;
+        if (args is AppleWKWebViewEnvironmentRequestedEventArgs apple)
+        {
+            apple.NonPersistentDataStore = false;
+            apple.DataStoreIdentifier = _dataStoreIdentifier;
+            apple.ApplicationNameForUserAgent = FlashMacOS.Domain.Identity.ProductIdentity.UserAgentProduct;
+            apple.ScriptHandlerMessageName = WebBridgeNames.DefaultHandler;
+            // Preserve the explicit URL scheme. Some legacy game sites redirect HTTPS to HTTP.
+            apple.UpgradeKnownHostsToHTTPS = false;
+            Record("browser.profile.configured", $"persistent=true; dataStore={_dataStoreIdentifier}");
+        }
+    }
+
+    private void OnAdapterCreated(object? sender, WebViewAdapterEventArgs args)
+    {
+        _adapterCreated = true;
+        if (_disposed) return;
+        Record("browser.adapter.created");
+        try
+        {
+            var handle = args.TryGetPlatformHandle()
+                ?? throw new PlatformNotSupportedException("NativeWebView did not expose a platform handle.");
+            _documentStartInjector.Inject(handle, _documentStartScriptProvider());
+            _native = new MacBrowserBridge(handle, OnNativeEvent, ReportNativeFailure);
+            Record("browser.documentStart.injected");
+            _readiness.Complete();
+        }
+        catch (Exception exception)
+        {
+            Record("browser.adapter.failed", exception.ToString());
+            _readiness.Fail(exception);
+            Faulted?.Invoke(exception);
+        }
+    }
+
+    private void OnAdapterDestroyed(object? sender, WebViewAdapterEventArgs args)
+    {
+        Record("browser.adapter.destroyed");
+        _nativeDestroyed.TrySetResult();
+        if (!_disposed) _readiness.Fail(new IOException("The native adapter was destroyed before it became ready."));
+    }
+
+    private void ReportNativeFailure(Exception exception)
+    {
+        Record("browser.native.failed", exception.ToString());
+        _readiness.Fail(exception);
+        Faulted?.Invoke(exception);
+    }
+
+    private void OnNativeEvent(NativeBrowserEvent value)
+    {
+        // Download updates still flow while closing: disposal waits for each terminal update.
+        if (value.Kind is >= 20 and <= 24) { OnNativeDownloadEvent(value); return; }
+        if (_disposed) return;
+        _diagnosticSink?.Invoke(JsonSerializer.Serialize(new { DataStoreIdentifier = _dataStoreIdentifier, value.Kind, value.Generation, value.Payload, value.Origin, value.IsMainFrame }));
+        switch (value.Kind)
+        {
+            case 13: OnNativePopupRequested(value.Payload); break;
+            case 15: if (value.Generation == _nativeGeneration) RestoreAfterDownloadNavigation(); break;
+            case 14: Record("browser.close.requested"); CloseRequested?.Invoke(); break;
+            case 1:
+                _waitingForNativeNavigationStart = false;
+                _nativeGeneration = value.Generation;
+                if (State.NavigationId is not null) _committed = State;
+                var sequence = _navigation.BeginNavigation();
+                Uri.TryCreate(value.Payload, UriKind.Absolute, out var started);
+                SetState(State with { Address = started ?? State.Address, IsLoading = true,
+                    NavigationSequence = sequence, NavigationId = null, Error = null });
+                Record("browser.navigation.started", value.Payload);
+                break;
+            case 2: CompleteNativeNavigation(value); break;
+            case 3:
+                if (value.Generation != _nativeGeneration) return;
+                using (var doc = JsonDocument.Parse(value.Payload))
+                {
+                    var root = doc.RootElement; var code = root.GetProperty("code").GetInt32();
+                    var error = code == -999 ? null : new BrowserNavigationError(root.GetProperty("domain").GetString()!,
+                        code, root.GetProperty("message").GetString()!, State.Address);
+                    SetState(State with { IsLoading = false, Error = error });
+                    Record(error is null ? "browser.navigation.cancelled" : "browser.navigation.failed", value.Payload);
+                    if (error is not null) Faulted?.Invoke(new IOException(error.Message));
+                }
+                break;
+            case 4:
+                if (!value.IsMainFrame) { Record("browser.bridge.frame.rejected", value.Origin); return; }
+                EnqueueNativeMessage(value.Payload, value.Origin);
+                break;
+            case 5: Record("browser.navigation.blocked", value.Payload); break;
+            case 7: Record("browser.dialog", value.Payload); break;
+            case 8:
+                if (value.Generation != _nativeGeneration) return;
+                using (var doc = JsonDocument.Parse(value.Payload))
+                {
+                    var root = doc.RootElement;
+                    if (root.GetProperty("loading").GetBoolean() || (State.IsLoading && !_waitingForNativeNavigationStart)) return;
+                    _waitingForNativeNavigationStart = false;
+                    if (Uri.TryCreate(root.GetProperty("url").GetString(), UriKind.Absolute, out var address))
+                        SetState(State with { IsLoading = false, Address = address, Title = string.IsNullOrWhiteSpace(root.GetProperty("title").GetString()) ? State.Title : root.GetProperty("title").GetString()!,
+                            CanGoBack = root.GetProperty("back").GetBoolean(), CanGoForward = root.GetProperty("forward").GetBoolean() });
+                }
+                break;
+            case 9:
+                if (value.Generation == _nativeGeneration && Uri.TryCreate(value.Payload, UriKind.Absolute, out var redirected))
+                    SetState(State with { Address = redirected });
+                break;
+            case 10: ReportNativeFailure(new InvalidDataException(value.Payload)); break;
+            case 11: Record("browser.applicationQuit.requested"); _requestQuit?.Invoke(); break;
+            case 12: Record("browser.inspection.status", value.Payload); break;
+        }
+    }
+
+    private async void CompleteNativeNavigation(NativeBrowserEvent value)
+    {
+        var sequence = State.NavigationSequence;
+        try
+        {
+            if (_disposed || value.Generation != _nativeGeneration) return;
+            using var linked = LinkCancellation(CancellationToken.None);
+            var metadata = await ExecuteScriptAsync("JSON.stringify({navigationId:window.__flashMacOSNavigationId})", linked.Token);
+            if (_disposed || State.NavigationSequence != sequence || value.Generation != _nativeGeneration) return;
+            using var document = JsonDocument.Parse(metadata ?? throw new InvalidDataException("Missing native document identity."));
+            var navigationId = document.RootElement.GetProperty("navigationId").GetString()
+                ?? throw new InvalidDataException("Missing document-start identity.");
+            using var native = JsonDocument.Parse(value.Payload);
+            var root = native.RootElement;
+            var address = new Uri(root.GetProperty("url").GetString()!, UriKind.Absolute);
+            var pending = _navigation.Commit(sequence, navigationId, address);
+            var title = root.GetProperty("title").GetString();
+            SetState(new BrowserState(address, string.IsNullOrWhiteSpace(title) ? FlashMacOS.Domain.Identity.ProductIdentity.Name : title,
+                false, _webView!.CanGoBack, _webView.CanGoForward, sequence, navigationId));
+            Record("browser.navigation.completed", address.AbsoluteUri);
+            foreach (var message in pending) PublishBridgeMessage(message);
+        }
+        catch (OperationCanceledException) when (_disposed) { }
+        catch (Exception exception)
+        {
+            if (_disposed || State.NavigationSequence != sequence) return;
+            Record("browser.navigation.failed", exception.ToString());
+            SetState(State with { IsLoading = false, Error = new BrowserNavigationError("Host", 0, exception.Message, State.Address) });
+            Faulted?.Invoke(exception);
+        }
+    }
+
+    // A main-frame response became a download: the previous document is still displayed and alive, so its
+    // identity is re-committed (with messages it buffered meanwhile) instead of leaving the page "loading".
+    private void RestoreAfterDownloadNavigation()
+    {
+        _waitingForNativeNavigationStart = false;
+        var previous = _committed;
+        Record("browser.navigation.becameDownload", State.Address?.AbsoluteUri);
+        if (previous?.NavigationId is null || previous.Address is null) { SetState(State with { IsLoading = false }); return; }
+        var sequence = State.NavigationSequence;
+        var pending = _navigation.Commit(sequence, previous.NavigationId, previous.Address);
+        SetState(previous with { NavigationSequence = sequence, IsLoading = false, Error = null });
+        foreach (var message in pending) PublishBridgeMessage(message);
+    }
+
+    private void OnNativePopupRequested(string payload)
+    {
+        BrowserPopupRequest request;
+        try { request = NativeBrowserPayloads.ParsePopupRequest(payload, Purpose); }
+        catch (Exception exception) when (exception is JsonException or FormatException or UriFormatException or NotSupportedException or InvalidDataException
+            or InvalidOperationException or KeyNotFoundException)
+        {
+            Record("browser.popup.rejected", exception.Message);
+            Faulted?.Invoke(exception);
+            return;
+        }
+        Record("browser.popup.requested", request.Request.Method + " " + request.Request.Address.AbsoluteUri);
+        PopupRequested?.Invoke(request);
+    }
+
+    private void OnNativeDownloadEvent(NativeBrowserEvent value)
+    {
+        var id = value.Generation;
+        if (value.Kind == 20)
+        {
+            var request = NativeBrowserPayloads.ParseDownloadRequest(id, value.Payload);
+            _downloads.TryAdd(id, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
+            Record("browser.download.requested", $"{id}; {request.Method}; {request.MimeType}; {request.ExpectedBytes}");
+            if (DownloadRequested is null || _disposed) _native!.SetDownloadDestination(id, null);
+            else DownloadRequested.Invoke(request);
+            return;
+        }
+        if (!_downloads.TryGetValue(id, out var completion)) return;
+        var update = NativeBrowserPayloads.ParseDownloadUpdate(value.Kind, id, value.Payload);
+        if (update.IsTerminal)
+        {
+            _downloads.Remove(id);
+            Record("browser.download." + update.Kind.ToString().ToLowerInvariant(), $"{id}; bytes={update.ReceivedBytes}; {update.Error}");
+        }
+        DownloadUpdated?.Invoke(update);
+        if (update.IsTerminal) completion.TrySetResult();
+    }
+
+    private void EnqueueNativeMessage(string body, string origin)
+    {
+        if (_disposed) return;
+        var accepted = false;
+        if (!string.IsNullOrEmpty(body) && body.Length <= BridgeLimits.MaximumBodyCharacters)
+        {
+            lock (_rawBridgeGate)
+            {
+                if (_rawBridgeCharacters + body.Length <= BridgeLimits.MaximumQueuedCharacters)
+                {
+                    _rawBridgeCharacters += body.Length;
+                    accepted = _rawBridge.Writer.TryWrite(new RawNativeMessage(body, origin));
+                    if (!accepted) _rawBridgeCharacters -= body.Length;
+                }
+            }
+        }
+        if (!accepted)
+        {
+            var exception = new InvalidDataException("The bounded native bridge rejected a message.");
+            Record("browser.bridge.failed", exception.Message);
+            Faulted?.Invoke(exception);
+        }
+    }
+
+    private async Task ReadBridgeAsync()
+    {
+        try
+        {
+            await foreach (var body in _rawBridge.Reader.ReadAllAsync(_lifetime.Token).ConfigureAwait(false))
+            {
+                try
+                {
+                    var message = WebBridgeProtocol.ParseNative(body.Body, body.Origin, true);
+                    if (_navigation.AcceptOrBuffer(message))
+                        await Dispatcher.UIThread.InvokeAsync(() =>
+                        {
+                            if (!_disposed && _navigation.AcceptOrBuffer(message)) PublishBridgeMessage(message);
+                        }).GetTask().WaitAsync(_lifetime.Token).ConfigureAwait(false);
+                    else Record("browser.bridge.deferredOrRejected", message.Type);
+                }
+                catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { break; }
+                catch (Exception exception) when (exception is JsonException or NotSupportedException or UriFormatException or InvalidDataException)
+                {
+                    Record("browser.bridge.failed", exception.ToString());
+                    if (!_disposed)
+                        await Dispatcher.UIThread.InvokeAsync(() => { if (!_disposed) Faulted?.Invoke(exception); })
+                            .GetTask().WaitAsync(_lifetime.Token).ConfigureAwait(false);
+                }
+                finally { lock (_rawBridgeGate) _rawBridgeCharacters -= body.Body.Length; }
+            }
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        finally
+        {
+            while (_rawBridge.Reader.TryRead(out var remaining))
+                lock (_rawBridgeGate) _rawBridgeCharacters -= remaining.Body.Length;
+            Record("browser.bridge.stopped");
+        }
+    }
+
+    private void PublishBridgeMessage(WebBridgeMessage message)
+    {
+        if (_disposed) return;
+        Record("browser.bridge.accepted", $"protocol={message.ProtocolVersion}; navigationId={message.NavigationId}; runId={message.RunId}; type={message.Type}");
+        Record("browser.bridge.received", WebBridgeProtocol.Describe(message));
+        BridgeMessageReceived?.Invoke(message);
+    }
+
+    private void SetState(BrowserState state)
+    {
+        _state = state;
+        StateChanged?.Invoke(state);
+    }
+
+    private void Record(string name, string? detail = null)
+    {
+        _eventSink?.Invoke(name, detail);
+    }
+}

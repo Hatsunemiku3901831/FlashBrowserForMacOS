@@ -1,0 +1,526 @@
+{
+  "schemaVersion": 1,
+  "scope": "Accepted P03 runtime/corpus copied into formal inputs; upstream bytes unmodified",
+  "files": [
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/RuffleTest.sol",
+      "sha256": "f680967f67a440d153d63cfd00c89ece1c0770d79531d51003afa3131758b978",
+      "size": 279
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/THIRD-PARTY.md",
+      "sha256": "b4702573aa120ab010305454d452cb6ab564637e6ffd486f4f90d38451dcb61e",
+      "size": 3067
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/avm2-external-interface/Test.as",
+      "sha256": "d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d",
+      "size": 5715
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/avm2-external-interface/index.html",
+      "sha256": "e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0",
+      "size": 1906
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/avm2-external-interface/test.fla",
+      "sha256": "1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9",
+      "size": 4804
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/avm2-external-interface/test.swf",
+      "sha256": "d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5",
+      "size": 2308
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/avm2-external-interface/test.ts",
+      "sha256": "ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894",
+      "size": 11769
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/avm2-hello-world/Test.as",
+      "sha256": "b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e",
+      "size": 60
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/avm2-hello-world/output.txt",
+      "sha256": "0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8",
+      "size": 13
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/avm2-hello-world/test.swf",
+      "sha256": "708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17",
+      "size": 580
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/avm2-hello-world/test.toml",
+      "sha256": "fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd",
+      "size": 15
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/shared-object-avm1.swf",
+      "sha256": "1a215bd4d1f1b6833267216650d8b1db94b42b9f72fb6489e18a65c229411b7c",
+      "size": 796
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/1ef41ff58c9763bed027.wasm",
+      "sha256": "cd0a675924f4f40a8e1e7e16f8e7fe2105d13edfb2fd650dc42aaeac1e92143a",
+      "size": 14201591
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/63468f5322aed2e768a8.wasm",
+      "sha256": "381c459563278d830db728beb8e8f1bdeedb390d50b3c6b16bd6e4af6c2ed016",
+      "size": 14146177
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/LICENSE_APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size": 9723
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/LICENSE_MIT",
+      "sha256": "4de9338a7879c68e911742a7d691f0797ff1ef8d8a6fb978b0c711e258fe959c",
+      "size": 1097
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/THIRD-PARTY.md",
+      "sha256": "58489a0d4b6e97c03052444047764429d84424eb44aa4914abcbcc10b7cff8bc",
+      "size": 1263
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/core.ruffle.0875e44536e955474b0c.js",
+      "sha256": "28fa24cd43c3d91899f92a5beedde63c58753b63850ed4b16484c14791625f7a",
+      "size": 104433
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/core.ruffle.831c4f4a93befb9e84af.js",
+      "sha256": "16214a9d1cc55219ee196fcd2bab9d303a6985567cbfe8ffc891eebacfd4cd29",
+      "size": 110362
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/package.json",
+      "sha256": "097043e1bfb0a094c77411912690245eee966ae1cb672128307f299ad743d90d",
+      "size": 418
+    },
+    {
+      "path": "src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/ruffle.js",
+      "sha256": "8593f2d1f7cc39f2000c02813bed664bfb0594dee15c3e8e18ca9f0c201081f2",
+      "size": 461418
+    },
+    {
+      "path": "test-assets/flash/p02-project/manifest.json",
+      "sha256": "b5e1e175e68b409937cd7349705e536fafd881ad9350153794d4394c689c4fd8",
+      "size": 5125
+    },
+    {
+      "path": "test-assets/flash/p02-project/project-audio/AudioProbe.as",
+      "sha256": "4b8d51d7fc49d56eee0bc1a2a41eedf0476c1fa68f39cd58ec0df231276948a8",
+      "size": 2732
+    },
+    {
+      "path": "test-assets/flash/p02-project/project-audio/output.txt",
+      "sha256": "4e4804a4f4908423fdfb85f6aa6bc454d724aa15723383f324a04c47104f80bb",
+      "size": 16
+    },
+    {
+      "path": "test-assets/flash/p02-project/project-audio/test.swf",
+      "sha256": "8b43c155ad67cef327fcd92096e80e112cd2d852e94d4809f198b1ef656c646f",
+      "size": 1178
+    },
+    {
+      "path": "test-assets/flash/p02-project/project-audio/tone.mp3",
+      "sha256": "dd39d9bbe7cc46f9f2077f2d364cdf9dddb0edc1ff73376495b910b6828c06ca",
+      "size": 48944
+    },
+    {
+      "path": "test-assets/flash/p02-project/project-audio/tone.wav",
+      "sha256": "2f5b9ff1c33b25192e42907d1f686e8090f2666bca9cf12f50780a0facfa9531",
+      "size": 264644
+    },
+    {
+      "path": "test-assets/flash/p02-project/project-network/NetworkProbe.as",
+      "sha256": "c797c06e9e8bd695cb7638740dcecf15d666528e337fcb13cec5d3c5ba4d051a",
+      "size": 4247
+    },
+    {
+      "path": "test-assets/flash/p02-project/project-network/output.txt",
+      "sha256": "e2b60bc0708ad09374784515294d7509a1f74c31b5a5077f7e183f9379c950e3",
+      "size": 21
+    },
+    {
+      "path": "test-assets/flash/p02-project/project-network/test.swf",
+      "sha256": "97c1b5e916272c491dd5a9cfd339920b055977d41c708022de2070a98892c697",
+      "size": 1822
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/LICENSE_APACHE",
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "size": 9723
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/LICENSE_MIT",
+      "sha256": "4de9338a7879c68e911742a7d691f0797ff1ef8d8a6fb978b0c711e258fe959c",
+      "size": 1097
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/THIRD-PARTY.md",
+      "sha256": "d77339d50a7e3eea8b419e7bc228336fd7fde227de2b96f6d680fb9ff713f6a9",
+      "size": 745
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-clone/Test.as",
+      "sha256": "239cd6b298f46946ab04c0461259afbcc5fe071ac47a4c95a23d394ed9efee5f",
+      "size": 548
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-clone/output.expected.png",
+      "sha256": "a275e96235ce03de67b66cb2dd1e20f05f2ef0af0809dd54c59391754fd7aabe",
+      "size": 5870
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-clone/output.txt",
+      "sha256": "9b04a326905884d45bf7c7e8f72b5467690a035f707171c5461bc37acf5334ff",
+      "size": 216
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-clone/test.fla",
+      "sha256": "e5c75982b0bf1b23cb16f245ccc1fd8a4769a020718576d78fec723956971ce4",
+      "size": 4963
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-clone/test.png",
+      "sha256": "bf7b3f62a8297b258d391cece978adc7e0778dc60b07718a93ef753b5f539c4b",
+      "size": 233
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-clone/test.swf",
+      "sha256": "a87b42daeec0b85ffd0cd3fc619d4a4a2adb03b007de9c57f4d771c1d5153aec",
+      "size": 1107
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-clone/test.toml",
+      "sha256": "8ac946404a0fb050450a4f16b5808a08021c5121ea7418740d0a448c6283d6bb",
+      "size": 128
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-fillrect/Test.as",
+      "sha256": "31cef4ad480096334699cf67ff6722eda65257a01c66e998d2059a00e047fb36",
+      "size": 1178
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-fillrect/output.expected.png",
+      "sha256": "da6ad247a9d256e97382c384fa7db3cca8bbb8903b7b653560ead3c72e69e1d6",
+      "size": 6088
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-fillrect/output.txt",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-fillrect/test.fla",
+      "sha256": "c17d6513e443cb767bc799201e5995de891f4afebf4833b104aa31d3bfcf2c79",
+      "size": 4583
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-fillrect/test.swf",
+      "sha256": "b70dc0b7a2fdaab01264b46788d03f1633d0ae98ccf33dfbb0dc53e4d9129959",
+      "size": 1162
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-fillrect/test.toml",
+      "sha256": "ba5e56c116608b6036e41abd6069f8f312168d679e01b74f3763f32bcd35e2a7",
+      "size": 129
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-pixels/Test.as",
+      "sha256": "8e0118689cf16e24b8ef72341ca57b62d7fa8899cbed7a4a4991c7b075533c0e",
+      "size": 1309
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-pixels/output.txt",
+      "sha256": "62b8b0e5f2c5dc5063f1c9fc7cf1e96f6941bba136cc7bde66cae1e6996d6c82",
+      "size": 2429
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-pixels/test.fla",
+      "sha256": "38a022daed6f747f9db3b497461d971568591278aab05ee58573e9e1c327b816",
+      "size": 4923
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-pixels/test.swf",
+      "sha256": "e98c6a0570524598249ae5227b64c76c476c394dd4b39afd590a8850882501f8",
+      "size": 1682
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/bitmap-pixels/test.toml",
+      "sha256": "fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd",
+      "size": 15
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/hello-world/Test.as",
+      "sha256": "b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e",
+      "size": 60
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/hello-world/output.txt",
+      "sha256": "0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8",
+      "size": 13
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/hello-world/test.swf",
+      "sha256": "708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17",
+      "size": 580
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/hello-world/test.toml",
+      "sha256": "fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd",
+      "size": 15
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/keyboard-input/Test.as",
+      "sha256": "649df5bd00a87269ea0e7868276b7da0131adf7535d50646f046ea7a150faf83",
+      "size": 749
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/keyboard-input/test.fla",
+      "sha256": "53208041b73904eb341821cff9026024b7a562adc6e8ef3b9847939a72fca733",
+      "size": 4727
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/keyboard-input/test.swf",
+      "sha256": "5049407bf1d1f393659175df88b38ab17b42062a16a76e10fdbf5f9b1b726b4b",
+      "size": 1067
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/keyboard-input/test.ts",
+      "sha256": "093b3a22ce865c03931e6aae43c1b4fddd72dc1e4b33c64825d6e2381bda88f1",
+      "size": 1547
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/manifest.json",
+      "sha256": "f6880f2a3f5528f34ccf42ee33ec69ab1605b35dacc927d0f394b9ed92c509df",
+      "size": 42427
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/mouse-click/Test.as",
+      "sha256": "650d66aad33072bdbb7f9667f699876a687bea2578ea86021aa3f3e28644950f",
+      "size": 2666
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/mouse-click/input.json",
+      "sha256": "de1075942407c8ac2a2a943b54d606513159c2bf892b9a76d4c959e33f06d2a1",
+      "size": 3159
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/mouse-click/output.txt",
+      "sha256": "7cef720cf354602c039847a2ea44d70707463ca416fc852ef43949c9f92227a7",
+      "size": 16836
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/mouse-click/test.swf",
+      "sha256": "c97700c38b08179a4b49327c6cdc791a178d836a70bb968551fe49d83e8c1ac8",
+      "size": 1960
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/mouse-click/test.toml",
+      "sha256": "a1cdd28e8b4ac0f786fc1d5f63a650d89365cedb6d5d6f7a9ed2fac66359b28f",
+      "size": 14
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/programmatic-events/Test.as",
+      "sha256": "b05a1147d0d4d95a96419a14f4c0aeb4009f5995e6d212811b8c28a3b7df1ba6",
+      "size": 628
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/programmatic-events/index.html",
+      "sha256": "0f52114ca0f48b28c4035c6e82cb8aff1fc502c647c5adb5b840bf838c9f9f80",
+      "size": 807
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/programmatic-events/test.swf",
+      "sha256": "fcbdb0eb5dd85c031c2b340e1081568958be226a254f5bd34df054d01015fc1f",
+      "size": 939
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/programmatic-events/test.ts",
+      "sha256": "1637a57dcec35681cdb5c7713eebd8e2cdc6e7cefe2dfa4573dba20087bd6c12",
+      "size": 4780
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-play/Test.as",
+      "sha256": "b79199c2c782b56442c6c1b345c6b3b76a3abf5254410380f4ba3982d411012f",
+      "size": 1163
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-play/noise.mp3",
+      "sha256": "8af616887fa7bca7dd2b8f089dd0016b49f6e53cbee276e57c93d06ee53a1b67",
+      "size": 4180
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-play/output.txt",
+      "sha256": "cf2dc7bc76c76da34dad7f9a6f54ccf53130fe52c86a6173ad2f2fcd2550f58d",
+      "size": 513
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-play/silence.mp3",
+      "sha256": "a4598e927063f6aa11b1ec2dd757b3aec1d588d73a4f3d5ce128abfe5f130c64",
+      "size": 4180
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-play/test.fla",
+      "sha256": "8e0ca4c590d6dd73d5e5cd4cfc42ad804d601bf10cd844d44ef786ad8cc7691f",
+      "size": 47497
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-play/test.swf",
+      "sha256": "264cb1d1ead36513755c8302084118192b26f6579275aac3bbe6f24b2e59d4f2",
+      "size": 8622
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-play/test.toml",
+      "sha256": "fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd",
+      "size": 15
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-stop/noise.mp3",
+      "sha256": "8af616887fa7bca7dd2b8f089dd0016b49f6e53cbee276e57c93d06ee53a1b67",
+      "size": 4180
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-stop/output.txt",
+      "sha256": "3cd533f60e10af28886debd4e0404d083d81cf57739fbfaecab6ea9a964a20a8",
+      "size": 213
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-stop/silence.mp3",
+      "sha256": "a4598e927063f6aa11b1ec2dd757b3aec1d588d73a4f3d5ce128abfe5f130c64",
+      "size": 4180
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-stop/test.fla",
+      "sha256": "efefc6311fc1e571602d2e3b7e19d7e9ef6d93548fdf8c1126bb89ed95d5a38d",
+      "size": 33234
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-stop/test.swf",
+      "sha256": "296aa3668c30627eb93eed9371ec05b10dc7acde86fcd1ba11593a6297a80ee4",
+      "size": 8596
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/sound-stop/test.toml",
+      "sha256": "ca34573267f9b6071e05a52041569acbdaa0c08b649de3971301975c382df690",
+      "size": 175
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/timer-events/Test.as",
+      "sha256": "313b21f85015e5ba9df4c03793d1b6076da2b0f708adee10cead82815b1b3c60",
+      "size": 521
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/timer-events/output.txt",
+      "sha256": "b849590197a13d9fbafc7f23d7095aff98c986762a78612b092630526a483f21",
+      "size": 247
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/timer-events/test.swf",
+      "sha256": "9bea7ceeac2e2aa4515aaface3b60ff745a818c884d310bd21241b5e30aeb6fd",
+      "size": 914
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/timer-events/test.toml",
+      "sha256": "bc2deff99f6c26df48c8b90e998c72683b5a5cf6f68bfb64f0d1ec26d8c54d8b",
+      "size": 15
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/timer-finished/Test.as",
+      "sha256": "243eb5fca9cb0fc914c839d3471884dc6bb7395e7aa1e6e425eb862680690f28",
+      "size": 1190
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/timer-finished/output.txt",
+      "sha256": "a4dd80e5ed1d5377c7454880514af119874ba5cc72913998cdb735896025149d",
+      "size": 775
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/timer-finished/test.fla",
+      "sha256": "31fee41fb90f5b98f4b9affd76f9a39b13d3655b60a79cde280928b93e821332",
+      "size": 3814
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/timer-finished/test.swf",
+      "sha256": "fe3f6fb3065d0063cde79a88a55cd21d05ad8617db0c8265d216f3b6627c4783",
+      "size": 1010
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/timer-finished/test.toml",
+      "sha256": "2d97b26f237148e7b4c775bc2cb92214c42faa6809e32befc0188dbb4686ad3b",
+      "size": 16
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/url-loader/Test.as",
+      "sha256": "eba5415338c10297bff65a1e8a8a7276e39f53b39da72fa09344704c9f5bbba3",
+      "size": 2393
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/url-loader/data.bin",
+      "sha256": "054edec1d0211f624fed0cbca9d4f9400b0e491c43742af2c5b0abebf0c990d8",
+      "size": 4
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/url-loader/data.txt",
+      "sha256": "cd18cfbcfaf2938eb8237736fb7bc3e4676142542509b6304fcb2e04fc215622",
+      "size": 19
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/url-loader/output.txt",
+      "sha256": "cbd65c942bdfec9e3dc074919875c6e09105bbd993572f7783a0edcfe8836bb3",
+      "size": 1143
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/url-loader/test.fla",
+      "sha256": "5db6939345bb5a855414148e35c2091487ef58d18024059cd2e9a557207e2155",
+      "size": 4048
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/url-loader/test.swf",
+      "sha256": "ecc2ab47b59ae79ddf3361e38d11e62fe20f31fba24dde7c78b21501e7ccccd6",
+      "size": 1737
+    },
+    {
+      "path": "test-assets/flash/ruffle-v0.4.1/url-loader/test.toml",
+      "sha256": "aa3a96dfb543bcf1c694acc3529dd01e95acdcd85215496606f551181711c696",
+      "size": 15
+    },
+    {
+      "path": "test-assets/legacy-sol/FBCookie.sol",
+      "sha256": "5189e30cf485f3f6427ff275c942877cbdd29637907342ac8c8433aacf6df4a4",
+      "size": 269
+    },
+    {
+      "path": "test-assets/legacy-sol/mao.sol",
+      "sha256": "efd9d1d647fa1542e63e2aa57d824e9b3b82eac1f25f36ee64abf5f16a94fa0b",
+      "size": 34
+    },
+    {
+      "path": "test-assets/legacy-sol/pvz.sol",
+      "sha256": "f87829c3be383331cd9c2895d42e4da57ded6cb7132ce03f8cad3dbbe4bd9ad7",
+      "size": 95
+    },
+    {
+      "path": "test-assets/legacy-sol/settings.sol",
+      "sha256": "c1f9c4c1700f440596daee7f9d2725093c7539ddc6503a3ca2450d9b8a7df226",
+      "size": 845
+    },
+    {
+      "path": "test-assets/web/mole/provenance.json",
+      "sha256": "179e9ac3621d84501e864ca5004f47e58362fc5337da6cd97112513d27233293",
+      "size": 489
+    },
+    {
+      "path": "test-assets/web/mole/swfobject-202507311216.js",
+      "sha256": "f484dbb1622c648eff246c31590dc8b8002a3ea0234790695812fd82cb05a8d3",
+      "size": 11234
+    }
+  ]
+}

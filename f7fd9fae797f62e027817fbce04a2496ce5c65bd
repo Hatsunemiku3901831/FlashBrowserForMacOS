@@ -1,0 +1,18 @@
+using FlashMacOS.Application.Flash;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class ApplicationArchitectureTests
+{
+    [TestMethod]
+    public void ApplicationDependsOnlyOnDomainAndBaseClassLibraries()
+    {
+        var forbidden = typeof(RufflePlayerCoordinator).Assembly.GetReferencedAssemblies()
+            .Where(reference => reference.Name != "FlashMacOS.Domain"
+                && !reference.Name!.StartsWith("System.", StringComparison.Ordinal)
+                && reference.Name != "System" && reference.Name != "netstandard" && reference.Name != "mscorlib")
+            .Select(reference => reference.Name).ToArray();
+        Assert.IsEmpty(forbidden, string.Join(", ", forbidden));
+    }
+}

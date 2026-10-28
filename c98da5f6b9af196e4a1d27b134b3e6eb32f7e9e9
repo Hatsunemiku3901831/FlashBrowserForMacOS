@@ -1,0 +1,220 @@
+"""Freeze reviewed W02 runs: same-input managed Debug/Release, one ARM64 package, its automated and manual native runs.
+
+No app launch or UI automation happens here. Run once on the Apple Silicon development Mac after every app is closed.
+"""
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import tarfile
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[3]
+DOC = ROOT / 'docs/evidence/W02/2026-10-28'
+EVIDENCE = ROOT / 'artifacts/evidence/W02'
+
+
+def sha(path):
+    with Path(path).open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+
+def read(path):
+    return json.loads(Path(path).read_text())
+
+
+def save(path, value):
+    Path(path).write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
+def content(name, length):
+    """Python twin of CompatibilityContentHost.DownloadContent (SHA-256 counter blocks)."""
+    out = bytearray()
+    block = 0
+    while len(out) < length:
+        out += hashlib.sha256(f'FlashMacOS-W02:{name}:{block}'.encode()).digest()
+        block += 1
+    return bytes(out[:length])
+
+
+def journal(result):
+    profile = Path(result['profile'])
+    logs = [p for p in (profile / 'logs').glob('*.jsonl') if f"-{result['pid']}-" in p.name]
+    require(len(logs) == 1, f"{result['runId']}: missing unambiguous process journal")
+    return logs[0], [json.loads(x) for x in logs[0].read_text().splitlines()]
+
+
+def check_session(run, rows):
+    names = Counter(x['name'] for x in rows)
+    require(any(x['name'] == 'composition.stopped' and x['detail'] == 'failures=0' for x in rows), f'{run}: cleanup failed')
+    require(not any(x['name'] in ('browser.native.failed', 'composition.startup.failed', 'compatibility.evidence.failed')
+                    or x['name'].endswith('.dispose.failed') for x in rows), f'{run}: unexpected fault')
+    require(names['popup.opened'] == names['popup.ownership.released'], f'{run}: popup surface not released')
+    require(names['browser.adapter.destroyed'] == 2 + names['popup.opened'], f'{run}: native adapters not all destroyed')
+    stop = next(i for i, x in enumerate(rows) if x['name'] == 'composition.stopping')
+    return names, rows[stop:]
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    for name in ('managed', 'release', 'package', 'native', 'manual', 'output'):
+        parser.add_argument('--' + name, required=True)
+    parser.add_argument('--next', default='W03')
+    args = parser.parse_args()
+    out = EVIDENCE / args.output
+    require(not out.exists(), 'Use a fresh freeze directory; never overwrite evidence')
+    out.mkdir(parents=True)
+    DOC.mkdir(parents=True, exist_ok=True)
+
+    # One package, unchanged after all native use, built from the same inputs as both managed runs.
+    package = read(EVIDENCE / args.package / 'result.json')
+    require(package['status'] == 'PASS', 'Package did not pass')
+    app, archive = ROOT / package['app'], ROOT / package['archive']
+    require(sha(archive) == package['artifactHashes']['archive'], 'Archive changed')
+    bundle = {str(p.relative_to(app)): sha(p) for p in sorted(app.rglob('*')) if p.is_file()}
+    with zipfile.ZipFile(archive) as stream:
+        prefix = app.name + '/'
+        archived = {n[len(prefix):]: hashlib.sha256(stream.read(n)).hexdigest()
+                    for n in stream.namelist() if n.startswith(prefix) and not n.endswith('/')}
+    require(bundle == archived == package['bundleFiles'], 'Bundle changed after native use')
+    with (out / 'codesign-after-all-runs.log').open('wb') as log:
+        subprocess.run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app)], stdout=log, stderr=subprocess.STDOUT, check=True)
+    managed = {}
+    for run in (args.managed, args.release):
+        result = read(EVIDENCE / run / 'result.json')
+        require(result['status'] == 'PASS' and result['actual']['inputsUnchanged'], f'{run}: managed verification failed')
+        managed[run] = {'configuration': result['environment']['configuration'], 'tests': result['actual']['testCount'],
+                        'inputs': read(EVIDENCE / run / 'inputs.json')['before']}
+    inputs = managed[args.managed]['inputs']
+    require(inputs == managed[args.release]['inputs'] == read(EVIDENCE / args.package / 'code-inputs.json')['before'],
+            'Debug, Release and package used different inputs')
+    require(all(sha(ROOT / p) == d for p, d in inputs.items()), 'Final source inputs changed')
+
+    # Automated native case: report, journal and the quit while a popup download was still running.
+    native = read(EVIDENCE / args.native / 'process-result.json')
+    require(native['exitCode'] == 0 and native['artifactHashes']['bundleFiles'] == bundle, 'Automated run exit/bundle mismatch')
+    native_log, rows = journal(native)
+    names, shutdown = check_session(args.native, rows)
+    require(any(x['name'] == 'download.cancelled' for x in shutdown), 'Quit did not cancel the running popup download')
+    require(any(x['name'] == 'popup.ownership.released' for x in shutdown), 'Quit did not release the open popup')
+    profile = Path(native['profile'])
+    reports = [read(p) for p in (profile / 'download-verification').glob('*.json')]
+    require(len(reports) == 1, 'Expected one automated report')
+    report = reports[0]
+    require(report['status'] == 'PASS' and report['failures'] == 0 and len(report['checks']) == 24
+            and all(c['status'] == 'PASS' for c in report['checks']), 'Automated checks failed')
+    files = profile / 'download-verification/files'
+    require(not list(files.rglob('*.flashmacos-download')), 'Staging residue after automated run')
+
+    # Manual save-panel case: reviewed CUA notes plus the actual files on disk.
+    manual = read(EVIDENCE / args.manual / 'process-result.json')
+    require(manual['exitCode'] == 0 and manual['artifactHashes']['bundleFiles'] == bundle, 'Manual run exit/bundle mismatch')
+    manual_log, manual_rows = journal(manual)
+    manual_names, manual_shutdown = check_session(args.manual, manual_rows)
+    notes = read(EVIDENCE / args.manual / 'manual-results.json')
+    folder = Path(notes['folder'])
+    attachment = folder / 'w02-attachment.txt'
+    basic = folder / 'w02-basic.txt'
+    require(sha(attachment) == hashlib.sha256(content('attachment', 256 * 1024)).hexdigest(), 'Save-panel replacement content mismatch')
+    require(sha(basic) == hashlib.sha256(b'authorized=w02-user\n' + content('basic', 4096)).hexdigest(), 'Basic-auth download content mismatch')
+    require(not list(folder.rglob('*.flashmacos-download')) and not (folder / notes['longDownloadName']).exists(),
+            'Manual staging residue or a final file for the download cancelled by closing')
+    require(manual_names['download.completed'] >= 2 and manual_names['download.cancelled'] >= 2, 'Manual completed/cancelled downloads missing')
+    require(any(x['name'] == 'download.cancelled' for x in manual_shutdown), 'Closing the main window did not cancel the running download')
+    shutil.copyfile(EVIDENCE / args.manual / 'manual-results.json', DOC / 'manual-results.json')
+
+    # Source repository and legacy data untouched (same checks as the shared freezer).
+    source = Path('/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser')
+    original = read(ROOT / 'docs/evidence/P00/2026-10-28/source-state-before.json')
+    require(all(sha(source / p) == d for p, d in original['businessFiles'].items()), 'Source repository file changed')
+    env = {**os.environ, 'GIT_OPTIONAL_LOCKS': '0'}
+    head = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], env=env, text=True).strip()
+    dirty = subprocess.check_output(['git', '-C', str(source), 'status', '--short'], env=env, text=True)
+    require(head == original['head'] and dirty == original['worktreeStatus'], 'Source repository state changed')
+    save(DOC / 'source-preserved.json', {'taskId': 'W02', 'status': 'PASS', 'checkedFiles': len(original['businessFiles']),
+                                         'head': head, 'worktreeStatus': dirty, 'changes': {}})
+    old = read(ROOT / 'docs/evidence/P03/2026-10-28/legacy-data-preserved.json')
+    actual = {}
+    for name in old['roots']:
+        path = Path(name)
+        actual[name] = {'exists': path.exists(), 'files': {str(f.relative_to(path)): sha(f) for f in path.rglob('*') if f.is_file()}}
+    require(actual == old['actual'], 'Legacy data changed')
+    save(DOC / 'legacy-data-preserved.json', {'taskId': 'W02', 'status': 'PASS', 'roots': old['roots'], 'changes': {}, 'actual': actual})
+
+    # Provenance, prototype test names, next-task baseline and the frozen formal inputs.
+    prior = read(ROOT / 'docs/provenance/W02-before.json')['files']
+    changes = [{'targetPath': p, 'beforeSha256': prior.get(p), 'targetSha256': d,
+                'reason': 'W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003',
+                'origin': 'Project-authored implementation; no reference algorithm or third-party asset changed', 'referenceSources': []}
+               for p, d in inputs.items() if prior.get(p) != d]
+    changes += [{'targetPath': p, 'beforeSha256': d, 'targetSha256': None, 'reason': 'Removed in W02', 'origin': 'n/a', 'referenceSources': []}
+                for p, d in prior.items() if p not in inputs]
+    save(ROOT / 'docs/provenance/W02-changes.json', {'schemaVersion': 1, 'changes': changes})
+    debug = read(EVIDENCE / args.managed / 'result.json')
+    test_map = read(ROOT / 'docs/provenance/A01-test-map.json')
+    lookup = {c['testName']: c for c in debug['actual']['tests']}
+    for case in test_map['tests']:
+        case['formal'] = lookup[case['formal']['testName']]
+        require(case['formal']['outcome'] == 'Passed', 'Prototype test not passed: ' + case['formal']['testName'])
+    test_map.update(destinationRun=args.managed, formalTotal=debug['actual']['testCount'])
+    save(ROOT / 'docs/provenance/W02-prototype-test-map.json', test_map)
+    save(ROOT / 'docs/provenance' / f'{args.next}-before.json', {'schemaVersion': 1, 'files': inputs})
+    with tarfile.open(DOC / 'source-inputs.tar.gz', 'w:gz') as stream:
+        for path in sorted(inputs):
+            stream.add(ROOT / path, arcname=path, recursive=False)
+
+    # Closed isolated profiles, complete, beside the result.
+    snapshots = {}
+    for result in (native, manual):
+        source_profile = Path(result['profile'])
+        destination = out / 'profiles' / source_profile.name
+        before = {str(p.relative_to(source_profile)): sha(p) for p in source_profile.rglob('*') if p.is_file()}
+        shutil.copytree(source_profile, destination)
+        require(before == {str(p.relative_to(destination)): sha(p) for p in destination.rglob('*') if p.is_file()}, 'Profile snapshot mismatch')
+        snapshots[source_profile.name] = before
+    save(out / 'profile-snapshots.json', snapshots)
+    result = {'taskId': 'W02', 'caseId': 'reviewed-final-native-gate', 'runId': out.name, 'status': 'PASS',
+              'profileId': [Path(native['profile']).name, Path(manual['profile']).name],
+              'expected': 'Same final package: 24 automated native download/popup checks, Quit with an open popup and running download, manual save panel/replace/decline/Basic sheet and main-window close with a running download',
+              'actual': {'managed': {k: {'configuration': v['configuration'], 'tests': v['tests']} for k, v in managed.items()},
+                         'automatedChecks': [c['name'] for c in report['checks']], 'automatedJournal': dict(names),
+                         'manualJournal': dict(manual_names), 'manual': notes,
+                         'limitations': ['window.opener is not preserved (ADR 0003)', 'Downloads end with their window (no app-level download list until U02)',
+                                         'HTTP Basic credentials stay in the WebKit session only', 'No real user credentials were entered; Basic used fixed test values']},
+              'startedAt': native['startedAt'], 'finishedAt': datetime.now(timezone.utc).isoformat(),
+              'environment': native['environment'],
+              'artifactHashes': {'archive': sha(archive), 'sourceInputs': inputs, 'bundleFiles': bundle,
+                                 'nativeJournal': sha(native_log), 'manualJournal': sha(manual_log)},
+              'evidencePaths': [str(p.relative_to(ROOT)) for p in (out, EVIDENCE / args.native, EVIDENCE / args.manual, DOC)],
+              'productComplete': False}
+    save(out / 'result.json', result)
+
+    paths = [EVIDENCE, DOC, ROOT / 'docs/contracts/browser.zh-CN.md', ROOT / 'docs/contracts/interfaces.zh-CN.md',
+             ROOT / 'docs/adr/0003-native-downloads-and-popups.zh-CN.md', ROOT / 'HANDOFF2.md', ROOT / 'README.md', ROOT / 'HRNESS.md',
+             Path(__file__)]
+    paths.extend((ROOT / 'docs/provenance').glob('W02-*.json'))
+    indexed = []
+    for path in paths:
+        indexed.extend([f for f in path.rglob('*') if f.is_file()] if path.is_dir() else ([path] if path.exists() else []))
+    index = {str(p.relative_to(ROOT)): sha(p) for p in indexed if p.name != 'acceptance-index.json'}
+    save(DOC / 'acceptance-index.json', {'taskId': 'W02', 'status': 'PASS', 'capturedAt': datetime.now(timezone.utc).isoformat(),
+                                         'managedRuns': [args.managed, args.release], 'formalTests': debug['actual']['testCount'],
+                                         'nativeRun': args.native, 'manualRun': args.manual, 'package': args.package,
+                                         'artifactHashes': index, 'codeInputs': inputs, 'prototypeTestNamesRetained': 107,
+                                         'fixedAssets': 104, 'productComplete': False})
+    print(json.dumps({'status': 'PASS', 'formalTests': debug['actual']['testCount'], 'changes': len(changes),
+                      'automatedChecks': len(report['checks']), 'artifacts': len(index)}, ensure_ascii=False))
+
+
+if __name__ == '__main__':
+    main()

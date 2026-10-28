@@ -1,0 +1,48 @@
+namespace FlashMacOS.Domain.Browser;
+
+public sealed record BrowserState(
+    Uri? Address,
+    string Title,
+    bool IsLoading,
+    bool CanGoBack,
+    bool CanGoForward,
+    long NavigationSequence = 0,
+    string? NavigationId = null,
+    BrowserNavigationError? Error = null)
+{
+    public static BrowserState Empty { get; } = new(null, FlashMacOS.Domain.Identity.ProductIdentity.Name, false, false, false);
+}
+
+/// <summary>A main-frame request the host loads itself, for example a popup's original GET/POST.</summary>
+public sealed record BrowserRequest(Uri Address, string Method = "GET", byte[]? Body = null, string? ContentType = null);
+
+/// <summary>A new-window request from a page; the opener's purpose selects the inherited data store.</summary>
+public sealed record BrowserPopupRequest(BrowserRequest Request, BrowserPurpose Purpose);
+
+/// <summary>A native WebKit download whose original request already ran; it waits for a destination.</summary>
+public sealed record BrowserDownloadRequest(long Id, Uri? Address, string SuggestedFileName, string Method, string? MimeType, long? ExpectedBytes);
+
+public enum BrowserDownloadEventKind { Progress, Redirected, Finished, Failed, Cancelled }
+
+public sealed record BrowserDownloadUpdate(long Id, BrowserDownloadEventKind Kind, long ReceivedBytes = 0, long? ExpectedBytes = null,
+    Uri? Address = null, string? Error = null)
+{
+    public bool IsTerminal => Kind is BrowserDownloadEventKind.Finished or BrowserDownloadEventKind.Failed or BrowserDownloadEventKind.Cancelled;
+}
+
+public sealed record WebBridgeMessage(
+    string Type,
+    string? Key = null,
+    string? Data = null,
+    string? Url = null,
+    string? FileName = null,
+    string? Message = null,
+    bool? RuffleAvailable = null,
+    int? FlashElementCount = null,
+    double? DocumentStartMilliseconds = null,
+    int ProtocolVersion = 0,
+    string? NavigationId = null,
+    string? RunId = null,
+    string? Origin = null,
+    string? Href = null,
+    bool IsMainFrame = true);

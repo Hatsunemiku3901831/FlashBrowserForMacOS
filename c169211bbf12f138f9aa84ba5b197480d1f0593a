@@ -1,0 +1,15 @@
+namespace FlashMacOS.Application.Paths;
+
+public interface IAppPaths
+{
+    string ApplicationSupportDirectory { get; }
+
+    string CacheDirectory { get; }
+
+    string LogDirectory { get; }
+
+    string RuffleSaveStorePath { get; }
+
+    void EnsureCreated();
+}
+

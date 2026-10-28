@@ -1,0 +1,74 @@
+# HANDOFF2：W02（下载和 popup）交接
+
+更新：2026-10-28 23:15 AEDT。因额度不足，用户要求停止并交接。**W02 仍为 IN_PROGRESS，不要勾选 Project.md。** 上一份交接（W01）见 [HANDOFF.md](HANDOFF.md)。状态表仍是唯一的详细状态记录：[docs/task-status.zh-CN.md](docs/task-status.zh-CN.md)。
+
+## 一句话状态
+
+实现、托管测试和真机自动验收都已完成：最终候选包 05 原生 24/24 PASS，下载进行中退出也清理干净（exit 0）。还没做的有四项：人工保存面板场景、Release 托管验证、finalize 脚本、报告和状态收尾。另有一个已关闭 popup 的原生窗口壳残留没有定论（见“未决问题 1”）。
+
+## 已完成
+
+- **设计**：[docs/adr/0003-native-downloads-and-popups.zh-CN.md](docs/adr/0003-native-downloads-and-popups.zh-CN.md)，契约见 [docs/contracts/browser.zh-CN.md](docs/contracts/browser.zh-CN.md)（W02 节）和 [docs/contracts/interfaces.zh-CN.md](docs/contracts/interfaces.zh-CN.md)。
+  - 下载一律走 WebKit 对原请求的 WKDownload，删除了 JS `a[download]` 拦截和 HttpClient 重下载，不保留 fallback。
+  - 文件事务：先写同目录隐藏暂存 `.<name>.<guid>.flashmacos-download`，完成后 flush + rename 覆盖目标；失败只删暂存。
+  - popup：宿主新建 surface，保留方法/body/Content-Type，继承 opener 的 BrowserPurpose 与 data store。
+- **代码**（原生事件 kind 13/14/15/20–24）：
+  - Domain：`BrowserModels.cs`，含 BrowserRequest/PopupRequest/DownloadRequest/DownloadUpdate。
+  - Application：`IBrowserSession.cs`（含 IBrowserDownloads）、`Files/IDownloadFiles.cs`、`DownloadManager.cs`、`SaveDialogDownloadDestinations.cs`、`BrowserWorkspace.cs`。
+  - Infrastructure：`LocalDownloadFiles.cs`。
+  - WebKit 适配器：`AvaloniaNativeWebViewSession.cs`、`NativeBrowserPayloads.cs`、`MacBrowserBridge.cs`、`Native/FlashMacOSWebKit.m`、`Diagnostics/DownloadPopupNativeVerification.cs`（24 项）。
+  - 离线端点：`Flash.Ruffle/Hosting/DownloadValidationSite.cs`，在 CompatibilityContentHost 中映射为 case `downloads` 和 `downloads-manual`。
+  - Desktop：`CompositionRoot.cs`、`MainWindow`、`PopupWindow`、`MainWindowViewModel`。
+- **测试**：托管测试 454 + tooling 21 全部通过（run 04/05，Debug）。新增或修改的测试见 IntegrationTests 下的 DownloadManager、NativeBrowserPayload、DownloadValidationSite、NativeSessionLifetime、RuffleDocumentStartScriptBuilder、RufflePlayerCoordinator，Application.Tests 下的 BrowserWorkspace、CoordinatorLifetime，以及 Desktop.Tests 下的 ViewModelLifetime。
+- **真机**（macOS 26.5.1，ARM64，Release self-contained 包）：
+
+| run | 结果 | 发现与修复 |
+|---|---|---|
+| native-01 | FAIL（2 项） | 原生 popup payload 中 `streamedBody` 是整数 0，`GetBoolean` 抛异常，所有 popup 失败。已改为 `(BOOL)` 转换、扩大 catch 并加回归测试；并发观测有竞态，已改为写完最后字节前记录 |
+| native-02 | 24/24 | quit-check 的慢下载被限到 30 s，退出前已完成，没测到“下载中退出”。上限已提到 600 s |
+| native-03 | 24/24 | 600 s 分 8 块时块间空闲 85 s，超过 WebKit 60 s 超时（-1001）。改为至少每 2 s 写一块，并加端点测试 |
+| native-04 | 24/24 + 退出 exit 0 | 证明了下载中退出：cancelAll → cancelled → adapter 销毁。发现隐藏 popup 后残留窗口壳，已去掉 Hide()，改为标题显示“Downloading …” |
+| native-05（最终候选） | 24/24，failures=0，exit 0 | 包 SHA `b49ffb033edfe5315f9eaeeeae4580bdfad057340330ea1589ba75a8a8c6f860`，19 个 Mach-O ARM64。下载中退出：adapter 创建 10 / 销毁 10，popup ownership 释放 8，下载取消 4，无暂存残留。仍残留一个窗口壳，见未决问题 1 |
+
+**证据位置**：`artifacts/evidence/W02/w02-native-20261028-0{1..5}/`（process-result、launch、process.log、cua-*.jpg/json）；`artifacts/profiles/w02-native-20261028-0N/`（logs 日志、compatibility jsonl、`download-verification/<id>.json|jsonl` 和 files）；包证据在 `artifacts/evidence/W02/w02-package-20261028-0N/`；托管证据在 `w02-managed-20261028-0N`。首次原生失败的记录：`docs/evidence/W02/2026-10-28/first-native-failure.json`。
+
+## 未完成（按顺序执行）
+
+1. **人工场景**（用包 05，终端由用户执行）：
+   `python3 scripts/run-native.py --task W02 --package-task W02 --package-run w02-package-20261028-05 --run-id w02-manual-20261028-01 --case downloads-manual --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser`
+   然后用 computer use（已授权 `local.flashmacos.app`；Terminal 只有 click 级权限，不要绕过）依次做：
+   - 在 profile 下建 `manual-downloads/`，放一个内容为 old 的 `w02-attachment.txt`；
+   - 点 Attachment，经保存面板替换并确认；
+   - 另一个链接在保存面板点取消，确认不落盘；
+   - 打开 HTTP Basic 页，输入项目测试值 w02-user/w02-pass（仅限 127.0.0.1），下载 `w02-basic.txt`；
+   - 点 Long download，再点主窗口红色关闭按钮，确认下载被取消、旧目标不变、无暂存残留。
+
+   最后写 `artifacts/evidence/W02/w02-manual-20261028-01/manual-results.json`，需包含 `folder`、`longDownloadName`（如 `w02-slow.bin`）和步骤/观察。finalize 脚本会用 Python 版的 `content(name,length)` 核对 attachment/basic 文件的 hash。
+2. **Release 托管验证**：`sh scripts/verify.sh --configuration Release --task W02 --run-id w02-managed-release-20261028-01 --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser`（参数名以脚本 `--help` 为准）。
+3. **汇总**：`python3 docs/evidence/W02/finalize-w02.py --managed w02-managed-20261028-05 --release w02-managed-release-20261028-01 --package w02-package-20261028-05 --native w02-native-20261028-05 --manual w02-manual-20261028-01 --output final-native-20261028-01`。脚本会生成 result.json、acceptance-index.json、W02-changes.json、prototype-test-map、W03-before.json、source-inputs.tar.gz 和 profile 快照，并把 HANDOFF2.md 收入索引。
+4. **文档收尾**：写 `docs/evidence/W02/2026-10-28/report.md`，记录 run 01–05 全部历史（含失败）和 native checklist；全部验收通过后，才把状态表 W02 改为 DONE 并勾选 Project.md；同步更新 README.md 和 HRNESS.md。
+
+## 未决问题与已知限制
+
+1. **已关闭 popup 的原生窗口壳残留（未定论，可能阻塞“popup 不泄漏”）**。run 04 和 05 各残留一个 off-space 的空白窗口（05 中为 window 11852，标题“W02 Popup GET”）；run 02 没有。托管侧证据完整：所有已关闭 popup 的 adapter 均已销毁、session 已 dispose、ownership 已释放，退出时 10/10。
+   - 已查 Avalonia 12.1.0 源码：`WindowImplBase.Dispose` → `Native.Close()` → `[window close]`；AvnWindow 设置了 `setReleasedWhenClosed:false`，所以 NSWindow 何时释放取决于 COM 引用（托管代理）什么时候 Release，很可能要等 GC 或 finalizer。
+   - 判断依据：是否残留不确定，且只残留一个。若要定论，建议在 DownloadPopupNativeVerification 中加一项检查：对每个关闭的 PopupWindow 保留 WeakReference，执行 `GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect()` 后断言已回收；必要时再由 dylib 报告 `[NSApp windows]` 中不可见窗口的数量。这需要重新打包（06）并重跑原生验收和人工场景。
+   - 若不加此检查，报告中必须如实写明“托管和 WebKit 层已证明释放；NSWindow 壳的释放时机依赖 Avalonia 和 GC，未证明”。
+   - 证据：`w02-native-20261028-04/cua-lingering-hidden-popup.jpg`、`w02-native-20261028-05/cua-windows-before-quit.json`。
+2. **主窗口标题竞态（W01 遗留，未修复）**：didFinish 时 payload 中的 title 为空，而 KVO 的 title 事件在 `CompleteNativeNavigation` 等待 ExecuteScript 期间被忽略，于是 VM 标题回退成“FlashMacOS”（见 05 截图）。建议在同一个元数据脚本里读取 `document.title`。应归到 U 系列或单独修复，不在 W02 范围内。
+3. 不支持 `window.opener`（ADR 0003），需要依赖升级任务另行评估。
+4. 关闭窗口会取消其中未完成的下载；跨窗口的下载列表和下载 UI 属于 U02。
+5. HTTP Basic/Digest 凭据只保存在 WebKit 会话内存中，不写入 Keychain。
+
+## 约束（继续有效）
+
+- 未经明确授权，不 commit、不 push、不发布。
+- CefFlashBrowser 只读：不做 restore/build/run/git 写。
+- 不改固定的第三方 JS/WASM/golden/lock 文件，不使用真实 cookie 或凭据。
+- 保留所有已有证据和失败记录，每次运行用新的 run ID。
+- `~/.nuget/packages` 的访问请求被拒绝过，不要绕过。
+- 本会话的 shell 是 Linux VM，macOS 构建、打包和运行都要由用户在终端执行。
+
+## 下一任务
+
+W02 收尾后才进入 W03。finalize 脚本会生成 `W03-before.json`。

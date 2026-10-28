@@ -1,0 +1,25 @@
+using System.Security.Cryptography;
+using FlashMacOS.Infrastructure.Persistence;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class StreamingRevisionTests
+{
+    [TestMethod]
+    public async Task StreamingRevisionMatchesSnapshotsAndEnforcesBoundsMissingFilesAndCancellation()
+    {
+        using var directory=new TemporaryDirectory(); var path=directory.GetPath("revision.bin");
+        Assert.AreEqual(FileRevision.Missing,await AtomicDocumentFile.ReadRevisionAsync(path,1024));
+        Assert.AreEqual(FileRevision.Missing,await AtomicDocumentFile.ReadRevisionAsync(directory.GetPath("missing/child.bin"),1024));
+        var bytes=new byte[128*1024+3]; new Random(77123).NextBytes(bytes); await File.WriteAllBytesAsync(path,bytes);
+        var actual=await AtomicDocumentFile.ReadRevisionAsync(path,bytes.Length);
+        Assert.AreEqual(new FileRevision(true,Convert.ToHexStringLower(SHA256.HashData(bytes))),actual);
+        Assert.AreEqual((await AtomicDocumentFile.ReadAsync(path,bytes.Length)).Revision,actual);
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(()=>AtomicDocumentFile.ReadRevisionAsync(path,bytes.Length-1).AsTask());
+        using var cancellation=new CancellationTokenSource(); cancellation.Cancel();
+        await Assert.ThrowsAsync<OperationCanceledException>(()=>AtomicDocumentFile.ReadRevisionAsync(path,bytes.Length,cancellation.Token).AsTask());
+        await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(()=>AtomicDocumentFile.ReadRevisionAsync(path,0).AsTask());
+        CollectionAssert.AreEqual(bytes,await File.ReadAllBytesAsync(path));
+    }
+}

@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""One-time A01 desktop wiring. Not part of the formal build."""
+from pathlib import Path
+import hashlib
+import json
+import re
+
+ROOT = Path(__file__).resolve().parents[1]
+BOOT = ROOT / 'bootstrap/legacy/spike/macos-host'
+DESKTOP = BOOT / 'src/CefFlashBrowser.MacOS.Spike.Desktop'
+entries = []
+
+def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+def transform(s):
+    mapping = {
+        'CefFlashBrowser.MacOS.Spike.Core.Application.Browser': 'FlashMacOS.Application.Browser',
+        'CefFlashBrowser.MacOS.Spike.Core.Application.Navigation': 'FlashMacOS.Application.Navigation',
+        'CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting': 'FlashMacOS.Application.Flash',
+        'CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle': 'FlashMacOS.Application.Flash',
+        'CefFlashBrowser.MacOS.Spike.Core.Flash.Storage': 'FlashMacOS.Application.Flash',
+        'CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Paths': 'FlashMacOS.Infrastructure.Paths',
+        'CefFlashBrowser.MacOS.Spike.Desktop.Browser': 'FlashMacOS.Browser.WebKit',
+        'CefFlashBrowser.MacOS.Spike.Desktop.Platform.MacOS': 'FlashMacOS.Browser.WebKit',
+        'CefFlashBrowser.MacOS.Spike.Desktop.Diagnostics': 'FlashMacOS.Infrastructure.Diagnostics',
+        'CefFlashBrowser.MacOS.Spike.Desktop': 'FlashMacOS.Desktop',
+    }
+    for a,b in mapping.items(): s=s.replace(a,b)
+    return s
+
+def write(relative, s, source=None, reason='A01 authored desktop composition through application ports'):
+    p=ROOT/relative
+    data=s.encode()
+    if p.exists() and p.read_bytes()!=data: raise ValueError('Preserving conflicting file: '+relative)
+    p.parent.mkdir(parents=True,exist_ok=True)
+    if not p.exists():p.write_bytes(data)
+    original=ROOT/'reference/legacy/spike/macos-host'/source.relative_to(BOOT) if source else None
+    entries.append({'bootstrapSourcePath':str(source.relative_to(ROOT)) if source else None,
+        'bootstrapSourceSha256':sha(source) if source else None,
+        'originalSourcePath':str(original.relative_to(ROOT/'reference/legacy')) if original and original.is_file() else None,
+        'originalSourceSha256':sha(original) if original and original.is_file() else None,
+        'targetPath':relative,'targetSha256':sha(p),'reason':reason})
+
+write('src/FlashMacOS.Platform.MacOS/FlashMacOS.Platform.MacOS.csproj','''<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../FlashMacOS.Domain/FlashMacOS.Domain.csproj" />
+    <ProjectReference Include="../FlashMacOS.Application/FlashMacOS.Application.csproj" />
+    <PackageReference Include="Avalonia" />
+  </ItemGroup>
+</Project>
+''')
+write('src/FlashMacOS.Platform.MacOS/MacFileDialogs.cs','''using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+using FlashMacOS.Application.Files;
+
+namespace FlashMacOS.Platform.MacOS;
+
+public sealed class MacFileDialogs(Func<IStorageProvider> storageProvider) : IFileDialogs
+{
+    private static readonly FilePickerFileType Swf = new("Flash movie")
+    {
+        Patterns = ["*.swf"], AppleUniformTypeIdentifiers = ["com.macromedia.flash.movie"],
+    };
+    private static readonly FilePickerFileType Sol = new("Flash SharedObject") { Patterns = ["*.sol"] };
+
+    public async ValueTask<string?> OpenAsync(NativeFileKind kind, string title, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var files = await storageProvider().OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = title, AllowMultiple = false, FileTypeFilter = Types(kind),
+            });
+            cancellationToken.ThrowIfCancellationRequested();
+            return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+        });
+    }
+
+    public async ValueTask<string?> SaveAsync(NativeFileKind kind, string title, string suggestedName,
+        string? defaultExtension = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return await Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            var file = await storageProvider().SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = title, SuggestedFileName = suggestedName, DefaultExtension = defaultExtension,
+                FileTypeChoices = Types(kind),
+            });
+            cancellationToken.ThrowIfCancellationRequested();
+            return file?.TryGetLocalPath();
+        });
+    }
+
+    private static IReadOnlyList<FilePickerFileType>? Types(NativeFileKind kind) => kind switch
+    {
+        NativeFileKind.FlashMovie => [Swf], NativeFileKind.SharedObject => [Sol],
+        NativeFileKind.Any => null, _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
+}
+''', DESKTOP/'Views/MainWindow.axaml.cs', 'A01 move actual native file panel behavior to platform implementation of IFileDialogs')
+
+props='''  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- Windows require composition arguments, as in the accepted prototype. -->
+    <NoWarn>$(NoWarn);AVLN3001</NoWarn>
+    <ApplicationTitle>FlashMacOS</ApplicationTitle>
+    <ApplicationId>local.flashmacos.app</ApplicationId>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+'''
+refs=['Domain','Application','Infrastructure','Sol.Managed','Browser.WebKit','Flash.Ruffle','Platform.MacOS']
+write('src/FlashMacOS.Desktop/FlashMacOS.Desktop.csproj','<Project Sdk="Microsoft.NET.Sdk">\n'+props+'  <ItemGroup>\n'+''.join(f'    <ProjectReference Include="../FlashMacOS.{r}/FlashMacOS.{r}.csproj" />\n' for r in refs)+''.join(f'    <PackageReference Include="{p}" />\n' for p in ['Avalonia','Avalonia.Desktop','Avalonia.Themes.Fluent'])+'''  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../test-assets/flash/p02-project/**" Link="CompatibilityFixtures/p02-project/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../test-assets/flash/ruffle-v0.4.1/**" Link="CompatibilityFixtures/ruffle-v0.4.1/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../FlashMacOS.Flash.Ruffle/Assets/**" Link="Assets/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../test-assets/legacy-sol/settings.sol" Link="Assets/Fixtures/settings.sol" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
+''')
+write('src/FlashMacOS.Desktop/GlobalUsings.cs','''global using FlashMacOS.Domain.Browser;
+global using FlashMacOS.Domain.Flash;
+global using FlashMacOS.Domain.Sol;
+''')
+for source in sorted((DESKTOP/'ViewModels').glob('*.cs')):
+    s=transform(source.read_text())
+    if source.name=='MainWindowViewModel.cs':
+        s='using FlashMacOS.Application.Files;\n'+s
+        s=s.replace('    private readonly RufflePlayerCoordinator _ruffle;', '    private readonly RufflePlayerCoordinator _ruffle;\n    private readonly IFileAccess _files;')
+        s=s.replace('        RufflePlayerCoordinator ruffle)', '        RufflePlayerCoordinator ruffle,\n        IFileAccess files)')
+        s=s.replace('        _ruffle = ruffle;', '        _ruffle = ruffle;\n        _files = files ?? throw new ArgumentNullException(nameof(files));')
+        s=s.replace('NavigationResolver.IsLocalFileWithExtension(argument, ".swf")','await NavigationResolver.IsLocalFileWithExtensionAsync(argument, ".swf", _files, cancellationToken).ConfigureAwait(false)')
+        s=s.replace('NavigationResolver.IsLocalFileWithExtension(Address, ".swf")','await NavigationResolver.IsLocalFileWithExtensionAsync(Address, ".swf", _files, cancellationToken).ConfigureAwait(false)')
+        # A01 changes namespace ownership, retaining one using per namespace.
+        seen=set();s=''.join(line for line in s.splitlines(keepends=True) if not line.startswith('using ') or not (line in seen or seen.add(line)))
+    write('src/FlashMacOS.Desktop/ViewModels/'+source.name,s,source,'A01 migrate ViewModel against Application/Domain only; async file-classification port')
+for source in [DESKTOP/'App.axaml',DESKTOP/'App.axaml.cs',DESKTOP/'Program.cs',*sorted((DESKTOP/'Views').glob('*.axaml'))]:
+    s=transform(source.read_text())
+    if source.name=='App.axaml.cs':s=s.replace('App : Application,','App : Avalonia.Application,')
+    if source.name=='Program.cs':s=s.replace('using FlashMacOS.Infrastructure.Paths;','using FlashMacOS.Desktop.Composition;').replace('TestProfile.FromEnvironment()','CompositionRoot.ValidateStartupProfile()')
+    if source.name=='MainWindow.axaml':s=s.replace('clr-namespace:FlashMacOS.Application.Flash;assembly=CefFlashBrowser.MacOS.Spike.Core','clr-namespace:FlashMacOS.Domain.Flash;assembly=FlashMacOS.Domain')
+    write('src/FlashMacOS.Desktop/'+str(source.relative_to(DESKTOP)),s,source,'A01 migrate desktop resource namespace; concrete setup remains composition only')
+
+source=DESKTOP/'Views/MainWindow.axaml.cs';s=transform(source.read_text())
+s=s.replace('using Avalonia.Platform.Storage;','using FlashMacOS.Application.Files;').replace('using FlashMacOS.Browser.WebKit;\n','')
+a=s.index('    private static readonly FilePickerFileType');b=s.index('    private readonly MainWindowViewModel',a);s=s[:a]+s[b:]
+s=s.replace('private readonly AvaloniaNativeWebViewSession _browserSession;', '''private readonly IBrowserSession _browserSession;
+    private readonly Func<Control> _createBrowserControl;
+    private readonly IFileDialogs _fileDialogs;''')
+s=s.replace('        AvaloniaNativeWebViewSession browserSession,','''        IBrowserSession browserSession,
+        Func<Control> createBrowserControl,
+        IFileDialogs fileDialogs,''')
+s=s.replace('        _browserSession = browserSession;','''        _browserSession = browserSession;
+        _createBrowserControl = createBrowserControl ?? throw new ArgumentNullException(nameof(createBrowserControl));
+        _fileDialogs = fileDialogs ?? throw new ArgumentNullException(nameof(fileDialogs));''')
+s=s.replace('''            var webView = new NativeWebView();
+            _browserSession.Attach(webView);
+            this.FindControl<ContentControl>("BrowserHost")!.Content = webView;''','''            this.FindControl<ContentControl>("BrowserHost")!.Content = _createBrowserControl();''')
+for start, line in [
+    ('private async void OnOpenSwfClick', 'var path = await _fileDialogs.OpenAsync(NativeFileKind.FlashMovie, "Open Flash movie");'),
+    ('private async void OnImportSaveClick', 'var path = await _fileDialogs.OpenAsync(NativeFileKind.SharedObject, _viewModel.SelectedSave is null ? "Import SharedObject" : "Replace selected SharedObject");'),
+    ('private async void OnExportSaveClick', 'var path = await _fileDialogs.SaveAsync(NativeFileKind.SharedObject, "Export SharedObject", selected.SolName, "sol");'),
+    ('private async void OnDownloadRequested', 'var path = await _fileDialogs.SaveAsync(NativeFileKind.Any, "Save download", suggestedName);')]:
+    a=s.index('            var files =',s.index(start)) if 'OpenSwf' in start or 'ImportSave' in start else s.index('            var file =',s.index(start))
+    b=s.index('            if (path is not null)',a)
+    s=s[:a]+'            '+line+'\n'+s[b:]
+write('src/FlashMacOS.Desktop/Views/MainWindow.axaml.cs',s,source,'A01 view uses browser/file-dialog ports and root-owned control factory; preserve panel titles and default extensions')
+source=DESKTOP/'Views/PopupWindow.axaml.cs';s=transform(source.read_text()).replace('using FlashMacOS.Browser.WebKit;\n','')
+s=s.replace('private readonly AvaloniaNativeWebViewSession _session;', 'private readonly IBrowserSession _session;\n    private readonly Func<Control> _createBrowserControl;')
+s=s.replace('PopupWindow(AvaloniaNativeWebViewSession session, Uri initialAddress)','PopupWindow(IBrowserSession session, Func<Control> createBrowserControl, Uri initialAddress)')
+s=s.replace('        _session = session;', '        _session = session;\n        _createBrowserControl = createBrowserControl ?? throw new ArgumentNullException(nameof(createBrowserControl));')
+s=s.replace('''        var webView = new NativeWebView();
+        _session.Attach(webView);
+        this.FindControl<ContentControl>("BrowserHost")!.Content = webView;''','''        this.FindControl<ContentControl>("BrowserHost")!.Content = _createBrowserControl();''')
+write('src/FlashMacOS.Desktop/Views/PopupWindow.axaml.cs',s,source,'A01 popup view takes browser port/control factory; lifetime ownership follow-up A02')
+source=DESKTOP/'Composition/CompositionRoot.cs';s=transform(source.read_text())
+s='''using Avalonia.Controls;
+using FlashMacOS.Application.Files;
+using FlashMacOS.Application.Sol;
+using FlashMacOS.Flash.Ruffle.Hosting;
+using FlashMacOS.Flash.Ruffle.Runtime;
+using FlashMacOS.Infrastructure.Persistence;
+using FlashMacOS.Sol.Managed;
+using FlashMacOS.Platform.MacOS;
+using FlashMacOS.Browser.WebKit.Diagnostics;
+'''+s
+s=s.replace('    private readonly TestProfile _paths;', '''    private readonly TestProfile _paths;
+    private readonly IFileAccess _files = new LocalFileAccess();
+    private readonly ISolHeaderInspector _inspector = new SolHeaderInspector();''')
+s=s.replace('new JsonRuffleSaveStore(_paths.RuffleSaveStorePath)','new JsonRuffleSaveStore(_paths.RuffleSaveStorePath, _inspector)')
+s=s.replace('new RufflePlayerCoordinator(_mainBrowser, _contentHost, _saveStore)','new RufflePlayerCoordinator(_mainBrowser, _contentHost, _saveStore, new RuffleScriptBuilder(), _inspector, _files)')
+s=s.replace('new MainWindowViewModel(_mainBrowser, _contentHost, ruffle)','new MainWindowViewModel(_mainBrowser, _contentHost, ruffle, _files)')
+s=s.replace('''        return new MainWindow(
+            _mainViewModel,
+            _mainBrowser,''','''        MainWindow? mainWindow = null;
+        var dialogs = new MacFileDialogs(() => mainWindow!.StorageProvider);
+        mainWindow = new MainWindow(
+            _mainViewModel,
+            _mainBrowser,
+            () => CreateBrowserControl(_mainBrowser),
+            dialogs,''')
+s=s.replace('            StartPageProbe);', '            StartPageProbe);\n        return mainWindow;')
+s=s.replace('            _paths.DataStoreIdentifier,','            _paths.DataStoreIdentifier,\n            _files,')
+s=s.replace('        return new PopupWindow(CreateBrowserSession(), address);','''        var browser = CreateBrowserSession();
+        return new PopupWindow(browser, () => CreateBrowserControl(browser), address);''')
+s=s.replace('    public MainWindow CreateMainWindow()', '''    public static TestProfile ValidateStartupProfile() => TestProfile.FromEnvironment();
+
+    private static NativeWebView CreateBrowserControl(AvaloniaNativeWebViewSession browser)
+    {
+        var control = new NativeWebView();
+        browser.Attach(control);
+        return control;
+    }
+
+    public MainWindow CreateMainWindow()''')
+seen=set();s=''.join(line for line in s.splitlines(keepends=True) if not line.startswith('using ') or not (line in seen or seen.add(line)))
+write('src/FlashMacOS.Desktop/Composition/CompositionRoot.cs',s,source,'A01 sole concrete composition; share ports and isolated profile across native windows')
+write('docs/provenance/A01-desktop-import.json',json.dumps({'schemaVersion':1,'stage':'desktop','files':entries},ensure_ascii=False,indent=2)+'\n')
+print('Created formal desktop; files:',len(entries))

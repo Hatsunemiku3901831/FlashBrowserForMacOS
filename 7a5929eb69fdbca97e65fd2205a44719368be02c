@@ -1,0 +1,55 @@
+using FlashMacOS.Domain.Configuration;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class SettingsModelTests
+{
+    [TestMethod]
+    public void DefaultConstructorSetsExpectedDefaults()
+    {
+        var settings = new AppSettings();
+        Assert.IsTrue(settings.FirstStart);
+        Assert.AreEqual("zh-CN", settings.Language);
+        Assert.AreEqual(Theme.Light, settings.Theme);
+        Assert.AreEqual(SearchEngine.Bing, settings.SearchEngine);
+        Assert.AreEqual(NavigationType.Automatic, settings.NavigationType);
+        Assert.AreEqual(NewPageBehavior.OriginalWindow, settings.NewPageBehavior);
+        Assert.IsFalse(settings.DisableOnBeforeUnloadDialog);
+        Assert.IsNull(settings.MainWindowSizeInfo);
+        Assert.IsNull(settings.BrowserWindowSizeInfo);
+        Assert.IsNull(settings.SwfWindowSizeInfo);
+        Assert.IsNull(settings.SolSaveManagerSizeInfo);
+        Assert.IsNotNull(settings.ProxySettings);
+        Assert.IsNotNull(settings.UserAgentSetting);
+        Assert.IsNotNull(settings.FakeFlashVersionSetting);
+        Assert.IsFalse(settings.HideMainWindowOnBrowsing);
+        Assert.IsTrue(settings.FollowSystemTheme);
+        Assert.IsTrue(settings.EnableIntegratedDevTools);
+        Assert.AreEqual(300d, settings.IntegratedDevToolsWidth);
+        Assert.IsTrue(settings.SaveZoomLevel);
+        Assert.AreEqual(0d, settings.BrowserZoomLevel);
+        Assert.IsFalse(settings.DisableFullscreen);
+        Assert.AreEqual(30, settings.RetainedLogCount);
+        Assert.IsFalse(settings.DisableBrowserShortcuts);
+        Assert.IsFalse(settings.DisableGpuAcceleration);
+        Assert.IsFalse(settings.DisableGpuAccelerationWPF);
+        Assert.IsNull(settings.CustomEmoticon);
+        Assert.IsFalse(settings.DisableBrowserContextMenu);
+        settings.Validate();
+    }
+
+    [TestMethod]
+    public void DefaultReturnsNewInstance()
+    {
+        var first = AppSettings.Default;
+        var second = AppSettings.Default;
+        Assert.AreNotSame(first, second);
+        Assert.AreNotSame(first.ProxySettings, second.ProxySettings);
+        Assert.AreEqual(first, second);
+        Assert.IsFalse(first.ProxySettings.EnableProxy);
+        Assert.AreEqual("", first.UserAgentSetting.UserAgent);
+        Assert.IsTrue(first.FakeFlashVersionSetting.Enable);
+        Assert.AreEqual("99.0.0.999", first.FakeFlashVersionSetting.FlashVersion);
+    }
+}

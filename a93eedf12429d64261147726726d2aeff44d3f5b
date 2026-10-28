@@ -1,0 +1,18 @@
+using FlashMacOS.Application.Files;
+
+namespace FlashMacOS.Application.Browser;
+
+/// <summary>Product destination policy: one native save panel at a time; the panel confirms replacing a same-name file.</summary>
+public sealed class SaveDialogDownloadDestinations(IFileDialogs dialogs) : IDownloadDestinations, IDisposable
+{
+    private readonly SemaphoreSlim _panel = new(1, 1);
+
+    public async ValueTask<string?> ChooseAsync(BrowserDownloadRequest request, CancellationToken cancellationToken = default)
+    {
+        await _panel.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return await dialogs.SaveAsync(NativeFileKind.Any, "Save download", request.SuggestedFileName, cancellationToken: cancellationToken).ConfigureAwait(false); }
+        finally { _panel.Release(); }
+    }
+
+    public void Dispose() => _panel.Dispose();
+}

@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "settingsTests": [
+    {
+      "original": "SettingsTests.DefaultConstructor_SetsExpectedDefaults",
+      "formal": "SettingsModelTests.DefaultConstructorSetsExpectedDefaults",
+      "reason": "Preserve assertions using immutable defaults and explicit migration, without mutating a global Settings object"
+    },
+    {
+      "original": "SettingsTests.Default_ReturnsNewInstance",
+      "formal": "SettingsModelTests.DefaultReturnsNewInstance",
+      "reason": "Preserve assertions using immutable defaults and explicit migration, without mutating a global Settings object"
+    },
+    {
+      "original": "SettingsTests.SetNullPropertiesToDefault_FillsNullLanguage",
+      "formal": "ConfigurationRepositoryTests.LegacyNullAndMissingReferencesUseFrozenDefaultsWithoutLosingRawNulls",
+      "reason": "Preserve assertions using immutable defaults and explicit migration, without mutating a global Settings object"
+    },
+    {
+      "original": "SettingsTests.SetNullPropertiesToDefault_PreservesNonNullValues",
+      "formal": "ConfigurationRepositoryTests.FullLegacySettingsMatchIndependentGoldenAndUpgradeOnlyOnce",
+      "reason": "Preserve assertions using immutable defaults and explicit migration, without mutating a global Settings object"
+    },
+    {
+      "original": "SettingsTests.SetNullPropertiesToDefault_FillsNullProxySettings",
+      "formal": "ConfigurationRepositoryTests.LegacyNullAndMissingReferencesUseFrozenDefaultsWithoutLosingRawNulls",
+      "reason": "Preserve assertions using immutable defaults and explicit migration, without mutating a global Settings object"
+    }
+  ],
+  "urlTests": [
+    {
+      "original": "UrlHelperTests.IsUrl_NullInput_ReturnsFalse",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_EmptyString_ReturnsFalse",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_WhitespaceOnly_ReturnsFalse",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_HttpScheme_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_HttpsScheme_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_FtpScheme_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_Localhost_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_LocalhostWithPort_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_IpAddress_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_IpAddressWithPort_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_DomainLikeString_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_SubdomainString_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_PlainWord_ReturnsFalse",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_PlainNumber_ReturnsFalse2",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_PureNumber_ReturnsFalse",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_PlainWord_WithSpaces_ReturnsFalse",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_FileScheme_ReturnsFalse",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_UnknownScheme_ReturnsFalse",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_WithPath_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    },
+    {
+      "original": "UrlHelperTests.IsUrl_WithQueryString_ReturnsTrue",
+      "formal": "NavigationResolverTests.LooksLikeWebAddressMatchesLegacyBehavior plus ConfigurationUseCaseTests.RemainingLegacyAddressClassificationCasesStillMatch",
+      "reason": "All original 20 input/assertion cases covered across the preserved parameter rows and explicit remaining cases; no file-system helper in Domain"
+    }
+  ]
+}

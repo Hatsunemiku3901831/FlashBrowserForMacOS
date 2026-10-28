@@ -1,0 +1,328 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Text.Json;
+using Avalonia.Controls;
+using Avalonia.Platform;
+using Avalonia.Threading;
+using CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle;
+using CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Persistence;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Browser;
+
+public sealed class AvaloniaNativeWebViewSession : IBrowserSession
+{
+    private static readonly Guid PersistentDataStoreId = new("852984bf-5e1e-4859-9fc3-cbf5f1a71a63");
+
+    private readonly IDocumentStartInjector _documentStartInjector;
+    private readonly Func<string> _documentStartScriptProvider;
+    private readonly Action<string, string?>? _eventSink;
+    private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private NativeWebView? _webView;
+    private bool _disposed;
+
+    public AvaloniaNativeWebViewSession(
+        IDocumentStartInjector documentStartInjector,
+        Func<string> documentStartScriptProvider,
+        Action<string, string?>? eventSink = null)
+    {
+        ArgumentNullException.ThrowIfNull(documentStartInjector);
+        ArgumentNullException.ThrowIfNull(documentStartScriptProvider);
+        _documentStartInjector = documentStartInjector;
+        _documentStartScriptProvider = documentStartScriptProvider;
+        _eventSink = eventSink;
+    }
+
+    public BrowserState State { get; private set; } = BrowserState.Empty;
+
+    public Task Ready => _ready.Task;
+
+    public event Action<BrowserState>? StateChanged;
+
+    public event Action<Uri>? PopupRequested;
+
+    public event Action<BrowserDownloadRequest>? DownloadRequested;
+
+    public event Action<WebBridgeMessage>? BridgeMessageReceived;
+
+    public event Action<Exception>? Faulted;
+
+    public void Attach(NativeWebView webView)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        ArgumentNullException.ThrowIfNull(webView);
+        if (_webView is not null)
+        {
+            throw new InvalidOperationException("This browser session is already attached.");
+        }
+
+        _webView = webView;
+        Record("browser.attached");
+        webView.EnvironmentRequested += OnEnvironmentRequested;
+        webView.AdapterCreated += OnAdapterCreated;
+        webView.NavigationStarted += OnNavigationStarted;
+        webView.NavigationCompleted += OnNavigationCompleted;
+        webView.NewWindowRequested += OnNewWindowRequested;
+        webView.WebMessageReceived += OnWebMessageReceived;
+    }
+
+    public async ValueTask NavigateAsync(Uri address, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(address);
+        Record("browser.navigate.requested", address.AbsoluteUri);
+        var webView = await GetReadyWebViewAsync(cancellationToken).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() => webView.Navigate(address));
+    }
+
+    public async ValueTask GoBackAsync(CancellationToken cancellationToken = default)
+    {
+        var webView = await GetReadyWebViewAsync(cancellationToken).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() => webView.GoBack());
+    }
+
+    public async ValueTask GoForwardAsync(CancellationToken cancellationToken = default)
+    {
+        var webView = await GetReadyWebViewAsync(cancellationToken).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() => webView.GoForward());
+    }
+
+    public async ValueTask ReloadAsync(CancellationToken cancellationToken = default)
+    {
+        var webView = await GetReadyWebViewAsync(cancellationToken).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() => webView.Refresh());
+    }
+
+    public async ValueTask StopAsync(CancellationToken cancellationToken = default)
+    {
+        var webView = await GetReadyWebViewAsync(cancellationToken).ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() => webView.Stop());
+    }
+
+    public async ValueTask<string?> ExecuteScriptAsync(
+        string script,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(script);
+        var webView = await GetReadyWebViewAsync(cancellationToken).ConfigureAwait(false);
+        return await Dispatcher.UIThread
+            .InvokeAsync(() => webView.InvokeScript(script))
+            .WaitAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async ValueTask DownloadAsync(
+        BrowserDownloadRequest request,
+        string destinationPath,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+        var webView = await GetReadyWebViewAsync(cancellationToken).ConfigureAwait(false);
+
+        var cookieContainer = new CookieContainer();
+        var cookieManager = await Dispatcher.UIThread.InvokeAsync(webView.TryGetCookieManager);
+        if (cookieManager is not null)
+        {
+            var cookies = await cookieManager.GetCookiesAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var cookie in cookies)
+            {
+                try
+                {
+                    cookieContainer.Add(cookie);
+                }
+                catch (CookieException)
+                {
+                    // A malformed third-party cookie must not abort an otherwise valid download.
+                }
+            }
+        }
+
+        using var handler = new HttpClientHandler
+        {
+            AllowAutoRedirect = true,
+            AutomaticDecompression = DecompressionMethods.All,
+            CookieContainer = cookieContainer,
+            UseCookies = true,
+        };
+        using var client = new HttpClient(handler)
+        {
+            Timeout = Timeout.InfiniteTimeSpan,
+        };
+        client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("CefFlashBrowser", "0.1"));
+
+        using var response = await client.GetAsync(
+                request.Address,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken)
+            .ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+        await AtomicFileWriter.WriteAsync(
+                destinationPath,
+                async (destination, token) =>
+                {
+                    await using var source = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                    await source.CopyToAsync(destination, 128 * 1024, token).ConfigureAwait(false);
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        var webView = _webView;
+        _webView = null;
+        if (webView is not null)
+        {
+            void DetachHandlers()
+            {
+                webView.EnvironmentRequested -= OnEnvironmentRequested;
+                webView.AdapterCreated -= OnAdapterCreated;
+                webView.NavigationStarted -= OnNavigationStarted;
+                webView.NavigationCompleted -= OnNavigationCompleted;
+                webView.NewWindowRequested -= OnNewWindowRequested;
+                webView.WebMessageReceived -= OnWebMessageReceived;
+            }
+
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                DetachHandlers();
+            }
+            else
+            {
+                await Dispatcher.UIThread.InvokeAsync(DetachHandlers);
+            }
+        }
+
+        _ready.TrySetCanceled();
+        Record("browser.disposed");
+    }
+
+    private async ValueTask<NativeWebView> GetReadyWebViewAsync(CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        await Ready.WaitAsync(cancellationToken).ConfigureAwait(false);
+        return _webView ?? throw new InvalidOperationException("The browser surface is not attached.");
+    }
+
+    private void OnEnvironmentRequested(object? sender, WebViewEnvironmentRequestedEventArgs args)
+    {
+        Record("browser.environment.requested");
+        args.EnableDevTools = true;
+        if (args is AppleWKWebViewEnvironmentRequestedEventArgs apple)
+        {
+            apple.NonPersistentDataStore = false;
+            apple.DataStoreIdentifier = PersistentDataStoreId;
+            apple.ApplicationNameForUserAgent = "CefFlashBrowser/0.1";
+            apple.ScriptHandlerMessageName = RuffleDocumentStartScriptBuilder.DefaultBridgeName;
+            apple.UpgradeKnownHostsToHTTPS = true;
+        }
+    }
+
+    private void OnAdapterCreated(object? sender, WebViewAdapterEventArgs args)
+    {
+        Record("browser.adapter.created");
+        try
+        {
+            var handle = args.TryGetPlatformHandle()
+                ?? throw new PlatformNotSupportedException("NativeWebView did not expose a platform handle.");
+            _documentStartInjector.Inject(handle, _documentStartScriptProvider());
+            Record("browser.documentStart.injected");
+            _ready.TrySetResult();
+        }
+        catch (Exception exception)
+        {
+            Record("browser.adapter.failed", exception.ToString());
+            _ready.TrySetException(exception);
+            Faulted?.Invoke(exception);
+        }
+    }
+
+    private void OnNavigationStarted(object? sender, WebViewNavigationStartingEventArgs args)
+    {
+        Record("browser.navigation.started", args.Request?.AbsoluteUri);
+        SetState(State with
+        {
+            Address = args.Request ?? State.Address,
+            IsLoading = true,
+        });
+    }
+
+    private async void OnNavigationCompleted(object? sender, WebViewNavigationCompletedEventArgs args)
+    {
+        try
+        {
+            var webView = _webView;
+            if (webView is null)
+            {
+                return;
+            }
+
+            var title = await webView.InvokeScript("document.title || location.href");
+            SetState(new BrowserState(
+                args.Request ?? webView.Source,
+                string.IsNullOrWhiteSpace(title) ? "CefFlashBrowser" : title,
+                false,
+                webView.CanGoBack,
+                webView.CanGoForward));
+            Record("browser.navigation.completed", args.Request?.AbsoluteUri);
+        }
+        catch (Exception exception)
+        {
+            Record("browser.navigation.failed", exception.ToString());
+            Faulted?.Invoke(exception);
+            SetState(State with { IsLoading = false });
+        }
+    }
+
+    private void OnNewWindowRequested(object? sender, WebViewNewWindowRequestedEventArgs args)
+    {
+        if (args.Request is null)
+        {
+            return;
+        }
+
+        args.Handled = true;
+        PopupRequested?.Invoke(args.Request);
+    }
+
+    private void OnWebMessageReceived(object? sender, WebMessageReceivedEventArgs args)
+    {
+        try
+        {
+            var message = WebBridgeProtocol.Parse(args.Body);
+            var description = WebBridgeProtocol.Describe(message);
+            if (message.Type.Equals("downloadRequested", StringComparison.Ordinal))
+            {
+                var address = new Uri(message.Url!, UriKind.Absolute);
+                Record("browser.bridge.received", description);
+                DownloadRequested?.Invoke(new BrowserDownloadRequest(address, message.FileName));
+                return;
+            }
+
+            Record("browser.bridge.received", description);
+            BridgeMessageReceived?.Invoke(message);
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException or UriFormatException)
+        {
+            Record("browser.bridge.failed", exception.ToString());
+            Faulted?.Invoke(exception);
+        }
+    }
+
+    private void SetState(BrowserState state)
+    {
+        State = state;
+        StateChanged?.Invoke(state);
+    }
+
+    private void Record(string name, string? detail = null)
+    {
+        _eventSink?.Invoke(name, detail);
+    }
+}

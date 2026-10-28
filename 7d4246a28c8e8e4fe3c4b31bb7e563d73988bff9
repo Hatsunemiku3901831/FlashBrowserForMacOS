@@ -1,0 +1,130 @@
+namespace FlashMacOS.Application.Browser;
+
+/// <summary>Routes two retained surfaces. The composition root owns and destroys the supplied sessions.</summary>
+public sealed class BrowserWorkspace : IBrowserSession, IBrowserTools
+{
+    private readonly IBrowserSession _web;
+    private readonly IBrowserSession _local;
+    private readonly Func<Uri, BrowserPurpose> _classify;
+    private readonly object _gate = new();
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly SemaphoreSlim _navigationCommands = new(1, 1);
+    private readonly List<Action> _unsubscribe = [];
+    private readonly TaskCompletionSource _drained = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _operations;
+    private bool _closed;
+    private Task? _dispose;
+    private BrowserPurpose _purpose;
+
+    public BrowserWorkspace(IBrowserSession web, IBrowserSession local, Func<Uri, BrowserPurpose> classify)
+    {
+        ArgumentNullException.ThrowIfNull(web); ArgumentNullException.ThrowIfNull(local); ArgumentNullException.ThrowIfNull(classify);
+        if (ReferenceEquals(web, local)) throw new ArgumentException("Browser purposes require distinct sessions.");
+        _web = web; _local = local; _classify = classify;
+        Subscribe(web); Subscribe(local);
+    }
+
+    public BrowserPurpose Purpose { get { lock (_gate) return _purpose; } }
+    public IBrowserSession ActiveSession => Purpose == BrowserPurpose.Web ? _web : _local;
+    public BrowserState State => ActiveSession.State;
+    public Task Ready => Task.WhenAll(_web.Ready, _local.Ready);
+    public BrowserCapabilities Capabilities => Tools(ActiveSession).Capabilities;
+    public double Zoom => Tools(ActiveSession).Zoom;
+    public event Action<BrowserPurpose>? SurfaceChanged;
+    public event Action<BrowserState>? StateChanged;
+    public event Action<BrowserPopupRequest>? PopupRequested;
+    /// <summary>The main workspace is never closed by page script.</summary>
+    public event Action? CloseRequested { add { } remove { } }
+    public event Action<WebBridgeMessage>? BridgeMessageReceived;
+    public event Action<Exception>? Faulted;
+
+    private void Subscribe(IBrowserSession session)
+    {
+        bool IsActive() { lock (_gate) return !_closed && ReferenceEquals(session, ActiveSession); }
+        void StateEvent(BrowserState value) { if (IsActive()) StateChanged?.Invoke(value); }
+        void Popup(BrowserPopupRequest value) { if (IsActive()) PopupRequested?.Invoke(value); }
+        void Bridge(WebBridgeMessage value) { if (IsActive()) BridgeMessageReceived?.Invoke(value); }
+        void Failure(Exception value) { if (IsActive()) Faulted?.Invoke(value); }
+        session.StateChanged += StateEvent; session.PopupRequested += Popup;
+        session.BridgeMessageReceived += Bridge; session.Faulted += Failure;
+        _unsubscribe.Add(() => { session.StateChanged -= StateEvent; session.PopupRequested -= Popup;
+            session.BridgeMessageReceived -= Bridge; session.Faulted -= Failure; });
+    }
+
+    private async ValueTask<T> OperateAsync<T>(Func<IBrowserSession, CancellationToken, ValueTask<T>> operation, CancellationToken cancellationToken)
+    {
+        CancellationTokenSource linked;
+        IBrowserSession selected;
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_closed, this); cancellationToken.ThrowIfCancellationRequested();
+            linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token); _operations++;
+            selected = ActiveSession;
+        }
+        try { return await operation(selected, linked.Token).ConfigureAwait(false); }
+        finally
+        {
+            linked.Dispose();
+            lock (_gate) { _operations--; if (_closed && _operations == 0) _drained.TrySetResult(); }
+        }
+    }
+
+    private async ValueTask OperateAsync(Func<IBrowserSession, CancellationToken, ValueTask> operation, CancellationToken cancellationToken)
+        => await OperateAsync(async (session, token) => { await operation(session, token).ConfigureAwait(false); return true; }, cancellationToken).ConfigureAwait(false);
+
+    public ValueTask NavigateAsync(Uri address, CancellationToken cancellationToken = default)
+        => NavigateAsync(new BrowserRequest(address), cancellationToken);
+
+    public ValueTask NavigateAsync(BrowserRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var address = request.Address;
+        BrowserNavigationPolicy.RequireAllowed(address);
+        return OperateAsync(async (_, token) =>
+        {
+            await _navigationCommands.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+            var purpose = _classify(address);
+            if (!Enum.IsDefined(purpose)) throw new InvalidOperationException("Unknown browser purpose.");
+            lock (_gate) { token.ThrowIfCancellationRequested(); _purpose = purpose; }
+            var selected = purpose == BrowserPurpose.Web ? _web : _local;
+            SurfaceChanged?.Invoke(purpose); StateChanged?.Invoke(selected.State);
+            await selected.NavigateAsync(request, token).ConfigureAwait(false);
+            }
+            finally { _navigationCommands.Release(); }
+        }, cancellationToken);
+    }
+    public ValueTask GoBackAsync(CancellationToken cancellationToken = default) => OperateAsync((s, t) => s.GoBackAsync(t), cancellationToken);
+    public ValueTask GoForwardAsync(CancellationToken cancellationToken = default) => OperateAsync((s, t) => s.GoForwardAsync(t), cancellationToken);
+    public ValueTask ReloadAsync(CancellationToken cancellationToken = default) => OperateAsync((s, t) => s.ReloadAsync(t), cancellationToken);
+    public ValueTask StopAsync(CancellationToken cancellationToken = default) => OperateAsync((s, t) => s.StopAsync(t), cancellationToken);
+    public ValueTask<string?> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default) => OperateAsync((s, t) => s.ExecuteScriptAsync(script, t), cancellationToken);
+    private static IBrowserTools Tools(IBrowserSession session) => session as IBrowserTools ?? throw new NotSupportedException("Native browser tools are unavailable.");
+    public ValueTask SetZoomAsync(double zoom, CancellationToken cancellationToken = default) => OperateAsync((s, t) => Tools(s).SetZoomAsync(zoom, t), cancellationToken);
+    public ValueTask<bool> FindAsync(BrowserFindRequest request, CancellationToken cancellationToken = default) => OperateAsync((s, t) => Tools(s).FindAsync(request, t), cancellationToken);
+    public ValueTask SetUserAgentAsync(string? userAgent, CancellationToken cancellationToken = default) => OperateAsync((s, t) => Tools(s).SetUserAgentAsync(userAgent, t), cancellationToken);
+    public ValueTask ShowPrintDialogAsync(CancellationToken cancellationToken = default) => OperateAsync((s, t) => Tools(s).ShowPrintDialogAsync(t), cancellationToken);
+    public ValueTask<byte[]> ExportPdfAsync(CancellationToken cancellationToken = default) => OperateAsync((s, t) => Tools(s).ExportPdfAsync(t), cancellationToken);
+    public ValueTask SetInspectionEnabledAsync(bool enabled, CancellationToken cancellationToken = default) => OperateAsync((s, t) => Tools(s).SetInspectionEnabledAsync(enabled, t), cancellationToken);
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_gate)
+        {
+            if (_dispose is not null) return new ValueTask(_dispose);
+            _closed = true;
+            foreach (var unsubscribe in _unsubscribe) unsubscribe();
+            _unsubscribe.Clear();
+            SurfaceChanged = null; StateChanged = null; PopupRequested = null;
+            BridgeMessageReceived = null; Faulted = null;
+            if (_operations == 0) _drained.TrySetResult();
+            return new ValueTask(_dispose = DisposeCoreAsync());
+        }
+    }
+    private async Task DisposeCoreAsync()
+    {
+        try { await _lifetime.CancelAsync().ConfigureAwait(false); await _drained.Task.WaitAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false); }
+        finally { _lifetime.Dispose(); _navigationCommands.Dispose(); }
+    }
+}

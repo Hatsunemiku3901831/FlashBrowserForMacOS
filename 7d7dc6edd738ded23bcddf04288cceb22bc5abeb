@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""Check the formal dependency graph and immutable local assets, without legacy reads."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import re
+import sys
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parents[1]
+MODULES = {'Domain', 'Application', 'Infrastructure', 'Sol.Managed', 'Browser.WebKit', 'Flash.Ruffle', 'Platform.MacOS', 'Desktop'}
+ADAPTERS = MODULES - {'Domain', 'Application', 'Desktop'}
+TESTS = {'Domain.Tests', 'Application.Tests', 'Sol.Managed.Tests', 'IntegrationTests', 'Desktop.Tests'}
+ALLOWED = {'Domain': set(), 'Application': {'Domain'}, 'Desktop': MODULES - {'Desktop'}}
+ALLOWED.update({name: {'Domain', 'Application'} for name in ADAPTERS})
+
+def source_files(root, base, suffix):
+    return sorted(p for p in (root / base).rglob('*' + suffix)
+                  if not {'bin', 'obj', 'TestResults'}.intersection(p.relative_to(root / base).parts))
+
+def check_graph(root):
+    root = root.resolve()
+    failures = []
+    graph = {}
+    projects = source_files(root, 'src', '.csproj') + source_files(root, 'tests', '.csproj')
+    expected = {f'FlashMacOS.{name}' for name in MODULES | TESTS}
+    actual = {p.stem for p in projects}
+    if actual != expected:
+        failures.append(f'Project set mismatch: missing={sorted(expected-actual)} extra={sorted(actual-expected)}')
+    for project in projects:
+        name = project.stem.removeprefix('FlashMacOS.')
+        tree = ET.parse(project)
+        graph[name] = []
+        for item in tree.iter():
+            include = item.attrib.get('Include')
+            if item.tag == 'PackageReference' and include and any(s in include.lower() for s in ('cefsharp', 'wpf', 'winforms', 'windowsdesktop')):
+                failures.append(f'{project.name}: forbidden package {include}')
+            if item.tag not in ('ProjectReference', 'Content', 'Compile', 'EmbeddedResource', 'Import') or not include:
+                continue
+            if '$(' in include or Path(include).is_absolute():
+                failures.append(f'{project.name}: unreviewed computed/absolute input {include}')
+                continue
+            prefix = re.split(r'[\*\?\[]', include, maxsplit=1)[0]
+            target = (project.parent / prefix).resolve()
+            if not target.is_relative_to(root) or target.is_relative_to(root / 'reference') or target.is_relative_to(root / 'bootstrap'):
+                failures.append(f'{project.name}: outside formal boundary {include}')
+            if item.tag == 'ProjectReference':
+                dependency = (project.parent / include).stem.removeprefix('FlashMacOS.')
+                graph[name].append(dependency)
+                if not (project.parent / include).is_file():
+                    failures.append(f'{project.name}: missing project {include}')
+                if name in MODULES and dependency not in ALLOWED[name]:
+                    failures.append(f'{name} -> {dependency}: forbidden dependency direction')
+                if name in TESTS and dependency not in MODULES:
+                    failures.append(f'{name}: test target outside product graph: {dependency}')
+    for base in ('src', 'tests', 'test-assets'):
+        for p in (root / base).rglob('*'):
+            if not {'bin', 'obj', 'TestResults', '__pycache__'}.intersection(p.relative_to(root / base).parts) and p.is_symlink():
+                failures.append('Symbolic link in formal input: ' + str(p.relative_to(root)))
+    for p in source_files(root, 'src', '.cs'):
+        text = p.read_text()
+        module = p.relative_to(root / 'src').parts[0].removeprefix('FlashMacOS.')
+        if 'CefFlashBrowser.MacOS.Spike' in text:
+            failures.append(str(p.relative_to(root)) + ': legacy CLR namespace')
+        if module in ('Domain', 'Application'):
+            if re.search(r'^using (?:Avalonia|FlashMacOS\.(?:Infrastructure|Sol\.Managed|Browser\.WebKit|Flash\.Ruffle|Platform\.MacOS))', text, re.M):
+                failures.append(str(p.relative_to(root)) + ': inner layer imports concrete adapter/UI')
+            if re.search(r'\b(?:File|Directory)\.|new (?:FileInfo|DirectoryInfo|FileStream)\(', text):
+                failures.append(str(p.relative_to(root)) + ': direct file-system implementation in inner layer')
+        if module == 'Desktop' and 'Composition' not in p.relative_to(root / 'src/FlashMacOS.Desktop').parts:
+            if re.search(r'^using FlashMacOS\.(?:Infrastructure|Sol\.Managed|Browser\.WebKit|Flash\.Ruffle|Platform\.MacOS)', text, re.M):
+                failures.append(str(p.relative_to(root)) + ': concrete adapter outside composition root')
+    solution = ET.parse(root / 'FlashMacOS.slnx')
+    listed = {Path(e.attrib['Path']).stem for e in solution.iter('Project')}
+    if listed != expected:
+        failures.append('Formal solution does not contain exactly the eight modules and five test projects')
+    return {'graph': graph, 'failures': failures}
+
+def check_assets(root):
+    root = root.resolve()
+    manifest = json.loads((root / 'docs/provenance/formal-assets.json').read_text())
+    failures = []
+    for entry in manifest['files']:
+        p = root / entry['path']
+        if not p.resolve().is_relative_to(root) or not p.is_file():
+            failures.append('Missing/outside asset: ' + entry['path'])
+        elif hashlib.sha256(p.read_bytes()).hexdigest() != entry['sha256']:
+            failures.append('Fixed asset hash mismatch: ' + entry['path'])
+    return {'assetCount': len(manifest['files']), 'failures': failures}
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--output', type=Path)
+    args = parser.parse_args()
+    graph = check_graph(ROOT)
+    assets = check_assets(ROOT)
+    result = {'status': 'FAIL' if graph['failures'] or assets['failures'] else 'PASS', **graph, 'assets': assets}
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return int(result['status'] != 'PASS')
+
+if __name__ == '__main__': sys.exit(main())

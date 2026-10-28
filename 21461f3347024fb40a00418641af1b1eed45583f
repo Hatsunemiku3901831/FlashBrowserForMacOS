@@ -1,0 +1,67 @@
+using System.Buffers;
+using System.Security.Cryptography;
+
+namespace FlashMacOS.Infrastructure.Persistence;
+
+public sealed record FileSnapshot(byte[]? Bytes, FileRevision Revision);
+
+public static class AtomicDocumentFile
+{
+    public static ValueTask<FileRevision> ReadRevisionAsync(string path, long maximumBytes, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumBytes);
+        return new(Task.Run(async () =>
+        {
+            FileStream stream;
+            try { stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete,
+                64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan); }
+            catch (FileNotFoundException) { return FileRevision.Missing; }
+            catch (DirectoryNotFoundException) { return FileRevision.Missing; }
+            await using (stream.ConfigureAwait(false))
+            {
+                if (stream.Length > maximumBytes) throw new InvalidDataException($"The document exceeds {maximumBytes} bytes.");
+                using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                var buffer = ArrayPool<byte>.Shared.Rent(64 * 1024);
+                try
+                {
+                    long total = 0;
+                    while (true)
+                    {
+                        var count = await stream.ReadAsync(buffer.AsMemory(0, 64 * 1024), cancellationToken).ConfigureAwait(false);
+                        if (count == 0) break;
+                        total = checked(total + count);
+                        if (total > maximumBytes) throw new InvalidDataException("The document grew beyond its read limit.");
+                        hash.AppendData(buffer, 0, count);
+                    }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    return new FileRevision(true, Convert.ToHexStringLower(hash.GetHashAndReset()));
+                }
+                finally { ArrayPool<byte>.Shared.Return(buffer, clearArray: true); }
+            }
+        }, cancellationToken));
+    }
+
+    public static ValueTask<FileSnapshot> ReadAsync(string path, long maximumBytes, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maximumBytes);
+        return new ValueTask<FileSnapshot>(Task.Run(async () =>
+        {
+            FileStream stream;
+            try { stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete,
+                64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan); }
+            catch (FileNotFoundException) { return new FileSnapshot(null, FileRevision.Missing); }
+            catch (DirectoryNotFoundException) { return new FileSnapshot(null, FileRevision.Missing); }
+            await using (stream.ConfigureAwait(false))
+            {
+                if (stream.Length > maximumBytes || stream.Length > Array.MaxLength)
+                    throw new InvalidDataException($"The document exceeds {maximumBytes} bytes.");
+                var bytes = new byte[checked((int)stream.Length)];
+                await stream.ReadExactlyAsync(bytes, cancellationToken).ConfigureAwait(false);
+                if (await stream.ReadAsync(new byte[1], cancellationToken).ConfigureAwait(false) != 0)
+                    throw new InvalidDataException("The document grew while being read.");
+                cancellationToken.ThrowIfCancellationRequested();
+                return new FileSnapshot(bytes, FileRevision.FromBytes(bytes));
+            }
+        }, cancellationToken));
+    }
+}

@@ -1,0 +1,23 @@
+namespace FlashMacOS.Domain.Flash;
+
+public sealed record RuffleGameConfiguration(string Id = "default", string Quality = "high", string Scale = "showAll", double Volume = 1)
+{
+    public static RuffleGameConfiguration Default { get; } = new();
+
+    public void Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(Id);
+        if (Quality is not ("low" or "medium" or "high" or "best")) throw new ArgumentException("Unsupported Ruffle quality.");
+        if (Scale is not ("showAll" or "noBorder" or "exactFit" or "noScale")) throw new ArgumentException("Unsupported Ruffle scale.");
+        if (!double.IsFinite(Volume) || Volume is < 0 or > 1) throw new ArgumentOutOfRangeException(nameof(Volume));
+    }
+}
+
+public enum FlashPlayerPhase { Empty, Loading, Ready, Paused, Reloading, Faulted, Closed }
+
+public sealed record FlashPlayerState(FlashPlayerPhase Phase, string? RunId = null, string? Error = null)
+{
+    public static FlashPlayerState Empty { get; } = new(FlashPlayerPhase.Empty);
+}
+
+public sealed record RuffleSiteProfile(string Host, RuffleGameConfiguration Configuration, string Compatibility);

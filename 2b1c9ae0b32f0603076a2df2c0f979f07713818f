@@ -1,0 +1,157 @@
+using FlashMacOS.Application.Browser;
+using FlashMacOS.Application.Files;
+using FlashMacOS.Application.Flash;
+using FlashMacOS.Application.Threading;
+using FlashMacOS.Desktop.ViewModels;
+using FlashMacOS.Domain.Browser;
+using FlashMacOS.Domain.Flash;
+using FlashMacOS.Domain.Sol;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class ViewModelLifetimeTests
+{
+    [TestMethod]
+    public async Task QueuedOldNavigationUiCallbacksDoNotChangeTheNewPage()
+    {
+        var browser = new FakeBrowser(); var player = new FakePlayer(); var ui = new QueuedUi();
+        await using var model = new MainWindowViewModel(browser, new FakeHost(), player, new FakeFiles(), ui);
+        player.Trace("old trace"); player.ChangeSave();
+        await browser.NavigateAsync(new Uri("https://new.example/"));
+        ui.Drain();
+        Assert.IsEmpty(model.Saves); Assert.AreEqual("New page", model.Title);
+        Assert.IsFalse(model.Status.Contains("old trace", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task ClosingUnsubscribesAndDiscardsAlreadyPostedCallbacks()
+    {
+        var browser = new FakeBrowser(); var player = new FakePlayer(); var ui = new QueuedUi();
+        var model = new MainWindowViewModel(browser, new FakeHost(), player, new FakeFiles(), ui);
+        var initial = model.Status;
+        player.Trace("late trace"); player.ChangeSave();
+        await Task.WhenAll(model.DisposeAsync().AsTask(), model.DisposeAsync().AsTask());
+        ui.Drain();
+        Assert.AreEqual(initial, model.Status); Assert.IsEmpty(model.Saves);
+        Assert.AreEqual(0, browser.Subscriptions); Assert.AreEqual(0, player.Subscriptions);
+        Assert.AreEqual(0, player.Disposals, "The composition owner, rather than the ViewModel, disposes the player.");
+        Assert.IsFalse(model.NavigateCommand.CanExecute(null));
+    }
+
+    [TestMethod]
+    public async Task DownloadStatusOutlivesNavigationAndStopsAfterClose()
+    {
+        var browser = new FakeBrowser(); var player = new FakePlayer(); var ui = new QueuedUi(); var source = new FakeDownloads();
+        await using var downloads = new DownloadManager(new NoDestination(), new NoFiles());
+        using var registration = downloads.Attach(source);
+        var model = new MainWindowViewModel(browser, new FakeHost(), player, new FakeFiles(), ui, downloads: downloads);
+        source.Request();
+        await browser.NavigateAsync(new Uri("https://new.example/"));
+        for (var i = 0; i < 200 && !model.Status.Contains("cancelled", StringComparison.Ordinal); i++) { await Task.Delay(10); ui.Drain(); }
+        StringAssert.Contains(model.Status, "Download cancelled: “w02.bin”.");
+        await model.DisposeAsync();
+        var closed = model.Status;
+        source.Request("late.bin"); await Task.Delay(50); ui.Drain();
+        Assert.AreEqual(closed, model.Status);
+        Assert.AreEqual(1, source.Subscribers, "Only the manager registration remains after the ViewModel closes.");
+    }
+
+    private sealed class FakeDownloads : IBrowserDownloads
+    {
+        private long _id;
+        public int Subscribers => DownloadRequested?.GetInvocationList().Length ?? 0;
+        public event Action<BrowserDownloadRequest>? DownloadRequested;
+        public event Action<BrowserDownloadUpdate>? DownloadUpdated;
+        public void Request(string name = "w02.bin") => DownloadRequested?.Invoke(new BrowserDownloadRequest(++_id, null, name, "GET", null, null));
+        public ValueTask<long> StartDownloadAsync(Uri address, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask SetDownloadDestinationAsync(long downloadId, string? stagingPath, CancellationToken cancellationToken = default)
+        { DownloadUpdated?.Invoke(new BrowserDownloadUpdate(downloadId, BrowserDownloadEventKind.Cancelled)); return ValueTask.CompletedTask; }
+        public ValueTask CancelDownloadAsync(long downloadId, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+    }
+    private sealed class NoDestination : IDownloadDestinations
+    {
+        public ValueTask<string?> ChooseAsync(BrowserDownloadRequest request, CancellationToken cancellationToken = default) => ValueTask.FromResult<string?>(null);
+    }
+    private sealed class NoFiles : IDownloadFiles
+    {
+        public ValueTask CommitAsync(string stagingPath, string destinationPath, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask DeleteAsync(string path, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+    }
+
+    private sealed class QueuedUi : IUiDispatcher
+    {
+        private readonly Queue<Action> _work = new();
+        public bool CheckAccess() => false;
+        public void Post(Action action) => _work.Enqueue(action);
+        public ValueTask InvokeAsync(Action action, CancellationToken cancellationToken = default)
+        { cancellationToken.ThrowIfCancellationRequested(); action(); return ValueTask.CompletedTask; }
+        public void Drain() { while (_work.TryDequeue(out var work)) work(); }
+    }
+    private sealed class FakeBrowser : IBrowserSession
+    {
+        private Action<BrowserState>? _stateChanged;
+        public int Subscriptions { get; private set; }
+        public BrowserState State { get; private set; } = new(new Uri("https://old.example/"), "Old", false, false, false, 1, Guid.NewGuid().ToString("N"));
+        public Task Ready => Task.CompletedTask;
+        public event Action<BrowserState>? StateChanged { add { _stateChanged += value; Subscriptions++; } remove { _stateChanged -= value; Subscriptions--; } }
+        public event Action<WebBridgeMessage>? BridgeMessageReceived { add { Subscriptions++; } remove { Subscriptions--; } }
+        public event Action<BrowserPopupRequest>? PopupRequested { add { Subscriptions++; } remove { Subscriptions--; } }
+        public event Action? CloseRequested { add { } remove { } }
+        public event Action<Exception>? Faulted { add { Subscriptions++; } remove { Subscriptions--; } }
+        public ValueTask NavigateAsync(Uri address, CancellationToken cancellationToken = default)
+        {
+            State = new BrowserState(address, "New page", false, false, false, State.NavigationSequence + 1, Guid.NewGuid().ToString("N"));
+            _stateChanged?.Invoke(State); return ValueTask.CompletedTask;
+        }
+        public ValueTask GoBackAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask GoForwardAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask ReloadAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask StopAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask<string?> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default) => ValueTask.FromResult<string?>("true");
+        public ValueTask NavigateAsync(BrowserRequest request, CancellationToken cancellationToken = default) => NavigateAsync(request.Address, cancellationToken);
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+    private sealed class FakePlayer : IFlashPlayer
+    {
+        private Action<string>? _trace;
+        private Action<RuffleSaveEntry>? _save;
+        public int Subscriptions { get; private set; }
+        public int Disposals { get; private set; }
+        public LocalSwfSource? CurrentSource => null;
+        public string? CurrentRunId => null;
+        public event Action<RuffleSaveEntry>? SaveChanged { add { _save += value; Subscriptions++; } remove { _save -= value; Subscriptions--; } }
+        public event Action<string>? TraceReceived { add { _trace += value; Subscriptions++; } remove { _trace -= value; Subscriptions--; } }
+        public event Action<string>? SaveDeleted { add { Subscriptions++; } remove { Subscriptions--; } }
+        public event Action<string>? StatusChanged { add { Subscriptions++; } remove { Subscriptions--; } }
+        public event Action<Exception>? Faulted { add { Subscriptions++; } remove { Subscriptions--; } }
+        public void Trace(string message) => _trace?.Invoke(message);
+        public void ChangeSave() => _save?.Invoke(new RuffleSaveEntry("save", "opaque", "save", SolEncoding.Amf0, 1, DateTimeOffset.UnixEpoch));
+        public ValueTask<LocalSwfSource> OpenSwfAsync(string filePath, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask<IReadOnlyList<RuffleSaveEntry>> GetSavesAsync(CancellationToken cancellationToken = default) => ValueTask.FromResult<IReadOnlyList<RuffleSaveEntry>>([]);
+        public ValueTask CapturePageSavesAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask<RuffleSaveEntry> ImportAsync(string sourcePath, string? replaceKey = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask ExportAsync(RuffleSaveEntry entry, string destinationPath, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask DeleteAsync(RuffleSaveEntry entry, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask PauseAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask ResumeAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask ReloadAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask RequestFullscreenAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask SetVolumeAsync(double volume, CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask DisposeAsync() { Disposals++; return ValueTask.CompletedTask; }
+    }
+    private sealed class FakeHost : ILocalContentHost
+    {
+        public string RuntimeVersion => "test";
+        public Uri? BaseUri => null; public Uri? DiagnosticsUri => null; public Uri? RufflePublicPath => null;
+        public ValueTask StartAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask<LocalSwfSource> RegisterSwfAsync(string filePath, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+    private sealed class FakeFiles : IFileAccess
+    {
+        public ValueTask<bool> ExistsAsync(string path, CancellationToken cancellationToken = default) => ValueTask.FromResult(false);
+        public ValueTask<byte[]> ReadBoundedAsync(string path, int maximumBytes, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask WriteAtomicAsync(string path, Func<Stream, CancellationToken, ValueTask> write, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+}

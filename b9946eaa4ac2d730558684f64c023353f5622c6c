@@ -1,0 +1,620 @@
+# CefFlashBrowser macOS vNext 开发交接
+
+快照日期：2026-08-09（Asia/Singapore）
+
+目标平台：Apple Silicon ARM64；唯一 RID 为 `osx-arm64`
+
+当前阶段：Gate 0 核心退出条件、H0.1、H0.2 + H0.3A 及 H0.R + H0.3B1 已通过；`CTRL-001`、`TRACE-001` 已关闭，ExternalInterface 固定非重入子集已验收；下一任务为 H0.3B2 剩余兼容语料，尚未进入可验收的 Alpha/正式版迁移
+
+本文面向接手开发的新聊天窗口，记录当前工作树事实、已完成能力、未完成范围、已知问题和下一步可执行任务。它是“当前快照与执行队列”，不替代以下权威文档：
+
+- 最新完成的 H0.R + H0.3B1 执行与证据：[`h0.3b1-player-reliability-externalinterface.zh-CN.md`](h0.3b1-player-reliability-externalinterface.zh-CN.md)
+- 已完成的 H0.2 + H0.3A 执行与证据：[`h0.2-h0.3a-gate0-hardening.zh-CN.md`](h0.2-h0.3a-gate0-hardening.zh-CN.md)
+- 目标、范围、里程碑、总工作量：[`../../../Docs/macos-porting-plan.zh-CN.md`](../../../Docs/macos-porting-plan.zh-CN.md)
+- 接口、事件、bridge、生命周期：[`interfaces.zh-CN.md`](interfaces.zh-CN.md)
+- 环境变量、路径、schema、路由、标识：[`variables.zh-CN.md`](variables.zh-CN.md)
+- 架构、性能、安全、测试、发布门禁：[`engineering-spec.zh-CN.md`](engineering-spec.zh-CN.md)
+- 浏览器后端决策：[`ADR-0001-wkwebview-backend.zh-CN.md`](ADR-0001-wkwebview-backend.zh-CN.md)
+- Gate 0 真机证据：[`gate0-results.zh-CN.md`](gate0-results.zh-CN.md)
+
+状态变化后必须更新本文的快照、问题表和“下一任务”，但完整里程碑只在移植方案中维护。
+
+## 1. 新聊天窗口先做什么
+
+接手者不得从猜测或重写开始。按以下顺序执行：
+
+1. 在仓库根目录运行 `git status --short`，确认本交接所述的未提交内容仍存在。
+2. 完整阅读仓库根 [`../../../AGENTS.md`](../../../AGENTS.md) 和 macOS 子树 [`../AGENTS.md`](../AGENTS.md)。
+3. 阅读本文、已完成的 [`H0.R + H0.3B1` 记录](h0.3b1-player-reliability-externalinterface.zh-CN.md)、[`H0.2 + H0.3A` 记录](h0.2-h0.3a-gate0-hardening.zh-CN.md)和 Gate 报告，再按硬路由补读接口、变量、工程规范、实现与测试。
+4. 不运行 `git clean`、`git reset --hard`、`git checkout --`，不删除 `Docs/` 或 `spike/`；这些未跟踪文件是当前 macOS 工作成果。
+5. 不开始 UI、AMF 或正式功能迁移；下一窗口只执行第 11 节的 H0.3B2 剩余固定兼容语料。
+6. 每完成一个任务，只更新实际通过的证据；不要沿用历史“97 passed”或 H0.R/H0.3B1 journal 冒充新任务验证结果。
+
+下一窗口最短入口如下：
+
+```text
+请在当前工作区接手 H0.3B2，完整读取两级 AGENTS、development-handoff、已完成的
+h0.3b1-player-reliability-externalinterface、interfaces、variables、engineering-spec 与最新
+Gate 报告。保留全部未提交/未跟踪文件，在现有 97 项与签名 ARM64 基线上补齐固定、离线、
+机器可判定的 AS3 输入/渲染/定时、音频、网络/策略文件语料；不要开始 H0.4/M1、UI、AMF、
+依赖升级，不改变 ARM64-only 基线，不提交或推送。
+```
+
+## 2. 一句话结论
+
+现有代码已经证明“`.NET 10 + Avalonia + WKWebView + 自托管 Ruffle + loopback 内容服务 + SharedObject bridge`”在 Apple Silicon 真机上可行，并冻结了 WKWebView 默认后端；H0.1、H0.2/H0.3A 与 H0.R/H0.3B1 均已复验通过。播放器 API 返回边界和热导航 trace 两项回归已关闭，ExternalInterface 固定非重入双向/结构化子集已得到机器 PASS；眼前的 P0 是完成 H0.3B2 剩余兼容语料，而不是直接进入大规模 UI 或产品迁移。
+
+按现有方案估算，除已完成的 Gate 0 主体外，仍约有 **75–117 净人日**工作，约等于单人 **4–6 个净工程月**，不含证书等待、上游 Ruffle 问题和外部验收。完成 H0 后必须用真实数据重新估算；不要把这个区间当成交付承诺。
+
+## 3. Git 与工作区快照
+
+| 项目 | 当前事实 |
+|---|---|
+| 分支 | `master` |
+| 基础提交 | `7cfbe0159616`（`Use DefaultPlatformToolset in vcxproj files`） |
+| 已修改跟踪文件 | `AGENTS.md` |
+| 未跟踪源码/文档 | `Docs/macos-porting-plan.zh-CN.md`、整个 `spike/` macOS 子树 |
+| macOS 代码是否已提交 | 否；不能通过切分支或清理命令假定可恢复 |
+| 忽略的生成目录 | `artifacts/`、各项目 `bin/`、`obj/` |
+| 本地 artifacts | 约 698 MiB；包含本次 170 MiB ARM64-only `.app` 及忽略目录中的历史产物，均不是源码 |
+| 固定 Ruffle 资产 | 约 28 MiB，位于 Desktop `Assets/Ruffle`，属于有 hash/许可证的源资产 |
+
+接手者必须把所有现有修改视为用户资产。若要建立提交或拆分 commit，先向用户确认；本文不授权自动提交、清理或删除历史产物。
+
+## 4. 当前工程结构
+
+```text
+spike/macos-host/
+├── CefFlashBrowser.MacOS.Spike.slnx
+├── Directory.Build.props          # net10.0、nullable、warnings-as-errors、lock file
+├── Directory.Packages.props       # 集中固定 Avalonia/WebView/MSTest 版本
+├── global.json                    # SDK 10.0.301
+├── src/
+│   ├── CefFlashBrowser.MacOS.Spike.Core/
+│   │   ├── Application/           # 浏览器端口、导航解析
+│   │   ├── Flash/                 # loopback、Ruffle、SharedObject store
+│   │   ├── Infrastructure/        # macOS 路径、原子文件写入
+│   │   └── Sol/                   # 仅 SOL 文件头检查，不是 AMF codec
+│   └── CefFlashBrowser.MacOS.Spike.Desktop/
+│       ├── Browser/               # NativeWebView/WKWebView 适配
+│       ├── Composition/           # composition root
+│       ├── Diagnostics/           # Gate 0 JSONL journal
+│       ├── Platform/MacOS/        # bundle 资源与 WKUserScript 注入
+│       ├── ViewModels/、Views/     # Gate 0 演示壳
+│       └── Assets/                # 固定 Ruffle 与 fixture
+├── tests/CefFlashBrowser.MacOS.Spike.Tests/
+├── packaging/macos/               # Info.plist、开发/发布 entitlement
+└── scripts/                       # ARM64-only 打包与完整基线回归
+```
+
+当前依赖方向仍为 Core ← Desktop；Core 不引用 Avalonia、WKWebView 或 macOS API。测试项目只引用 Core，没有 Desktop 自动化测试。
+
+### 4.1 关键入口
+
+| 目的 | 文件 |
+|---|---|
+| 对象图、启动和释放顺序 | [`CompositionRoot.cs`](../src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs) |
+| 浏览器端口 | [`BrowserContracts.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs) |
+| WKWebView 适配器 | [`AvaloniaNativeWebViewSession.cs`](../src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs) |
+| document-start 原生注入 | [`MacDocumentStartInjector.cs`](../src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/MacDocumentStartInjector.cs) |
+| Ruffle 注入脚本 | [`RuffleDocumentStartScriptBuilder.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs) |
+| 本地内容服务 | [`LoopbackContentHost.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs) |
+| Ruffle 用例协调 | [`RufflePlayerCoordinator.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs) |
+| SharedObject 持久化 | [`RuffleSaveStore.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs) |
+| 当前 UI 状态/命令 | [`MainWindowViewModel.cs`](../src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs) |
+| 当前主界面 | [`MainWindow.axaml`](../src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml) |
+| 打包 | [`package-macos.sh`](../scripts/package-macos.sh) |
+
+## 5. 已完成什么
+
+“完成”只表示达到 Gate 0 原型或明确测试证据，不自动等于正式产品完成。
+
+### 5.1 技术路线与治理
+
+- 已形成 ARM64-only 移植方案；Windows Legacy 保持独立，不把 WPF/CefSharp/C++/CLI 边界混入 vNext。
+- 已接受 ADR-0001：WKWebView 作为默认浏览器后端，只有固定语料证明硬能力缺口时才重新评估 CefGlue。
+- 已建立接口、变量、工程规范和根/子树两级硬路由。
+- 已固定 .NET SDK 10.0.301、Avalonia 12.1.0、NativeWebView 12.0.1、Ruffle Web 0.4.1 与 NuGet lock file 策略。
+
+### 5.2 浏览器 Gate 0
+
+- `IBrowserSession` 已隔离浏览器状态、导航、脚本、popup、下载和 bridge。
+- WKWebView 已支持地址导航、前进、后退、刷新、停止和标题/加载状态回传。
+- 新窗口由应用接管到独立 Avalonia 窗口。
+- HTML `download` 请求由 bridge 接管，原生保存面板选路径；下载器复制 WebView Cookie、流式写入并原子替换。
+- 使用固定 data store ID 验证 Cookie 跨进程、跨随机 loopback 端口保持。
+- 原生 `WKUserScript` 已在 document start、全部 frame 注入，真机证明早于诊断页插件检测。
+- document-start 脚本建立 Flash plugin polyfill、静态/动态 `<object>/<embed>` 扫描、Ruffle 配置和 bridge。
+
+### 5.3 Ruffle 与本地 SWF
+
+- Ruffle self-hosted 资产随应用分发，包含许可证、上游来源、归档 hash 和逐文件 SHA-256。
+- 应用启动本地服务前逐文件验证资产；缺失或 hash 不符即失败，不自动联网换版本。
+- 本地 `.swf` 可通过参数、地址栏路径或原生文件选择器打开。
+- 本地播放器已接入暂停、恢复、重载、全屏和 100 ms 防抖音量控制；所有命令共用可序列化脚本结果边界，`CTRL-001` 已关闭。
+- 初始 load/API reload 会在 Ruffle 新实例建立后重绑 trace observer，离页时清理；冷/热/两种 reload 每 run 唯一 trace 已真机通过。
+- 本地 SWF 使用目录为相对资源根，已用 XML sidecar 集成测试验证相对资源。
+- Gate 0 真机已运行 Ruffle 官方 AVM1 SharedObject fixture。
+
+### 5.4 Loopback 内容服务与边界
+
+- Kestrel 只监听 `127.0.0.1` 随机端口，关闭 server header。
+- 每进程生成 32 随机字节 token；token 路由、query 和 HttpOnly/Strict Cookie 保护内容。
+- 只服务已登记 SWF 根目录内的常规文件，拒绝目录穿越、绝对路径和符号链接逃逸。
+- 已实现 SWF Range、MIME、Ruffle JS/WASM MIME、CSP、`nosniff`、referrer policy 和静态资产缓存头。
+- 内置诊断页可重复触发静态/动态 Flash、popup、下载、Cookie、bridge、SharedObject 与 ExternalInterface 离线测试。
+- ExternalInterface runner 只暴露固定 `test.swf`，任意文件名/路径穿越返回 404；HTML/SWF 使用现有 token、Cookie、MIME 和安全头。
+
+### 5.5 SharedObject/SOL 原型闭环
+
+- document-start patch 和低频 diff 扫描可自动发现 Ruffle localStorage 中的 Base64 SOL。
+- 页面到宿主支持 `saveChanged`、`saveDeleted`、`savesSnapshot`、`trace`、`playerReady`、`diagnostics`、`bridgeError` 与 `compatibilityResult`；后者只记录短摘要，不记录结构化 `data`。
+- JSON store schema v1 已实现串行写入、按 key 稳定排序、单 SOL 64 MiB 和 store 256 MiB 上限。
+- 写入使用同目录临时文件、flush-to-disk 和原子覆盖。
+- 可列出、导入、导出、删除 SharedObject；导入/删除后同步页面 localStorage 并重载播放器。
+- 已复用 4 个 Legacy SOL fixture 与 Ruffle 官方 AVM1、AVM2 hello-world、ExternalInterface fixture；当前能校验 SOL 文件头、名称和 AMF0/AMF3 编码号，并锁定兼容语料大小/hash。
+- 真机完成 279-byte SOL 捕获、重启恢复、单字节变体导入和游戏重写回官方 hash 的闭环。
+
+注意：这里没有实现 AMF0/AMF3 内容树解析、编辑和重新编码；当前“修改闭环”是文件级替换验证。
+
+### 5.6 Gate 0 UI
+
+- 有可运行的 Avalonia 主窗口、地址栏、浏览历史按钮、加载/停止、Open SWF 文件面板和状态栏。
+- 播放器页显示 Ruffle 控制条。
+- SharedObject 侧栏显示名称、key、编码和大小，提供刷新、导入、导出、删除。
+- popup 使用独立窗口；下载使用 macOS 原生保存面板。
+- ViewModel 只依赖端口/协调器，原生 WebView、窗口和文件面板留在 View/Desktop。
+
+该 UI 是英文硬编码的 Gate 0 工具，不是正式主题、本地化或完整产品交互。
+
+### 5.7 打包与真机证据
+
+- 已有 self-contained + ReadyToRun `.app` 组装脚本和由内到外 codesign 流程；打包先 locked restore，再 `publish --no-restore`，组包时裁为 ARM64。
+- arm64 ad-hoc + Hardened Runtime 包曾通过 `codesign --verify --deep --strict` 并在 M1 Pro 真机启动/退出 0。
+- 已记录少量启动、导航、playerReady、存档捕获、RSS 和关闭耗时样本。
+- 没有 Developer ID 证书，因此没有完成 Developer ID 签名、公证、staple、Gatekeeper 或 `.dmg`。
+
+### 5.8 自动化测试
+
+当前测试源码包含 41 个测试方法，数据行展开后为 97 项，覆盖：
+
+- Legacy 导航识别/搜索 URL 行为；
+- 5 份 SOL 的文件头、名称、编码以及损坏头拒绝；
+- Ruffle 官方 fixture hash；
+- SharedObject store 原子持久化、损坏 Base64 不覆盖、删除语义；
+- 路径边界与符号链接逃逸；
+- loopback 鉴权、Range、MIME、CSP、相对资源、Cookie；
+- document-start 脚本关键结构；
+- 导入/删除及所有播放器控制脚本不向 NativeWebView 返回 `Promise`/对象；
+- loopback 未启动/启动后/重复/并发释放、释放后拒绝 start/register 与重复启动；
+- bridge malformed root、必填字段、未知类型、camelCase、2,048 字符截断和 `data` 脱敏；
+- coordinator 故障观察、释放排空、释放后拒绝新消息与严格到达顺序；
+- AVM2 `hello_world` 四文件存在性、逐文件 hash、规范化输出、AS3 源码和 SWF 证据；
+- trace observer 的 load/reload 重绑与离页清理 HTML 结构；
+- ExternalInterface 五文件大小/hash/固定 oracle、严格 runner/SWF route、协议必填字段、状态投影和 `data` 脱敏。
+
+H0.R + H0.3B1 当前复验记录：97 passed、0 failed、0 skipped；Debug build 0 warnings、0 errors。完整命令、打包与真机证据见第 6 节和 Gate 报告。
+
+## 6. 当前可复现状态
+
+### 6.1 本次实际执行
+
+在 `spike/macos-host/` 执行：
+
+```sh
+scripts/verify-arm64-baseline.sh
+```
+
+该脚本依次执行两次 locked restore、Debug build/test、ARM64 package、lock hash 对比、全包 Mach-O 扫描和严格 codesign。开发机为 Apple M1 Pro、macOS 26.5.1（25F80）、arm64，SDK 为 `10.0.301`。
+
+| 本次检查 | 结果 |
+|---|---|
+| `.NET SDK` | 通过：`10.0.301` |
+| solution locked restore | 通过：连续两次，第二次为 no-op；lock hash 不变 |
+| Debug build | 通过：0 warnings、0 errors |
+| 自动化测试 | 通过：97 passed、0 failed、0 skipped |
+| 非 ARM64 RID | 通过：打包脚本在任何 restore/产物变更前退出 `2` |
+| `osx-arm64` package | 通过：self-contained + ReadyToRun，170 MiB |
+| Mach-O 架构 | 通过：主程序 arm64；bundle 内 18 个 Mach-O 均无 Intel slice |
+| codesign | 通过：ad-hoc + Hardened Runtime，`--deep --strict --verbose=2` |
+| lock file 不变性 | 通过：第二次 restore 与 package 前后 hash 一致 |
+| Apple Silicon AVM2 smoke | 通过：冷启动、热导航、浏览器 reload、播放器 reload 每 run 唯一 `Hello world!` trace；无 bridge/序列化失败 |
+| ExternalInterface smoke | 通过：进入→返回→再进入各唯一精确 PASS；完整门禁最终包复验唯一 PASS、正常释放，`open -n -W` 退出 0 |
+| Windows Legacy build/test | 本次未执行；macOS 无法正式构建 C++/CLI solution |
+
+### 6.2 H0.1 关闭事实
+
+NuGet runtime graph 的工程来源现在是 `Directory.Build.props`：
+
+```text
+RuntimeIdentifiers = osx-arm64
+```
+
+Core、Desktop 与 Tests 三份 lock file 均包含：
+
+```text
+net10.0
+net10.0/osx-arm64
+```
+
+`package-macos.sh` 只接受 `osx-arm64`，先 locked restore，再以 `--no-restore` publish；`ditto --arch arm64` 会在组装 bundle 时裁掉依赖通用 Mach-O 的非 ARM64 slice。`verify-arm64-baseline.sh` 持续验证 RID 拒绝、锁不变性、全包架构和签名。
+
+### 6.3 H0.2 + H0.3A 关闭事实
+
+- `L1–L5`、`B1–B7`、`C1–C4` 和 `F1–F4` 自动化均通过；完整展开数为 82。
+- Ruffle v0.4.1 `avm2/hello_world` 的 `Test.as`、`output.txt`、`test.swf`、`test.toml` 已按原字节纳入并锁定来源、双许可证、大小和 SHA-256。
+- 首次真机探测发现 trace observer 早于 Ruffle 内部实例创建；在 `loadedmetadata` 同步点绑定后，签名 ARM64 `.app` 的本次 journal 同时包含一次 `playerReady: test.swf` 和唯一 `trace: Hello world!`。
+- 原实现窗口 journal `~/Library/Logs/CefFlashBrowser/gate0-20260807T200614454Z-19376.jsonl` 与独立验收 journal `gate0-20260807T204020664Z-35069.jsonl` 均为 `playerReady=1`、`helloWorldTrace=1`、`browser.bridge.failed=0`、`ObjectDisposedException=0`，正常关闭包含 `composition.contentHost.stopped` 与 `process.stopping`，进程退出码 0。
+- 最终 `scripts/verify-arm64-baseline.sh` 通过；三份 lock SHA-256 与 H0.2 阶段门前一致。
+
+### 6.4 历史扩展验收失败事实
+
+失败 journal：
+
+```text
+~/Library/Logs/CefFlashBrowser/gate0-20260807T203757598Z-34028.jsonl
+```
+
+无参数启动诊断页后从地址栏打开相同固定 SWF，实际为 `playerReady=1`、`helloWorldTrace=0`、bridge failure=0；点击 `Reload player` 后状态栏显示 `NSErrorException: JavaScript execution returned a result of an unsupported type`。静态审查确认通用 `ReloadAsync` 直接留下 Ruffle Promise 作为脚本结果。该会话正常完成 host stop 与 process stopping，进程已退出。
+
+该结果不撤销第 6.3 节按原 F5 定义完成的 H0.3A；它曾新增 `TRACE-001`、`CTRL-001` 并阻断 H0.3B1。两项现已按第 6.5 节关闭，本节继续保留失败 journal，不用成功样本覆盖历史事实。
+
+### 6.5 H0.R + H0.3B1 关闭事实
+
+- `PC1–PC4`、`TR1–TR5`、`EI1–EI7` 全部通过；播放器控制统一原始返回值边界，trace observer 随 Ruffle 实例重绑并在离页时清理。
+- 冷启动 journal `gate0-20260808T182601433Z-27503.jsonl` 为 `playerReady=1`、`helloWorldTrace=1`。
+- 热导航/浏览器 reload/播放器 reload journal `gate0-20260808T230305303Z-60920.jsonl` 的三个 run trace 累计严格为 `1 → 2 → 3`，无 unsupported result。
+- Ruffle v0.4.1 ExternalInterface 五文件按原字节纳入；tag、commit、许可证、大小和 SHA-256 均已锁定。
+- 重复进入 journal `gate0-20260809T004129216Z-1344.jsonl` 每次各一条精确 PASS；最终门禁重新组包后的 `gate0-20260809T005034384Z-5958.jsonl` 恰好一条相同 PASS，journal 不含结构化 `data`。
+- 最终 `scripts/verify-arm64-baseline.sh` 为 97 passed、0 failed、0 skipped、Debug 0 warnings/0 errors；ARM64 package、18 个 Mach-O、codesign 与三份 lock hash 不变性全部通过。
+
+## 7. 没有完成什么
+
+### 7.1 P0：进入新功能前必须关闭
+
+| 项目 | 当前状态 | 完成条件 |
+|---|---|---|
+| 完整 M0.1 语料 | 已有 AVM1 SharedObject、AVM2 `hello_world`、ExternalInterface 非重入子集、DOM、popup、download、Cookie | H0.3B2 增加 AS3 输入/渲染/定时、音频、网络/策略文件的固定合法 fixture 和预期结果。 |
+
+### 7.2 正式产品能力
+
+| 区域 | 当前只有 | 尚未完成 |
+|---|---|---|
+| 工程骨架 | 2 项目 Gate 0 solution | 正式 `CefFlashBrowser.Next.slnx`、Domain/Application/Infrastructure/平台适配分离、ARM CI。 |
+| SOL/AMF | SOL header inspector | 纯 C# AMF0/AMF3 完整类型系统、引用表、读写器、创建/编辑/保存、恶意输入限制和 benchmark。 |
+| 设置 | 无 | schema v2、旧 JSON 兼容、仓储、原子保存、平台设置拆分、UI。 |
+| 收藏夹 | 无 | 模型/仓储/迁移、增删改查、管理 UI。 |
+| 浏览器 | Gate 0 导航/popup/download | UA 选择、查找、打印、外部协议、JS 对话框策略、Web Inspector 策略、认证下载完整语义、导航策略。 |
+| Ruffle | 固定 0.4.1 原型配置 | 正式配置模型、逐游戏覆盖、错误分级、完整兼容矩阵、升级流程。 |
+| SharedObject | 单 JSON store + 文件替换 | 与完整 AMF editor 集成、事务备份/恢复、Pepper 目录导入、origin/path 映射预览。 |
+| UI | 英文 Gate 0 单窗口 | 正式设计系统、原生菜单、设置/收藏夹/SOL 编辑器、主题、五种语言、可访问性、键盘/焦点。 |
+| macOS 平台 | 文件面板、WKWebView、基础窗口 | `.swf/.sol` 文件关联、Finder 打开、拖放、单实例/第二次激活、系统主题、快捷键、`.webloc`。 |
+| 数据迁移 | 无 | Windows 设置/收藏夹/SOL 预检、映射、幂等导入、备份、报告和回退。 |
+| 日志 | 每条 flush 的 Gate 0 journal | 标准日志端口、批量/分级/轮转、脱敏、崩溃诊断和退出 drain。 |
+| 性能 | 少量单次样本 | P95 基准、10 MiB SOL、二次 SWF、30 分钟泄漏、后台 CPU 和 CI 对比。 |
+| 发布 | arm64 ad-hoc `.app` | 正式 bundle identity/版本、最小 entitlement、Developer ID、公证、staple、`.dmg`、升级/卸载/干净账户。 |
+
+## 8. 已知缺陷与工程债
+
+| ID | 优先级 | 事实 | 风险/处理 |
+|---|---|---|---|
+| `BLD-001` | P0（已关闭） | 三份 lock file 现含普通与 `osx-arm64` 图，连续 locked restore 通过。 | `verify-arm64-baseline.sh` 持续校验 restore/package 前后 hash 不变。 |
+| `BLD-002` | P0（已关闭） | `package-macos.sh` 只接受 `osx-arm64`，bundle 内 Mach-O 已裁为 ARM64。 | 回归脚本持续校验非法 RID 退出 `2`、全包架构和 codesign。 |
+| `LIFE-001` | P0（已关闭） | lifecycle gate 线性化 start/register/dispose；释放幂等、清空 URI/登记并禁止重启。 | `L1–L5` 持续回归，gate 不在仍有等待者时销毁。 |
+| `BRIDGE-001` | P0（已关闭） | Core 单一协议边界验证 root/type/必填字段并脱敏描述；Desktop 只分派；coordinator 拥有并排空 task tail。 | `B1–B7`、`C1–C4` 与真实 WKWebView smoke 持续回归。 |
+| `CTRL-001` | P0（已关闭） | pause/resume/reload/fullscreen/volume 共用脚本原始返回值边界；真机 reload 无 unsupported type。 | 回归测试和 Apple Silicon 点击 smoke 持续保留。 |
+| `TRACE-001` | P0（已关闭） | observer 在 load/reload 新实例建立时重绑并在离页时清理；冷/热/两种 reload 每 run 唯一 trace。 | HTML 生命周期测试与签名 WKWebView smoke 持续保留。 |
+| `COMPAT-001` | P0（部分关闭） | AVM2 `hello_world` 冷/热/reload 与 H0.3B1 ExternalInterface 非重入固定子集已通过。 | H0.3B2 补输入/渲染/定时、音频和网络/策略文件。 |
+| `DATA-001` | P1 | 当前所有页面使用一个持久 WebKit data store ID。 | 按产品策略验证外部网页与本地播放器是否需要隔离；迁移时保护已有数据。 |
+| `REL-001` | P1 | `.csproj` ApplicationId、Info.plist bundle ID、版本和 User-Agent 有多份来源。 | RC 前收敛；正式骨架阶段避免再复制。 |
+| `SEC-001` | P1 | Gate 0 `EnableDevTools=true`，开发 entitlement 允许关闭 library validation。 | Release 配置明确关闭/限制；不得进入正式包。 |
+| `OBS-001` | P1 | Gate 0 journal 每条 flush，部分资源/异常 detail 可能含完整本地路径。 | 正式日志批处理、分级、脱敏；性能测试验证。 |
+| `TEST-001` | P1 | 测试项目只引用 Core；没有 Desktop、Avalonia headless 或自动化 WKWebView 测试。 | M1/M4 建立分层测试，真机 smoke 仍保留。 |
+| `UI-001` | P1（待人工复验） | 辅助功能自动化在原生 Open panel 选中 `.swf` 后仍见 `Open` disabled；地址栏打开同文件成功。 | 先用人工鼠标路径区分 AX 自动化限制与 UTI/filter 缺陷；未复现前不作为 P0，也不塞入当前合并包。 |
+| `DL-001` | P1 | 真机下载已进入保存面板，但 Gate 0 烟测主动取消，未验证实际目标落盘。 | 使用隔离临时目录完成真实下载、hash、取消和失败不覆盖测试。 |
+| `REL-002` | P1 | 只有 ad-hoc 开发签名；本机无有效 Developer ID identity。 | 等证书后完成 M6.3，不能伪造公证结论。 |
+| `ART-001` | P2 | 本地忽略目录仍有历史原型 artifact，artifacts 总计约 698 MiB。 | 不作为支持证据；需要清理时先确认精确目录和用户授权。 |
+
+## 9. 里程碑状态映射
+
+| 计划项 | 状态 | 可复用结果 | 尚缺退出条件 |
+|---|---|---|---|
+| M0.1 兼容语料 | 部分完成 | AVM1 SharedObject、AVM2 `hello_world` 冷/热/reload、ExternalInterface 非重入子集、静态/动态 DOM、popup、download、Cookie | H0.3B2 补 AS3 输入/渲染/定时、音频和网络。 |
+| M0.2 NativeWebView 原型 | 核心完成 | 导航、bridge、popup、download、Cookie、真机样本、可复现 ARM64 构建 | 更多浏览策略后移 M4。 |
+| M0.3 本地 Ruffle 原型 | 部分完成 | 自托管、SWF、相对资源、统一控制边界、存档 | 音频固定语料未验证。 |
+| M0.4 网页注入/存档闭环 | 核心完成 | document-start、polyfill、导出/导回/游戏重写、异常 bridge 协议 hardening、ExternalInterface 结果协议 | H0.3B2 扩展兼容语料。 |
+| M0.5 后端决策 | 完成 | ADR-0001 接受 WKWebView | 仅在 ADR 数据门槛触发时重开。 |
+| M1 工程/应用/持久化 | 未进入正式验收 | 原型端口、路径、原子写可迁移 | 正式 solution、领域用例、设置/收藏/日志。 |
+| M2 Managed SOL | 未开始 | header 规则、Legacy C++、4+1 fixture 可复用 | AMF0/AMF3 完整读写、测试、fuzz、benchmark。 |
+| M3 正式 UI | 未开始 | Gate 0 布局和 ViewModel 边界可参考 | 设计系统和所有产品窗口。 |
+| M4 正式浏览器/Ruffle | 原型可复用 | 大部分 Gate 0 adapter | 产品能力、配置、错误、完整兼容验证。 |
+| M5 平台/迁移 | 未开始 | 基础 macOS 文件面板 | 激活、关联、拖放、系统集成、迁移向导。 |
+| M6 测试/性能/发布 | 未开始 | 少量 Gate 0 证据 | 全矩阵、性能、泄漏、Developer ID、公证、DMG。 |
+
+因此不能用“Gate 0 已通过”推导“项目接近正式版”。更准确的说法是：最高风险的浏览器/Ruffle 可行性已消除，产品迁移的大部分工作仍在前方。
+
+## 10. 下一步任务规划与拆分
+
+### 10.1 Wave H0：恢复可信基线并关闭 Gate 0（3–6 人日）
+
+#### H0.1 ARM64-only restore/build/package（已完成，2026-08-07）
+
+依赖：无。已完成，不应由后续会话重复执行；完整回归仍作为后续任务的构建门禁。
+
+文件范围：
+
+- [`package-macos.sh`](../scripts/package-macos.sh)
+- Core/Desktop `.csproj` 与 `packages.lock.json`
+- [`Directory.Build.props`](../Directory.Build.props)
+- [`README.md`](../README.md)
+- [`variables.zh-CN.md`](variables.zh-CN.md)
+- 必要的构建回归脚本/测试
+
+实施拆分：
+
+1. 保存并展示当前 lock file 差异，不手工猜测删除 JSON 节点。
+2. 选择并记录 RID 单一来源，使普通开发 restore 与 `osx-arm64` publish 使用可兼容的 NuGet graph。
+3. 从打包脚本删除 `osx-x64` 接受分支；未知 RID 必须退出 2。
+4. 用受控 restore 重新生成 Core/Desktop lock file，确认只含预期的无 RID/arm64 graph，不含 x64。
+5. 给打包流程增加 locked restore 语义，或在 publish 前独立 locked restore；禁止 publish 隐式重写 lock。
+6. 对比打包前后 lock file hash/`git diff`，证明打包不修改依赖锁。
+7. 更新变量文档与 README，只保留 ARM64 命令。
+
+验收：
+
+```sh
+dotnet restore CefFlashBrowser.MacOS.Spike.slnx --locked-mode
+dotnet build CefFlashBrowser.MacOS.Spike.slnx --configuration Debug --no-restore --disable-build-servers -m:1
+dotnet test CefFlashBrowser.MacOS.Spike.slnx --configuration Debug --no-build --disable-build-servers -m:1
+scripts/package-macos.sh osx-arm64
+file artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/CefFlashBrowser.MacOS.Spike.Desktop
+codesign --verify --deep --strict --verbose=2 artifacts/osx-arm64/CefFlashBrowser.app
+```
+
+- restore/build/test 全部成功，测试仍为 33 项或因新增回归合理增加；
+- 主可执行文件只报告 `arm64`；包内不得出现 x86_64 Mach-O；
+- `scripts/package-macos.sh osx-x64` 明确失败；
+- lock file 在第二次 restore 和 package 后无变化；
+- 不删除 Windows Legacy x86/x64 配置。
+
+实际结果：33/33 测试通过，Debug build 0 warnings/0 errors；170 MiB ad-hoc `.app` 严格签名通过，bundle 内 18 个 Mach-O 均为 ARM64；非法 RID 退出 `2`，连续 restore 与 package 均未改写 lock file。
+
+#### H0.2 + H0.3A 合并工作包（已完成，2026-08-08）
+
+依赖：H0.1。原计划的 4–6 小时是本工作包的连续执行时间盒，不替代总体规划中的净人日估算。
+
+唯一细化计划为 [`h0.2-h0.3a-gate0-hardening.zh-CN.md`](h0.2-h0.3a-gate0-hardening.zh-CN.md)，不得从本文摘要自行扩展范围。合并顺序：
+
+1. **H0.2 生命周期**：用失败回归锁住 `LoopbackContentHost` 重复/并发释放与 start/dispose 线性化。
+2. **H0.2 bridge**：建立 Core 解析/验证/脱敏边界，修正 Desktop 分派与 coordinator fire-and-forget 排空。
+3. **H0.3A 首份兼容语料**：只有 H0.2 阶段门全绿后，才固定纳入 Ruffle v0.4.1 `avm2/hello_world` 源码、SWF、期望输出、配置、许可证和逐文件 hash，并在当前 WKWebView 宿主验证 `Hello world!` trace。
+
+实际结果：H0.2 的 `L/B/C` 测试矩阵、H0.3A 的 `F1–F5`、82 项全量测试和 ARM64 基线全部通过；独立验收仍通过，签名 bundle 的 journal 与进程退出证据见第 6.3 节。扩展验收发现的回归随后在 H0.R + H0.3B1 关闭。
+
+#### H0.R + H0.3B1 合并工作包（已完成，2026-08-09）
+
+依赖：H0.2 与 H0.3A。
+
+唯一细化来源为
+[`h0.3b1-player-reliability-externalinterface.zh-CN.md`](h0.3b1-player-reliability-externalinterface.zh-CN.md)，不要从本文摘要自行实现。它合并三个依赖任务：
+
+1. `CTRL-001`：统一玩家命令的 NativeWebView 可序列化返回边界；
+2. `TRACE-001`：冷启动、热导航、浏览器 reload、播放器 reload 每 run 恰好一个 AVM2 trace；
+3. 两项全绿后，固定纳入 Ruffle v0.4.1 self-hosted ExternalInterface 五文件 fixture，验证非重入 JS ↔ AS3 双向调用和结构化值。
+
+前两项是强制阶段门；未通过时不纳入 fixture。该窗口不关闭完整 H0.3B，也不做上游已 skip 的同步重入场景。
+
+实际结果：阶段顺序得到保持，`CTRL-001`/`TRACE-001` 关闭后才纳入五文件；
+`PC1–PC4`、`TR1–TR5`、`EI1–EI7`、97 项测试与 ARM64 全门禁通过，真实 WKWebView
+重复进入和最终包均得到精确 PASS。证据见第 6.5 节与细化执行记录。
+
+#### H0.3B2 剩余固定兼容语料（当前下一任务；H0.3 总体仍为 2–4 人日）
+
+H0.3B1 完成后再补：
+
+- AS3 基础输入、渲染和定时行为；
+- 音频加载、播放、静音/音量和授权失败语义；
+- 相对/绝对网络请求、失败、重定向和策略文件场景；
+- 对每个 fixture 定义机器可判定的 bridge 输出/hash，不只看截图。
+
+继续优先复用 Ruffle 官方固定版本 fixture；运行不依赖公网，使用确定性 loopback route；Apple Silicon 真机记录设备、系统、SDK、Ruffle 版本和 journal；Gate 兼容矩阵按 A/B/C/D 分级，不静默跳过。
+
+#### H0.4 Gate 0 收口与重新估算（0.5 人日）
+
+- 重跑全部自动化和真机 smoke。
+- 更新 Gate 0 报告、本文问题表和 M0 状态。
+- 基于实测复用率重新估算 M1–M6；只有此时才正式进入 M1。
+
+### 10.2 Wave M1：正式 vNext 基础（10–15 人日）
+
+#### M1.1 正式工程骨架（2–3 人日）
+
+- 以现有 Core/Desktop 为种子，不平行复制另一套 Ruffle/WKWebView 实现。
+- 建立 `CefFlashBrowser.Next.slnx` 与 Domain/Application/Infrastructure/Desktop/Platform 边界。
+- 在移动或重命名前先以 namespace/project reference 测试锁住行为；一次只迁一个所有权边界。
+- 建立 macOS arm64 CI：locked restore、build、unit/integration tests；原生 UI smoke 使用专用 Apple Silicon runner。
+- 集中版本、bundle identity、User-Agent 和 build number 的单一来源。
+
+完成条件：正式 solution 从干净环境构建；Core/Domain 无 Avalonia/WebView；Gate 0 适配器仍可运行；Windows Legacy solution 未改坏。
+
+#### M1.2 Domain/Application 抽取（4–6 人日）
+按以下顺序提炼：
+
+1. 导航、搜索和打开目标用例；
+2. 浏览器会话、下载、popup、外部打开端口；
+3. Flash source/player/save 用例；
+4. 设置、收藏夹、日志、路径、激活端口；
+5. 领域错误、取消和状态模型。
+
+每个端口先写调用方/契约测试，再迁实现。ViewModel 不持有 Window/WebView/文件面板；平台文件面板通过 View 或明确服务接入。
+
+#### M1.3 持久化、设置、收藏夹与日志（4–6 人日）
+
+- 对 Legacy `Settings`、`FavoritesFile`、`Website` 做兼容字段清单和 golden JSON。
+- 设计 schema v2 与 `legacy` 保留区；迁移支持预检、备份、幂等、回退。
+- 使用共享原子写基础设施，但格式解析留在各 repository。
+- 实现 macOS Application Support/Cache/Logs 路径端口。
+- 将 Gate 0 每行 flush journal 替换为标准日志抽象 + 有界 channel + 批量 flush/严重错误 flush。
+
+完成条件：旧 JSON fixture 可读；未知字段策略明确；写失败不覆盖旧数据；并发/权限/临时残留有测试。
+
+### 10.3 Wave M2：Managed SOL/AMF（12–19 人日）
+
+关键路径，不应与 SOL 编辑器 UI 混做。
+
+1. **M2.A 行为冻结**：梳理 `CefFlashBrowser.Sol/sol.cpp`、`utils.cpp`、AMF 规范、现有 4 个 fixture 和 Legacy 测试；把预期语义转换为平台无关测试。
+2. **M2.B 领域模型**：建立显式判别类型，覆盖 undefined/null/bool/number/string/date/XML/byte array/object/typed object/稠密与关联数组/引用。
+3. **M2.C AMF0 reader/writer**：span-based 单遍读取、确定性写入、深度/长度/集合上限。
+4. **M2.D AMF3 reader/writer**：U29、string/object/trait/reference tables、循环/共享引用语义。
+5. **M2.E SOL codec**：文件头、名称、版本和 root 数据整合；创建、读取、写入、round-trip。
+6. **M2.F hardening**：截断、非法 marker、超深、超大长度、引用越界、模糊输入和 10 MiB benchmark。
+
+完成条件：全部 Legacy fixture/测试语义迁移，无 C++/CLI 运行时依赖；分支覆盖率目标 ≥90%；10 MiB 预算有 Apple Silicon Release 数据。
+
+### 10.4 后续波次与依赖
+
+后续完整任务、估算和退出条件以移植方案第 12–14 节为准，推荐执行顺序：
+
+```mermaid
+flowchart LR
+    H0[H0 可信基线] --> M1[M1 正式架构/持久化]
+    M1 --> M2[M2 Managed SOL/AMF]
+    M1 --> M31[M3.1 Avalonia 设计系统]
+    M31 --> M32[M3.2 主窗口/设置/收藏夹]
+    M2 --> M33[M3.3 SOL 编辑器]
+    M31 --> M4[M4 Browser/Ruffle 正式适配]
+    M2 --> M43[M4.3 live save]
+    M4 --> M43
+    M32 --> M5[M5 平台集成/迁移]
+    M33 --> M5
+    M43 --> M5
+    M5 --> M6[M6 测试/性能/发布]
+```
+
+| 波次 | 内容 | 估算 | 主要退出条件 |
+|---|---|---:|---|
+| M3 | Avalonia 设计系统、主 UI、设置/收藏夹、SOL 编辑器 | 17–25 人日 | Apple Silicon 上形成 Alpha；主题/语言/可访问性与 ViewModel 测试通过。 |
+| M4 | 浏览器和 Ruffle 产品化、live save | 16–25 人日 | 普通浏览、网页 Flash、下载/popup、完整存档闭环达到 Beta 能力。 |
+| M5 | 文件关联、拖放、激活、系统集成、迁移向导 | 7–12 人日 | Finder/第二次启动/旧数据导入和回退在真机通过。 |
+| M6 | 自动化、兼容矩阵、性能泄漏、签名公证发布 | 10–16 人日 | ARM64 `.app/.dmg` 完成 Developer ID、公证、staple、Gatekeeper 和干净账户验证。 |
+
+### 10.5 并行与拆分原则
+
+- 单人开发按 H0 → M1 → M2/M3.1 → M3/M4 → M5 → M6 顺序。
+- 多人开发只在端口和 fixture 已冻结后并行；适合并行的是 M2 codec、M3.1 设计系统、M4 adapter 的独立实现，不适合多人同时改 composition root 或持久化 schema。
+- 每个任务应独立包含“行为测试 → 最小实现 → 文档同步 → Apple Silicon 验证（如适用）”。
+- 不把依赖升级、目录大迁移和新功能塞进同一任务。
+- 每个任务只允许一个明确所有者；跨模块变更由端口所有者先冻结契约。
+
+## 11. 下一任务的精确边界
+
+新会话只接 **H0.3B2 剩余固定兼容语料**。H0.R + H0.3B1 已完成，不得重复修复、
+改写其固定 fixture 或扩大 ExternalInterface 结论。本任务限于 AS3 输入/渲染/定时、音频、
+网络/策略文件三组确定性矩阵；开始修改前仍须读取第 10.1 节、接口、变量、工程规范和
+最新 Gate 报告，并为选择的上游 fixture 固定来源/hash/预期机器结果。
+
+### 输入
+
+- 当前未提交工作树；
+- 已通过的 97 项测试、`scripts/verify-arm64-baseline.sh` 与签名 ARM64 bundle；
+- H0.R/H0.3B1 的冷/热/reload 与 ExternalInterface journal，尤其最终包
+  `gate0-20260809T005034384Z-5958.jsonl`；
+- 已固定的 Ruffle Web 0.4.1 资产、AVM1 SharedObject、AVM2 `hello_world` 与
+  ExternalInterface fixture/runner；
+- Ruffle v0.4.1 上游可复用语料，以及 H0.3B2 每项需先定义的 hash、输入、机器 oracle 和
+  Apple Silicon WKWebView 判定。
+
+### 输出
+
+- AS3 基础输入、渲染和定时行为各有固定合法 fixture、预期输出和机器 PASS/明确 FAIL；
+- 音频加载、播放、静音/音量及授权/失败语义有离线固定语料与可判定结果；
+- 相对/绝对网络请求、失败、重定向和策略文件场景由确定性 loopback route 提供，不依赖公网；
+- 每个新增 fixture 的 tag/commit、许可证、大小/hash 与测试输出被锁定，不以截图代替 oracle；
+- 本次 Apple Silicon journal、全量自动化、ARM64 package/Mach-O/codesign/lock 回归；
+- 同步后的接口、变量、Gate、交接、总体计划、README 与 H0.3B2 实际结果。
+
+### 明确不做
+
+- 不迁移 AMF/SOL；
+- 不重写 UI；
+- 不开始 H0.4 或 M1，不迁移正式产品 UI/浏览器功能；
+- 不升级 .NET/Avalonia/WebView/Ruffle；
+- 不删除 Windows x86/x64；
+- 不自动清理约 698 MiB artifacts；
+- 不改变 H0.1 的 RID、lock 或打包策略；
+- 不回退 H0.2 生命周期/bridge 或 H0.R 返回值/trace 契约，不改写 H0.3A/H0.3B1 固定文件，不把同步重入 ExternalInterface 偷渡进通过口径；
+- 不提交或推送，除非用户另行要求。
+
+## 12. 构建、测试和真机命令
+
+工作目录：`spike/macos-host/`。
+
+标准开发验证：
+
+```sh
+dotnet restore CefFlashBrowser.MacOS.Spike.slnx --locked-mode
+dotnet build CefFlashBrowser.MacOS.Spike.slnx \
+  --configuration Debug --no-restore --disable-build-servers -m:1
+dotnet test CefFlashBrowser.MacOS.Spike.slnx \
+  --configuration Debug --no-build --disable-build-servers -m:1
+```
+
+完整 ARM64 基线回归：
+
+```sh
+scripts/verify-arm64-baseline.sh
+```
+
+直接运行诊断页：
+
+```sh
+dotnet run --project src/CefFlashBrowser.MacOS.Spike.Desktop
+```
+
+运行固定 AVM1 SharedObject fixture：
+
+```sh
+dotnet run --project src/CefFlashBrowser.MacOS.Spike.Desktop -- \
+  src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/shared-object-avm1.swf
+```
+
+运行 H0.3A 已纳入的固定 AVM2/AS3 fixture：
+
+```sh
+dotnet run --project src/CefFlashBrowser.MacOS.Spike.Desktop -- \
+  src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf
+```
+
+ARM64 开发包：
+
+```sh
+scripts/package-macos.sh osx-arm64
+file artifacts/osx-arm64/CefFlashBrowser.app/Contents/MacOS/CefFlashBrowser.MacOS.Spike.Desktop
+codesign --verify --deep --strict --verbose=2 artifacts/osx-arm64/CefFlashBrowser.app
+```
+
+不要运行 x64/Intel/Universal 2 构建。真机测试必须记录：设备、macOS、SDK、配置、fixture、journal 路径、预期和实际结果。
+
+## 13. 交付与文档更新纪律
+
+- 目标、范围、估算变化：更新移植方案。
+- 端口、模型、bridge 或生命周期变化：更新接口文档和契约测试。
+- RID、路径、schema、路由、Cookie、bundle/version 变化：更新变量文档和配置测试。
+- 架构、性能、安全、测试、发布规则变化：更新工程规范；例外写 ADR。
+- 已执行结果：更新 Gate 报告；失败也要记录，不能只留成功样本。
+- 当前快照、问题状态或下一任务变化：更新本文。
+- README 只保留可执行命令和使用入口，不复制本文完整任务树。
+
+## 14. 交接检查表
+
+- [ ] 新会话已读取两级 AGENTS 和本文。
+- [ ] `git status --short` 与第 3 节差异已解释，未覆盖用户改动。
+- [ ] 当前任务已按路由读取权威接口/变量/规范。
+- [ ] 当前任务只支持 `osx-arm64`。
+- [ ] 已区分历史证据与本次实际验证。
+- [ ] 回归测试没有通过跳过项目、关闭 lock 或吞异常制造成功。
+- [ ] 文档同步矩阵已执行。
+- [ ] 完成后更新了问题状态和新的“下一任务”。
+
+`H0.1`、`H0.2`、`H0.3A` 与 `H0.R + H0.3B1` 已完成。下一会话只执行第 11 节的
+`H0.3B2`；剩余兼容语料关闭后才进入 `H0.4` Gate 0 总收口。

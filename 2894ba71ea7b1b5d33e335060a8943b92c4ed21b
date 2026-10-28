@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Run an archived formal development app in a new isolated native profile."""
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import subprocess
+import sys
+import zipfile
+from product_identity import read_identity
+
+ROOT = Path(__file__).resolve().parents[1]
+def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+def now(): return datetime.now(timezone.utc).isoformat()
+def name(value): return bool(value) and all(c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in value)
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--run-id', required=True)
+    parser.add_argument('--package-run', required=True)
+    parser.add_argument('--task', default='A02')
+    parser.add_argument('--package-task', default='A02')
+    parser.add_argument('--url')
+    parser.add_argument('--case', dest='case_id')
+    parser.add_argument('--inspect-page', action='store_true')
+    parser.add_argument('--capture-count', type=int, default=6)
+    parser.add_argument('--deny-read', type=Path, action='append', default=[])
+    parser.add_argument('--reuse-test-profile', help='Existing isolated artifacts/profiles run ID; new evidence run ID is still mandatory')
+    parser.add_argument('--default-profile', action='store_true', help='Use normal Release product paths without either profile environment variable')
+    parser.add_argument('--settings-fixture', type=Path)
+    parser.add_argument('--favorites-fixture', type=Path)
+    args = parser.parse_args()
+    if any(not name(v) for v in (args.run_id, args.package_run, args.task, args.package_task)):
+        parser.error('Use simple task/run names')
+    if args.url and args.case_id: parser.error('Choose url or case')
+    if args.reuse_test_profile and (not name(args.reuse_test_profile) or args.default_profile or args.settings_fixture or args.favorites_fixture): parser.error('Reuse requires a simple existing Test run ID without fixture seeding or default-profile')
+    if args.default_profile and (args.settings_fixture or args.favorites_fixture): parser.error('Fixture seeding requires a new Test profile')
+    for fixture in (args.settings_fixture, args.favorites_fixture):
+        if fixture and (not fixture.resolve().is_relative_to(ROOT / 'test-assets/configuration') or not fixture.is_file()):
+            parser.error('Configuration fixtures must be existing files under test-assets/configuration')
+    if not 1 <= args.capture_count <= 120: parser.error('capture-count must be between 1 and 120')
+    if platform.system() != 'Darwin' or platform.machine() != 'arm64':
+        print('BLOCKED: actual native evidence requires Apple Silicon macOS', file=sys.stderr); return 3
+    package_path = ROOT / 'artifacts/evidence' / args.package_task / args.package_run / 'result.json'
+    package = json.loads(package_path.read_text())
+    if package['status'] != 'PASS': raise ValueError('Selected package did not pass')
+    app = ROOT / package['app']; archive = ROOT / package['archive']
+    if sha(archive) != package['artifactHashes']['archive']: raise ValueError('Archive changed')
+    bundle = {str(p.relative_to(app)): sha(p) for p in sorted(app.rglob('*')) if p.is_file()}
+    with zipfile.ZipFile(archive) as stream:
+        prefix = app.name + '/'
+        archived = {p[len(prefix):]: hashlib.sha256(stream.read(p)).hexdigest()
+                    for p in stream.namelist() if p.startswith(prefix) and not p.endswith('/')}
+    if bundle != archived or bundle != package['bundleFiles']: raise ValueError('Current app differs from archive')
+    output = ROOT / 'artifacts/evidence' / args.task / args.run_id
+    identity = read_identity(ROOT)
+    data_roots = [Path.home() / 'Library' / section / identity['ProductBundleId'] / 'profiles/default'
+                  for section in ('Application Support', 'Caches', 'Logs')]
+    profile = data_roots[0] if args.default_profile else ROOT / 'artifacts/profiles' / (args.reuse_test_profile or args.run_id)
+    if args.reuse_test_profile and (not profile.is_dir() or profile.is_symlink() or not profile.resolve().is_relative_to(ROOT / 'artifacts/profiles')): parser.error('Reuse must select an existing regular isolated Test profile directory')
+    if output.exists() or (profile.exists() and not args.default_profile and not args.reuse_test_profile): parser.error('Use a fresh run-id; existing evidence and data are preserved')
+    output.mkdir(parents=True)
+    seeds = {}
+    for kind, fixture in (('settings', args.settings_fixture), ('favorites', args.favorites_fixture)):
+        if fixture:
+            import shutil
+            destination = profile / 'data' / (kind + '.v2.json')
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(fixture, destination)
+            seeds[kind] = {'source': str(fixture.resolve().relative_to(ROOT)), 'sha256': sha(fixture), 'destination': str(destination)}
+    def snapshot_default():
+        return {str(folder): {str(p.relative_to(folder)): sha(p) for p in folder.rglob('*') if p.is_file()} for folder in data_roots}
+    if args.default_profile:
+        (output / 'default-data-before.json').write_text(json.dumps(snapshot_default(), indent=2) + '\n')
+    with (output / 'codesign-before-launch.log').open('wb') as log:
+        subprocess.run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app)],
+                       stdout=log, stderr=subprocess.STDOUT, check=True)
+    denied = [ROOT / 'reference', ROOT / 'bootstrap', *[p.resolve() for p in args.deny_read]]
+    if any(p == ROOT or p in ROOT.parents for p in denied): raise ValueError('Cannot deny the app/profile parent')
+    sandbox = '(version 1) (allow default) ' + ' '.join('(deny file-read* (subpath ' + json.dumps(str(p)) + '))' for p in denied)
+    (output / 'denied-reads.sb').write_text(sandbox + '\n')
+    environment = {k: v for k, v in os.environ.items() if k not in ('DOTNET_ROOT', 'DOTNET_ROOT_ARM64', 'FLASHMACOS_COMPAT_CASE', 'FLASHMACOS_PAGE_INSPECT', 'FLASHMACOS_NATIVE_CAPTURE_COUNT', 'FLASHMACOS_TEST_PROFILE', 'FLASHMACOS_PROFILE_MODE')}
+    environment['PATH'] = '/usr/bin:/bin:/usr/sbin:/sbin'
+    if not args.default_profile: environment['FLASHMACOS_TEST_PROFILE'] = str(profile)
+    if args.case_id: environment['FLASHMACOS_COMPAT_CASE'] = args.case_id
+    if args.inspect_page:
+        environment['FLASHMACOS_PAGE_INSPECT'] = '1'
+        environment['FLASHMACOS_NATIVE_CAPTURE_COUNT'] = str(args.capture_count)
+    command = ['sandbox-exec', '-p', sandbox, str(app / 'Contents/MacOS/FlashMacOS.Desktop')] + ([args.url] if args.url else [])
+    record = {'taskId': args.task, 'caseId': 'formal-native-session', 'runId': args.run_id, 'profileId': profile.name,
+        'startedAt': now(), 'profile': str(profile), 'reusedTestProfile': args.reuse_test_profile, 'profileSeeds': seeds, 'command': command, 'workingDirectory': str(output),
+        'environment': {'architecture': platform.machine(), 'macOS': platform.mac_ver()[0], 'configuration': 'Release, self-contained',
+            'PATH': environment['PATH'], 'DOTNET_ROOT': 'unset', 'testProfileEnvironment': 'unset' if args.default_profile else str(profile),
+            'profileModeEnvironment': 'unset', 'nativeCaptureCount': args.capture_count if args.inspect_page else 0}, 'artifactHashes': {'bundleFiles': bundle},
+        'packageEvidence': {'path': str(package_path.relative_to(ROOT)), 'archiveSha256': sha(archive), 'allBundleFilesEqualArchive': True}}
+    with (output / 'process.log').open('wb') as log:
+        process = subprocess.Popen(command, cwd=output, env=environment, stdout=log, stderr=subprocess.STDOUT)
+        record['pid'] = process.pid
+        (output / 'launch.json').write_text(json.dumps(record, ensure_ascii=False, indent=2) + '\n')
+        print('Formal native PID ' + str(process.pid) + '; run ' + args.run_id, flush=True)
+        code = process.wait()
+    record.update({'finishedAt': now(), 'exitCode': code, 'status': 'EXITED' if code == 0 else 'FAIL',
+        'note': 'Normal exit alone is not compatibility or product acceptance.'})
+    (output / 'process-result.json').write_text(json.dumps(record, ensure_ascii=False, indent=2) + '\n')
+    if args.default_profile:
+        import shutil
+        (output / 'default-data-after.json').write_text(json.dumps(snapshot_default(), indent=2) + '\n')
+        if data_roots[2].exists(): shutil.copytree(data_roots[2], output / 'default-profile-logs')
+    print('Formal native process exit ' + str(code), flush=True)
+    return code
+
+if __name__ == '__main__': sys.exit(main())

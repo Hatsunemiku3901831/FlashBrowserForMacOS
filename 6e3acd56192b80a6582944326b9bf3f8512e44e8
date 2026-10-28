@@ -1,0 +1,68 @@
+# WKWebView 会话与用途
+
+W01 已在本机真实应用完成验收，结果见 W01 报告及 native-checklist.json。本契约描述当前代码语义；完整产品、其他系统与发行验收仍以任务表为准。
+
+## 所有权与能力
+
+`IBrowserSession` 继承 `IJavaScriptExecutor`；ViewModel 只持有应用端口。可选 `IBrowserTools` 报告缩放、原生查找、打印、PDF、对话框与可检查能力。打印方法完成只表示已派发打印界面；实际打印或取消单独记录。JS 执行有 15 秒上限，查找 10 秒，PDF 30 秒；调用者取消与会话关闭均可结束等待。PDF 64 MiB 上限，迟到 stream 释放且故障进入日志。
+
+`BrowserWorkspace` 路由两个长期附着的 surface，切换只变可见性，分别保留导航历史。composition root 拥有实际 adapter 及原生控件，workspace 只持有订阅与路由操作；停止入口、取消并排空操作后，composition root 销毁各 adapter。隐藏 surface 的状态、popup、bridge 与 fault 不覆盖当前页面；下载不属于 workspace 路由，由 DownloadManager 直接观察每个 surface（见下文 W02）。当前主窗口的 app-owned loopback 选择 LocalPlayer，其余网页选择 Web；popup 携带发起 surface 的用途。
+
+## 稳定数据区
+
+Web 保留 A03 的 v1 DataStoreIdentifier，不读取旧 CefFlashBrowser store。LocalPlayer 使用 SHA-256(`FlashMacOS.WebKit.LocalPlayer.v1\0` + ProfileId) 前 16 字节构造 GUID；算法与字符串版本固定。Product/Development/Test 及两个用途均不串数据，身份不依赖工作目录、随机端口、版本或 app 位置。原 v1 共用区的 Cookie 保留在 Web，不静默复制到 LocalPlayer；显式数据迁移由 W04/M02 承接，JSON SOL store 仍保持原件。
+
+## 原生桥与导航
+
+本项目的 `Native/FlashMacOSWebKit.m` 只使用公开 Apple API，以 ARM64/macOS 15.0 编译。它在 Avalonia 提供的 WKWebView 上安装独立的 flashMacOSNativeBridgeV1 消息注册与代理，库原来的 cefFlashBrowserBridge 注册保持，保留并转发其原 navigation/UI delegate；关闭时移除自己的 script handler/KVO/局部键盘 monitor、恢复原 delegate、取消 sheet 和回调后释放。新动态库被传递复制到输出与 self-contained 包，并与其他 Mach-O 一同签名及架构检查。没有更新 Avalonia 或 WebView 依赖。
+
+主导航开始/重定向/完成/失败来自 WKNavigationDelegate，按实际 WKNavigation 与 generation 过滤迟到事件。子 frame 不推进主页面世代、地址或 loading。URL/title/history/loading 的原生观察支持同文档变更；同文档返回未产生新的 native navigation-start 时，由最终 loading=false 完成等待，保留其 document ID。WK 错误 domain/code/message/地址进入不可变 BrowserState.Error；取消 -999 清除 loading，不当作站点失败。错误后仍可导航恢复。
+
+消息先由 WKScriptMessage 的原生 frameInfo 和 securityOrigin 校验，再解析原有 v1 envelope 与文档/run ID。网页自己写 `isMainFrame:true` 不能越过子 frame 校验，来源 origin 必须与原生一致。保留 96 MiB 字符/64 条/128 MiB 队列限额，原始兼容 parser 只用于旧消息过渡测试，不直接进入产品 native ingress。注入依然是 document-start、所有 frames，固定第三方 Ruffle 原字节不变。
+
+宿主直接导航仅接受 http/https/about:blank。原生 action 策略还允许引擎内部 blob，其他 scheme 取消并记录，不自动调用操作系统。显式外部打开由 M01 的 launcher 与用户操作承接。不存在未知协议兜底执行。
+
+查找使用 WKFindConfiguration，缩放使用 pageZoom（0.25—5），Legacy Chromium 的设置级数按 `1.2^level` 转换到该范围。自定义 UA 限 2048 个非控制字符，可清空恢复系统 UA 与产品后缀。设置/收藏完整 UI 与缩放持久化仍由 U02 接入；存储旧值不因原生范围而改写。
+
+JS alert/confirm/prompt 采用标明原生来源的 NSAlert sheet，文本显示上限 4096 字符；重叠请求被明确取消，关闭必定完成 WebKit callback。普通会话默认关闭 inspection；用户显式开启后使用公共 isInspectable，通过 Safari Develop 选择目标，没有调用私有 WebInspector。普通 HTML/Flash 全屏、键盘焦点和实际退出必须分别真机验收。
+
+## 验证入口
+
+`--case browser` 仅在显式 Test profile 启动受控原生验证，含严格 nonce CSP、同/跨 origin frame、伪造 frame 消息、历史/错误/慢响应及对话框/全屏按钮。两真实会话在同一 origin 测 Cookie；新 evidence run 可用 `run-native.py --reuse-test-profile <prior-run-id>` 保留专用 Test 根验证第二进程，禁止 fixture reseed、默认 Product、符号链接或任意外部路径。
+
+native 自动检查保存逐项 JSONL、PDF 与最终结果；打印 sheet、对话框、全屏、焦点和未知 scheme 另由 CUA 实际操作，不能从自动部分推断。P02/A02 历史截图不计 W01 新验收。
+
+API 依据：已安装 Avalonia.Controls.WebView 12.0.1 公共 API 清单、[Avalonia NativeWebView 文档](https://docs.avaloniaui.net/controls/web/nativewebview)、本机 SDK 的 WKNavigationDelegate/WKUIDelegate/WKWebView/WKFindConfiguration 公开头。在线文档可能描述新版，实际调用以固定程序集和 SDK 可用性为准。
+
+W01 真实人工扩展发现同文档返回与长会话销毁失败，旧 11 项自动通过不覆盖这两项。崩溃与修复依据见 ADR 0002。调试之前的页面右键提示已纠正；本机 Safari Develop 尚未启用，没有改 Safari 设置，也不宣称打开过 Inspector。原生属性默认 false 和显式 true/false 读取校验作为受控能力证据；完整系统 Inspector 工作流保持未验证边界。
+
+最终 package04 的两个独立进程均为 12/12，第二进程读取到各用途原有 Cookie；三次 Native 焦点退出均 exit 0、failures=0、两个 adapter 实际 destroyed，其中一次包含较长驻留。前台实际页面点击完成全屏/退出；先前 AX 后台隐藏文档拒绝请求的失败保留，不能用 AX 调用成功推断真实用户激活。摩尔庄园本轮截图确实显示账号/密码登录 UI，随后账号框点击后的 Quit 通过；仍不代表登录之后玩法或 IME 通过。
+
+## W02 下载与 popup
+
+本节描述 W02 实现的语义；真机验收状态与证据以任务状态表和 W02 报告为准。
+
+### 下载：只用 WebKit 原生 WKDownload，不再重发请求
+
+- 判定点全部在 `Native/FlashMacOSWebKit.m`：`shouldPerformDownload`（同源 download 属性、blob:、data:）在 action 阶段决定 `WKNavigationActionPolicyDownload`；任何 frame 的 `Content-Disposition: attachment`，以及主 frame 中 `canShowMIMEType == NO` 的响应在 response 阶段决定 `WKNavigationResponsePolicyDownload`。这两条路径都把**同一个**请求/响应交给 WKDownload：POST body、HttpOnly Cookie、HTTP 认证、跨源重定向和一次性 URL 都不会被二次请求破坏。W01 之前的 JS `a[download]` 拦截与 `HttpClient` 复制 Cookie 重新 GET 的路径已删除；没有 HTTP 客户端 fallback。
+- 程序化下载（将来的“链接另存为”及验证用并发）只走 `-[WKWebView startDownloadUsingRequest:]`，即该 surface 自己的 data store。
+- 主 frame 的导航转为下载时，原页面仍在显示：原生发出 kind 15，托管侧把上一个已提交文档的 BrowserState 和 bridge 文档身份重新提交（含期间缓冲的消息），WebKit 随后报告的中断失败被忽略，不会出现假错误或卡在 loading；没有已提交文档的 popup 只清除 loading。
+- 每个 surface 的下载 ID 由其 bridge 分配；`IBrowserDownloads` 事件在 UI 线程发出，每个下载**恰有一个**终止更新（Finished/Failed/Cancelled）。`NativeBrowserPayloads` 是唯一入口校验：建议文件名被收敛为单个安全文件名（去目录、控制字符、前导点，空则 `download`，最长 200 字符），`expected<0` 视为未知。
+- `DownloadManager`（Application）为每个下载调用 `IDownloadDestinations` 得到最终路径，在**同一目录**生成隐藏暂存名 `.<name>.<guid>.flashmacos-download` 交给 WebKit 写入。只有 WebKit 报告完成后，`IDownloadFiles.CommitAsync` 才 flush 并以同目录 `rename(2)` 覆盖到最终名：最终名要么是旧文件，要么是完整新文件。拒绝、取消、网络失败、磁盘失败和提交失败都删除暂存文件、绝不改动已有目标；状态分别为 Cancelled/Failed 并带原因。进度更新约每 250 ms 一次，状态变化写入 journal（不记录路径或 URL）。
+- 产品目标策略是 `SaveDialogDownloadDestinations`：原生保存面板一次只开一个，同名文件由系统面板确认“替换”，替换在提交时原子完成；用户取消即拒绝下载。只有显式 Test profile 的 `--case downloads` 使用 `DiagnosticDownloadDestinations`（固定目录、唯一名、验证可指定“替换已有目标”或拒绝）。
+- 关闭一个 surface（popup 关闭、主窗口退出）先取消该 surface 未完成的下载并等待其终止更新（各 3 秒上限），再拆除原生代理；DownloadManager 对残留项按 Cancelled 处理并删除暂存。下载当前不跨窗口存活，这是有意的资源所有权边界。
+
+### 认证
+
+`webView:didReceiveAuthenticationChallenge:` 与 `download:didReceiveAuthenticationChallenge:` 共用一个标明主机与 realm 的原生 sheet，只处理 HTTP Basic/Digest；凭据仅以 `NSURLCredentialPersistenceForSession` 交给 WebKit，不进入托管代码、日志或磁盘。连续 3 次失败、已有 sheet 或窗口不可用时取消该挑战；服务器信任、客户端证书等其他方式保持 WebKit 默认处理。HTTP（非加密）保护空间在 sheet 中明示。
+
+### popup
+
+- 新窗口有两个原生入口：`targetFrame == nil` 的导航 action（target=_blank、表单 target）和 `createWebViewWithConfiguration`（window.open）。原生发出 kind 13，载荷含 URL、方法、body（base64）与 Content-Type；文件上传等流式 body 明确拒绝，不降级为 GET。只接受 http/https/about:blank，GET/POST，body ≤ 8 MiB。Avalonia 自身的 NewWindowRequested 不再参与。
+- 请求带发起 surface 的 `BrowserPurpose`（会话构造时即固定），Root 以该用途的稳定 data store 新建 popup surface，由 popup 自己按原方法/body 加载（`fm_load_request`）。因此 Cookie/认证状态继承发起用途，Web 与 LocalPlayer 不串；`window.opener` 不保留（Avalonia NativeWebView 无法接管 WebKit 创建的视图），这是已知边界。
+- popup 内再次请求新窗口会打开另一个同用途 popup，不替换当前页；页面 `window.close()` 经 `webViewDidClose:`（kind 14）关闭该 popup。popup 的首个响应若成为下载（例如 target=_blank 指向附件），窗口不隐藏，标题显示“Downloading <文件名>…”，下载终止后自动关闭并释放 surface（run 04 发现先隐藏再关闭会留下原生窗口，已改为不隐藏）。
+- 所有 popup 都由主窗口拥有并由 Root 跟踪；主窗口关闭时 Root 先关闭全部 popup 并等待其会话与下载清理，再销毁两个主 surface。Root 开始关闭后的新 popup 请求被拒绝并记入 journal。
+
+### 验证入口
+
+`run-native.py --case downloads` 启动显式 Test profile 的自动原生检查（`Browser.WebKit/Diagnostics/DownloadPopupNativeVerification.cs`），站点在 `Flash.Ruffle/Hosting/DownloadValidationSite.cs`（两个 loopback origin，含一次性 URL、POST 回显、HttpOnly 登录、Basic 认证、跨源重定向、慢速与中途断开端点，以及按实际写出字节计算的 SHA-256 观测）。`--case downloads-manual` 打开同一站点但使用产品保存面板，用于真实面板、替换确认、Basic sheet 和退出清理的人工/CUA 验收。

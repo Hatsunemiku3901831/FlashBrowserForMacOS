@@ -1,0 +1,37 @@
+"""Resolve the single product identity and the macOS bundle template."""
+from pathlib import Path
+import plistlib
+import re
+import xml.etree.ElementTree as ET
+
+
+def read_identity(root: Path):
+    values = {x.tag: x.text for x in ET.parse(root / 'Product.props').getroot().find('PropertyGroup')}
+    required = {'ProductName', 'ProductBundleId', 'ProductVersion', 'ProductBuild', 'ProductMinimumMacOS'}
+    if set(values) != required or any(not v for v in values.values()):
+        raise ValueError('Product.props must define exactly the required identity values')
+    if not re.fullmatch(r'[A-Za-z][A-Za-z0-9]*', values['ProductName']):
+        raise ValueError('Invalid product name')
+    if not re.fullmatch(r'[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)+', values['ProductBundleId']):
+        raise ValueError('Invalid bundle identifier')
+    if not re.fullmatch(r'\d+\.\d+\.\d+', values['ProductVersion']):
+        raise ValueError('Invalid product version')
+    if not values['ProductBuild'].isdigit() or int(values['ProductBuild']) < 1:
+        raise ValueError('Invalid product build')
+    if not re.fullmatch(r'\d+\.\d+', values['ProductMinimumMacOS']) or int(values['ProductMinimumMacOS'].split('.')[0]) < 15:
+        raise ValueError('Minimum macOS must satisfy the supported SDK floor')
+    return values
+
+
+def render_bundle_info(root: Path):
+    identity = read_identity(root)
+    info = plistlib.loads((root / 'packaging/macos/Info.plist').read_bytes())
+    def render(value):
+        if isinstance(value, str) and value.startswith('@') and value.endswith('@'):
+            return identity[value[1:-1]]
+        if isinstance(value, dict):
+            return {key: render(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [render(item) for item in value]
+        return value
+    return render(info)

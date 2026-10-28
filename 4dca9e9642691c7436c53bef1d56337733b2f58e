@@ -1,0 +1,8 @@
+namespace FlashMacOS.Application.Files;
+
+public interface IFileAccess
+{
+    ValueTask<bool> ExistsAsync(string path, CancellationToken cancellationToken = default);
+    ValueTask<byte[]> ReadBoundedAsync(string path, int maximumBytes, CancellationToken cancellationToken = default);
+    ValueTask WriteAtomicAsync(string path, Func<Stream, CancellationToken, ValueTask> write, CancellationToken cancellationToken = default);
+}

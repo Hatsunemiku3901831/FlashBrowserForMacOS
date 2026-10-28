@@ -1,0 +1,34 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const context={};
+vm.runInNewContext(fs.readFileSync('src/FlashMacOS.Flash.Ruffle/Runtime/RuffleStorageReload.js','utf8'),context);
+const reload=context.__cefFlashBrowserReloadWithStorage;
+
+function fixture(playing=true){
+  const state={disk:'old',cached:'old',alive:true,events:[],read:null};
+  const parent={insertBefore(player,next){assert.equal(next,'sibling');state.events.push('reconnect');player.parentNode=parent;}};
+  const destroy=()=>{if(state.alive){state.events.push('old-flush');state.disk=state.cached;state.alive=false;}};
+  const player={parentNode:parent,nextSibling:'sibling',remove(){destroy();state.events.push('disconnect');this.parentNode=null;}};
+  const api={volume:0.25,isPlaying:playing,suspend(){state.events.push('pause');this.isPlaying=false;},
+    async reload(){destroy();state.events.push('new-read');state.read=state.disk;state.alive=true;this.isPlaying=true;this.volume=1;}};
+  return {state,player,api};
+}
+
+(async()=>{
+  const negative=fixture();negative.state.disk='candidate';await negative.api.reload();
+  assert.equal(negative.state.read,'old','Negative control must reproduce the prior setter-before-reload defect');
+  const imported=fixture();
+  await reload(imported.player,imported.api,()=>{imported.state.events.push('candidate-write');imported.state.disk='candidate';});
+  assert.equal(imported.state.read,'candidate');
+  assert.deepEqual(imported.state.events,['pause','old-flush','disconnect','candidate-write','reconnect','new-read']);
+  assert.equal(imported.api.volume,0.25);assert.equal(imported.api.isPlaying,true);
+  const deleted=fixture(false);await reload(deleted.player,deleted.api,()=>{deleted.state.disk=null;});
+  assert.equal(deleted.state.read,null);assert.equal(deleted.api.isPlaying,false);assert.equal(deleted.api.volume,0.25);
+  const failed=fixture();const fault=new Error('Controlled storage failure');
+  await assert.rejects(reload(failed.player,failed.api,()=>{throw fault;}),e=>e===fault);
+  assert.ok(failed.player.parentNode,'Mutation failure must reconnect the owned element');
+  const normal=fixture();await reload(normal.player,normal.api);
+  assert.equal(normal.state.read,'old');assert.ok(!normal.state.events.includes('disconnect'));
+  console.log('PASS: negative control reproduces old flush overwrite; candidate/delete ordering, playback state, failure ownership and ordinary reload');
+})().catch(error=>{console.error(error);process.exitCode=1;});

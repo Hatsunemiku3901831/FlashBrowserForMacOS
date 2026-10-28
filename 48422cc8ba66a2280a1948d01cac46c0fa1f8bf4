@@ -1,0 +1,27 @@
+{
+  "Favorites": [
+    {
+      "Name": "Mole",
+      "Url": "http://mole.61.com/",
+      "futureFavorite": {
+        "priority": 7
+      }
+    },
+    {
+      "Name": "Mole",
+      "Url": "http://mole.61.com/"
+    },
+    {
+      "Name": null,
+      "Url": null
+    },
+    null,
+    {
+      "Name": "Local copy",
+      "Url": "C:\\Games\\movie.swf"
+    }
+  ],
+  "futureFavoritesRoot": {
+    "keep": true
+  }
+}

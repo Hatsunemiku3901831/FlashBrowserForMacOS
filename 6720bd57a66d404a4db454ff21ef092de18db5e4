@@ -1,0 +1,28 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class AmfGoldenIntegrityTests
+{
+    [TestMethod]
+    public void NormativeFixturesMatchFrozenHashesBytesAndExplicitExpectedSemantics()
+    {
+        var directory = Path.Combine(AppContext.BaseDirectory, "SolGolden");
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(directory, "manifest.json")));
+        var cases = manifest.RootElement.GetProperty("fixtures").EnumerateArray().ToArray();
+        Assert.HasCount(31, cases);
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var fixture in cases)
+        {
+            Assert.IsTrue(ids.Add(fixture.GetProperty("id").GetString()!));
+            var bytes = File.ReadAllBytes(Path.Combine(directory, Path.GetFileName(fixture.GetProperty("path").GetString()!)));
+            Assert.AreEqual(fixture.GetProperty("bytes").GetInt32(), bytes.Length);
+            Assert.AreEqual(fixture.GetProperty("hex").GetString(), Convert.ToHexStringLower(bytes));
+            Assert.AreEqual(fixture.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            Assert.AreEqual(JsonValueKind.Object, fixture.GetProperty("expected").ValueKind);
+            Assert.IsTrue(fixture.GetProperty("specSections").GetArrayLength() > 0);
+        }
+    }
+}

@@ -1,0 +1,23 @@
+namespace FlashMacOS.Application.Flash;
+
+public interface ILocalContentHost : IAsyncDisposable
+{
+    string RuntimeVersion { get; }
+
+    Uri? BaseUri { get; }
+
+    Uri? DiagnosticsUri { get; }
+
+    Uri? HomeUri => DiagnosticsUri;
+
+    Uri? RufflePublicPath { get; }
+
+    ValueTask<LocalSwfSource> RegisterSwfAsync(string filePath, RuffleGameConfiguration configuration,
+        CancellationToken cancellationToken = default) => RegisterSwfAsync(filePath, cancellationToken);
+
+    ValueTask StartAsync(CancellationToken cancellationToken = default);
+
+    ValueTask<LocalSwfSource> RegisterSwfAsync(
+        string filePath,
+        CancellationToken cancellationToken = default);
+}

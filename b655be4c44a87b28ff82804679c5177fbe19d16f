@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""Compare an actual WKWebView compositor snapshot with a frozen Ruffle golden."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+from PIL import Image, ImageChops, ImageStat
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--profile', type=Path, required=True)
+    parser.add_argument('--index', type=int, default=0)
+    parser.add_argument('--fixture', choices=['bitmap-clone','bitmap-fillrect'], default='bitmap-fillrect')
+    parser.add_argument('--expected', type=Path, required=True)
+    parser.add_argument('--output-dir', type=Path, required=True)
+    args = parser.parse_args()
+    profile = args.profile.resolve(strict=True)
+    probes = [json.loads(line) for line in (profile / 'page-inspection.jsonl').read_text().splitlines()]
+    probes = [json.loads(p) if isinstance(p, str) else p for p in probes]
+    probe = probes[args.index]
+    if not probe['url'].endswith('/case/' + args.fixture):
+        parser.error('Snapshot is not associated with the requested fixed bitmap document')
+    flash = next(e for e in probe['flash'] if e['id'] == 'p02-player')
+    actual_path = profile / f'native-snapshot-{args.index}.png'
+    actual = Image.open(actual_path).convert('RGB')
+    expected = Image.open(args.expected).convert('RGB')
+    view = probe['viewport']
+    scale_x, scale_y = actual.width / view['width'], actual.height / view['height']
+    if abs(scale_x - scale_y) > 0.001 or abs(scale_x - view['devicePixelRatio']) > 0.001:
+        parser.error('Compositor dimensions do not match the recorded viewport/DPR')
+    rect = flash['rect']
+    if (rect['width'], rect['height']) != expected.size:
+        parser.error('Player CSS dimensions must exactly match the upstream golden')
+    box = tuple(round(v) for v in (rect['x'] * scale_x, rect['y'] * scale_y,
+                                   (rect['x'] + rect['width']) * scale_x,
+                                   (rect['y'] + rect['height']) * scale_y))
+    if min(box) < 0 or box[2] > actual.width or box[3] > actual.height:
+        parser.error('Player was clipped in the actual compositor snapshot')
+    # Pinned fixture requests low renderer quality and a 1:1 CSS stage. Sample
+    # backing pixels at their centers; no color/edge tolerance is introduced.
+    crop = actual.crop(box).resize(expected.size, Image.Resampling.NEAREST)
+    diff = ImageChops.difference(crop, expected)
+    rgb = diff.tobytes()
+    mismatches = sum(any(rgb[i:i+3]) for i in range(0,len(rgb),3))
+    colors = expected.getcolors(maxcolors=expected.width * expected.height)
+    non_white = sum(count for count,color in colors if color != (255,255,255))
+    if args.fixture == 'bitmap-fillrect' and non_white == 0:
+        parser.error('A non-empty renderer oracle is required')
+    output = args.output_dir.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    crop.save(output / 'actual-stage.png')
+    diff.save(output / 'absolute-diff.png')
+    result = {'taskId': 'P02', 'fixtureId': 'bitmap-renderer-golden', 'runId': profile.name,
+              'status': 'PASS' if mismatches == 0 else 'FAIL', 'capturedAt': probe['capturedAt'],
+              'expected': {'size': expected.size, 'pixelTolerance': 0, 'differingPixels': 0,
+                           'nonWhitePixels': non_white,
+                           'source': 'upstream ' + args.fixture + '/test.toml and output.expected.png'},
+              'actual': {'nativeSnapshotSize': actual.size, 'viewport': view, 'playerRect': rect,
+                         'cropBox': box, 'differingPixels': mismatches, 'maxChannelDelta': max(x[1] for x in diff.getextrema()),
+                         'meanAbsoluteChannelDelta': ImageStat.Stat(diff).mean,
+                         'method': 'Actual WK takeSnapshot compositor PNG; exact stage crop, backing-pixel center samples; no renderer buffer inference'},
+              'artifactHashes': {str(p): sha(p) for p in [actual_path, args.expected.resolve(), profile / 'page-inspection.jsonl', output / 'actual-stage.png', output / 'absolute-diff.png']}}
+    (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if mismatches == 0 else 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

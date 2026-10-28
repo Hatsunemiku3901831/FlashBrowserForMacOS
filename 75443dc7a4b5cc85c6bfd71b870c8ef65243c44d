@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""Run bounded SOL fuzz workers and pinned coverage against an already built Release graph."""
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import importlib.util
+import json
+import os
+from pathlib import Path
+import platform
+import resource
+import shutil
+import signal
+import subprocess
+import time
+import uuid
+
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location('formal_verification', ROOT / 'scripts/verify-formal.py')
+formal = importlib.util.module_from_spec(spec); spec.loader.exec_module(formal)
+def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def save(path, value): path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + '\n')
+def now(): return datetime.now(timezone.utc).isoformat()
+
+def owned_processes(pid):
+    pending = [pid]; owned = []; seen = set()
+    while pending:
+        current = pending.pop()
+        if current in seen: continue
+        seen.add(current); owned.append(current)
+        children = subprocess.run(['pgrep', '-P', str(current)], capture_output=True, text=True)
+        pending.extend(int(value) for value in children.stdout.split() if value.isdigit())
+    result = subprocess.run(['ps', '-p', ','.join(map(str, owned)), '-o', 'pid=,ppid=,rss='], capture_output=True, text=True)
+    return [{'pid': int(row[0]), 'parent': int(row[1]), 'rssBytes': int(row[2]) * 1024}
+            for line in result.stdout.splitlines() if len(row := line.split()) == 3]
+
+def run(command, output, environment, prefix, *, bounded=False):
+    output.mkdir(parents=True, exist_ok=False); start = time.monotonic(); started_at = now(); reason = None; samples = []
+    def limits():
+        if bounded: resource.setrlimit(resource.RLIMIT_CPU, (30, 35))
+    with (output / 'stdout.log').open('wb') as log:
+        process = subprocess.Popen(prefix + command, cwd=output, env=environment, stdout=log, stderr=subprocess.STDOUT,
+                                   start_new_session=True, preexec_fn=limits)
+        while process.poll() is None:
+            rows = owned_processes(process.pid); rss = sum(row['rssBytes'] for row in rows)
+            samples.append({'seconds': time.monotonic() - start, 'processes': rows, 'aggregateRssBytes': rss})
+            if (bounded and rss > 1024 * 1024 * 1024) or time.monotonic() - start > (45 if bounded else 180):
+                reason = 'aggregate RSS exceeded 1 GiB' if bounded and rss > 1024 * 1024 * 1024 else 'wall-time budget exceeded'
+                try: os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError: pass  # The owned group exited at the budget boundary; this run still fails.
+                break
+            time.sleep(0.1)
+        code = process.wait()
+    result = {'command': prefix + command, 'startedAt': started_at, 'finishedAt': now(), 'elapsedSeconds': time.monotonic() - start,
+              'exitCode': code, 'terminationReason': reason, 'status': 'PASS' if code == 0 and not reason else 'FAIL',
+              'budget': {'wallSeconds': 45, 'perProcessCpuSeconds': 30, 'perProcessGcHeapBytes': 512 * 1024 * 1024,
+                         'aggregateRssBytes': 1024 * 1024 * 1024} if bounded else {'wallSeconds': 180},
+              'peakAggregateRssBytes': max((row['aggregateRssBytes'] for row in samples), default=0),
+              'environmentOverrides': {key: value for key, value in environment.items() if key.startswith(('FLASHMACOS_', 'DOTNET_GCHeapHardLimit', 'MSBUILDNODEHANDSHAKESALT', 'DOTNET_ROOT'))},
+              'samples': samples}
+    save(output / 'result.json', result); return result
+
+def coverage_report(data, raw_report):
+    modules = {}; missing = []; violations = []
+    expected = {'FlashMacOS.Domain.dll': 'FlashMacOS.Domain.Sol.', 'FlashMacOS.Sol.Managed.dll': 'FlashMacOS.Sol.Managed.'}
+    for module, files in data.items():
+        covered = total = 0; line_visits = {}
+        for file, classes in files.items():
+            for cls, methods in classes.items():
+                if module not in expected or not cls.startswith(expected[module]): violations.append({'module': module, 'class': cls})
+                for method, values in methods.items():
+                    for line, visits in values.get('Lines', {}).items(): line_visits[(file, line)] = max(visits, line_visits.get((file, line), 0))
+                    for branch in values.get('Branches', []):
+                        total += 1; covered += branch['Hits'] > 0
+                        if not branch['Hits']: missing.append({'module': module, 'file': file, 'class': cls, 'method': method, **branch})
+        modules[module] = {'branches': total, 'coveredBranches': covered, 'branchPercent': 100 * covered / total if total else 0,
+                           'lines': len(line_visits), 'coveredLines': sum(visits > 0 for visits in line_visits.values()),
+                           'linePercent': 100 * sum(visits > 0 for visits in line_visits.values()) / len(line_visits) if line_visits else 0}
+    valid = set(modules) == set(expected) and not violations and all(row['branches'] > 0 and row['branchPercent'] >= 90 for row in modules.values())
+    return {'status': 'PASS' if valid else 'FAIL', 'requiredBranchPercentPerModule': 90, 'fileExclusions': [],
+            'modules': modules, 'scopeViolations': violations, 'mergedRawReport': raw_report}, missing
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__); parser.add_argument('--run-id', required=True)
+    parser.add_argument('--deny-read', type=Path, action='append', default=[])
+    parser.add_argument('--fuzz-iterations', type=int, default=40000)
+    args = parser.parse_args()
+    if not args.run_id or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in args.run_id): parser.error('invalid run ID')
+    if args.fuzz_iterations < 4000 or args.fuzz_iterations > 100000: parser.error('fuzz iterations must be 4000..100000')
+    if platform.system() != 'Darwin' or platform.machine() != 'arm64': parser.error('the acceptance runner requires Apple Silicon macOS')
+    out = ROOT / 'artifacts/evidence/S05' / args.run_id; out.mkdir(parents=True, exist_ok=False); before = formal.inputs()
+    denied = [ROOT / 'reference', ROOT / 'bootstrap', *[path.resolve() for path in args.deny_read]]
+    if any(path == ROOT or path in ROOT.parents for path in denied): parser.error('cannot deny the formal workspace or its parent')
+    sandbox = '(version 1) (allow default) ' + ' '.join('(deny file-read* (subpath ' + json.dumps(str(path)) + '))' for path in denied)
+    (out / 'denied-reads.sb').write_text(sandbox + '\n'); prefix = ['sandbox-exec', '-p', sandbox]
+    runtimes = subprocess.check_output(['dotnet', '--list-runtimes'], text=True)
+    runtime = next(line for line in runtimes.splitlines() if line.startswith('Microsoft.NETCore.App 10.'))
+    runtime_root = Path(runtime.split('[', 1)[1].rstrip(']')).parent.parent
+    environment = {**os.environ, 'DOTNET_ROOT': str(runtime_root), 'DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER': '1',
+                   'MSBUILDDISABLENODEREUSE': '1', 'MSBUILDNODEHANDSHAKESALT': 'FlashMacOS-quality-' + str(uuid.uuid4())}
+    project = ROOT / 'tests/FlashMacOS.Sol.Managed.Tests/FlashMacOS.Sol.Managed.Tests.csproj'
+    results = []
+    for seed in ['5eed1234', '9e3779b9', 'deadbeef']:
+        target = out / ('fuzz-' + seed)
+        env = {**environment, 'DOTNET_GCHeapHardLimit': '0x20000000', 'FLASHMACOS_FUZZ_SEED': seed,
+               'FLASHMACOS_FUZZ_ITERATIONS': str(args.fuzz_iterations), 'FLASHMACOS_TEST_EVIDENCE_DIRECTORY': str(target / 'raw')}
+        command = ['dotnet', 'test', str(project), '--configuration', 'Release', '--no-build', '--no-restore', '--disable-build-servers', '-m:1',
+                   '--filter', 'FullyQualifiedName~SolFuzzTests', '--logger', 'trx;LogFileName=fuzz.trx', '--results-directory', str(target / 'TestResults')]
+        print('fuzz-' + seed + ': starting', flush=True); result = run(command, target, env, prefix, bounded=True); results.append(result)
+        summaries = list((target / 'raw').glob('fuzz-summary-*.json'))
+        applied = bool(summaries) and all(0 < json.loads(path.read_text())['runtimeGcAvailableBytes'] <= 512 * 1024 * 1024 for path in summaries)
+        result['runtimeGcLimitConfirmed'] = applied
+        if not applied: result['status'] = 'FAIL'
+        save(target / 'result.json', result)
+        print('fuzz-' + seed + ': ' + result['status'], flush=True)
+        if result['status'] != 'PASS': break
+    coverage = None; restored = True
+    if all(result['status'] == 'PASS' for result in results):
+        tool = ROOT / 'artifacts/tools/coverlet-10.1.0/coverlet'
+        if not tool.exists(): raise FileNotFoundError('Install the pinned development tool: dotnet tool install coverlet.console --version 10.1.0 --tool-path artifacts/tools/coverlet-10.1.0')
+        previous = None
+        for name in ['FlashMacOS.Sol.Managed.Tests', 'FlashMacOS.IntegrationTests']:
+            target = out / ('coverage-' + name); assembly = ROOT / 'tests' / name / 'bin/Release/net10.0' / (name + '.dll')
+            originals = {path: sha(path) for path in assembly.parent.glob('FlashMacOS.*') if path.suffix in ['.dll', '.pdb']}
+            runner = ['test', str(ROOT / 'tests' / name / (name + '.csproj')), '--configuration', 'Release', '--no-build', '--no-restore', '--disable-build-servers', '-m:1',
+                      '--filter', 'TestCategory!=SolPerformance', '--logger', 'trx;LogFileName=coverage.trx', '--results-directory', str(target / 'TestResults')]
+            command = [str(tool), str(assembly), '--target', shutil.which('dotnet'), '--targetargs', subprocess.list2cmdline(runner),
+                       '--include', '[FlashMacOS.Sol.Managed]*', '--include', '[FlashMacOS.Domain]FlashMacOS.Domain.Sol.*', '--format', 'json',
+                       '--output', str(target / 'coverage.json')]
+            if previous: command.extend(['--merge-with', str(previous)])
+            env = {**environment, 'FLASHMACOS_TEST_EVIDENCE_DIRECTORY': str(target / 'raw')}
+            print(name + ': coverage starting', flush=True); result = run(command, target, env, prefix); results.append(result)
+            preserved = {str(path): digest for path, digest in originals.items() if sha(path) != digest}; restored &= not preserved
+            save(target / 'instrumentation-preserved.json', {'allAssembliesAndSymbolsRestored': not preserved, 'changes': preserved,
+                                                           'before': {str(path): digest for path, digest in originals.items()}})
+            print(name + ': ' + result['status'], flush=True)
+            if result['status'] != 'PASS': break
+            previous = target / 'coverage.json'
+        if previous:
+            coverage, missing = coverage_report(json.loads(previous.read_text()), str(previous.relative_to(ROOT)))
+            save(out / 'coverage-summary.json', coverage); save(out / 'coverage-missing.json', missing)
+    after = formal.inputs(); status = 'PASS' if len(results) == 5 and all(row['status'] == 'PASS' for row in results) and restored and coverage and coverage['status'] == 'PASS' and before == after else 'FAIL'
+    save(out / 'result.json', {'taskId': 'S05', 'status': status, 'runs': results, 'coverage': coverage, 'instrumentationRestored': restored,
+                              'inputsUnchanged': before == after, 'codeInputs': before, 'deniedPaths': list(map(str, denied)),
+                              'environment': {'architecture': platform.machine(), 'macOS': platform.mac_ver()[0],
+                                              'sdk': subprocess.check_output(['dotnet', '--version'], cwd=ROOT, text=True).strip(),
+                                              'runtimeRoot': str(runtime_root), 'coverletVersion': '10.1.0'}})
+    print(json.dumps({'status': status, 'output': str(out.relative_to(ROOT)), 'coverage': coverage}), flush=True)
+    return 0 if status == 'PASS' else 1
+
+if __name__ == '__main__': raise SystemExit(main())

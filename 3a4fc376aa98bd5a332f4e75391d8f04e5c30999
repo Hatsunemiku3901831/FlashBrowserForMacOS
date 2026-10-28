@@ -1,0 +1,16 @@
+namespace FlashMacOS.Application.Files;
+
+/// <summary>Staged download files. Only CommitAsync makes a download visible under its final name.</summary>
+public interface IDownloadFiles
+{
+    /// <summary>Durably flushes the staged file and atomically renames it over the destination.</summary>
+    ValueTask CommitAsync(string stagingPath, string destinationPath, CancellationToken cancellationToken = default);
+
+    ValueTask DeleteAsync(string path, CancellationToken cancellationToken = default);
+}
+
+/// <summary>Chooses the final download path; null declines. The product implementation is the native save panel.</summary>
+public interface IDownloadDestinations
+{
+    ValueTask<string?> ChooseAsync(BrowserDownloadRequest request, CancellationToken cancellationToken = default);
+}

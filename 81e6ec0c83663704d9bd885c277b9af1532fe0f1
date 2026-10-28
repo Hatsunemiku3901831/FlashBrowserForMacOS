@@ -1,0 +1,156 @@
+#!/usr/bin/env python3
+"""A01 test migration, preserving every original method and data row."""
+from pathlib import Path
+import hashlib
+import json
+import re
+
+ROOT=Path(__file__).resolve().parents[1]
+BOOT=ROOT/'bootstrap/legacy/spike/macos-host'
+SOURCE=BOOT/'tests/CefFlashBrowser.MacOS.Spike.Tests'
+entries=[]
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def write(path,s,source=None,reason='A01 architecture regression'):
+    p=ROOT/path;data=s.encode()
+    if p.exists() and p.read_bytes()!=data:raise ValueError('Preserving conflicting file: '+path)
+    p.parent.mkdir(parents=True,exist_ok=True)
+    if not p.exists():p.write_bytes(data)
+    original=ROOT/'reference/legacy/spike/macos-host'/source.relative_to(BOOT) if source else None
+    entries.append({'bootstrapSourcePath':str(source.relative_to(ROOT)) if source else None,'bootstrapSourceSha256':sha(source) if source else None,
+        'originalSourcePath':str(original.relative_to(ROOT/'reference/legacy')) if original and original.is_file() else None,
+        'originalSourceSha256':sha(original) if original and original.is_file() else None,
+        'targetPath':path,'targetSha256':sha(p),'reason':reason})
+
+write('tests/Directory.Build.props','''<Project>
+  <Import Project="../Directory.Build.props" />
+  <PropertyGroup><IsPackable>false</IsPackable><IsTestProject>true</IsTestProject></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MSTest.TestAdapter" />
+    <PackageReference Include="MSTest.TestFramework" />
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+  </ItemGroup>
+</Project>
+''')
+asset_items='''  <ItemGroup>
+    <Compile Include="../Shared/TestSupport.cs" Link="TestSupport.cs" />
+    <Content Include="../../test-assets/legacy-sol/*.sol" Link="TestData/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/**" Link="TestData/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/**" Link="Assets/Ruffle/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../test-assets/flash/ruffle-v0.4.1/**" Link="CompatibilityFixtures/ruffle-v0.4.1/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../test-assets/flash/p02-project/**" Link="CompatibilityFixtures/p02-project/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+'''
+refs={
+    'Domain.Tests':['Domain'],
+    'Application.Tests':['Application','Domain'],
+    'Sol.Managed.Tests':['Sol.Managed','Domain','Application'],
+    'IntegrationTests':['Domain','Application','Infrastructure','Sol.Managed','Browser.WebKit','Flash.Ruffle'],
+    'Desktop.Tests':['Desktop','Application','Domain'],
+}
+for name,rs in refs.items():
+    write(f'tests/FlashMacOS.{name}/FlashMacOS.{name}.csproj','<Project Sdk="Microsoft.NET.Sdk">\n  <ItemGroup>\n'+''.join(f'    <ProjectReference Include="../../src/FlashMacOS.{r}/FlashMacOS.{r}.csproj" />\n' for r in rs)+'  </ItemGroup>\n'+(asset_items if name in ('IntegrationTests','Sol.Managed.Tests') else '')+'</Project>\n')
+
+mapping={
+    'CefFlashBrowser.MacOS.Spike.Core.Application.Browser':'FlashMacOS.Application.Browser',
+    'CefFlashBrowser.MacOS.Spike.Core.Application.Navigation':'FlashMacOS.Application.Navigation',
+    'CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting':'FlashMacOS.Flash.Ruffle.Hosting',
+    'CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle':'FlashMacOS.Application.Flash',
+    'CefFlashBrowser.MacOS.Spike.Core.Flash.Storage':'FlashMacOS.Infrastructure.Persistence',
+    'CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Paths':'FlashMacOS.Infrastructure.Paths',
+    'CefFlashBrowser.MacOS.Spike.Core.Sol':'FlashMacOS.Sol.Managed',
+    'CefFlashBrowser.MacOS.Spike.Tests':'FlashMacOS.Tests',
+}
+for source in sorted(SOURCE.glob('*.cs')):
+    s=source.read_text()
+    for a,b in mapping.items():s=s.replace(a,b)
+    project='Sol.Managed.Tests' if source.name=='SolFileInspectorTests.cs' else 'IntegrationTests'
+    if source.name=='TestSupport.cs':path='tests/Shared/TestSupport.cs'
+    else:path=f'tests/FlashMacOS.{project}/'+source.name
+    # Keep all original expectations; only constructors and port calls change.
+    s=re.sub(r'new JsonRuffleSaveStore\(([^;\n]+)\)', r'new JsonRuffleSaveStore(\1, new SolHeaderInspector())', s)
+    s=s.replace('new JsonRuffleSaveStore(storePath), new SolHeaderInspector())', 'new JsonRuffleSaveStore(storePath, new SolHeaderInspector()))')
+    s=s.replace('new RufflePlayerCoordinator(browser, host, store)', 'new RufflePlayerCoordinator(browser, host, store, new RuffleScriptBuilder(), new SolHeaderInspector(), new LocalFileAccess())')
+    if source.name=='RufflePlayerCoordinatorTests.cs':
+        s=s.replace('        public Uri? BaseUri => null;', '        public string RuntimeVersion => RuffleAssetManifest.Version;\n\n        public Uri? BaseUri => null;')
+    if source.name=='NavigationResolverTests.cs':
+        s=s.replace('public void IsLocalFileWithExtensionRequiresExistingMatchingFile()', 'public async Task IsLocalFileWithExtensionRequiresExistingMatchingFile()')
+        s=s.replace('NavigationResolver.IsLocalFileWithExtension(swfPath, ".swf")', 'await NavigationResolver.IsLocalFileWithExtensionAsync(swfPath, ".swf", new LocalFileAccess())')
+        s=s.replace('NavigationResolver.IsLocalFileWithExtension(swfPath, ".sol")', 'await NavigationResolver.IsLocalFileWithExtensionAsync(swfPath, ".sol", new LocalFileAccess())')
+        s=s.replace('NavigationResolver.IsLocalFileWithExtension(directory.GetPath("missing.swf"), ".swf")', 'await NavigationResolver.IsLocalFileWithExtensionAsync(directory.GetPath("missing.swf"), ".swf", new LocalFileAccess())')
+    write(path,s,source,'A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only')
+write('tests/FlashMacOS.IntegrationTests/GlobalUsings.cs','''global using FlashMacOS.Domain.Browser;
+global using FlashMacOS.Domain.Flash;
+global using FlashMacOS.Domain.Sol;
+global using FlashMacOS.Application.Browser;
+global using FlashMacOS.Application.Flash;
+global using FlashMacOS.Infrastructure.Persistence;
+global using FlashMacOS.Sol.Managed;
+global using FlashMacOS.Flash.Ruffle.Runtime;
+global using FlashMacOS.Browser.WebKit;
+''')
+write('tests/FlashMacOS.Sol.Managed.Tests/GlobalUsings.cs','global using FlashMacOS.Domain.Sol;\n')
+write('tests/FlashMacOS.Domain.Tests/ArchitectureTests.cs','''using FlashMacOS.Domain.Browser;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class DomainArchitectureTests
+{
+    [TestMethod]
+    public void DomainReferencesOnlyBaseClassLibraries()
+    {
+        var forbidden = typeof(BrowserState).Assembly.GetReferencedAssemblies()
+            .Where(reference => !reference.Name!.StartsWith("System.", StringComparison.Ordinal)
+                && reference.Name != "System" && reference.Name != "netstandard" && reference.Name != "mscorlib")
+            .Select(reference => reference.Name).ToArray();
+        Assert.IsEmpty(forbidden, string.Join(", ", forbidden));
+    }
+}
+''')
+write('tests/FlashMacOS.Application.Tests/ArchitectureTests.cs','''using FlashMacOS.Application.Flash;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class ApplicationArchitectureTests
+{
+    [TestMethod]
+    public void ApplicationDependsOnlyOnDomainAndBaseClassLibraries()
+    {
+        var forbidden = typeof(RufflePlayerCoordinator).Assembly.GetReferencedAssemblies()
+            .Where(reference => reference.Name != "FlashMacOS.Domain"
+                && !reference.Name!.StartsWith("System.", StringComparison.Ordinal)
+                && reference.Name != "System" && reference.Name != "netstandard" && reference.Name != "mscorlib")
+            .Select(reference => reference.Name).ToArray();
+        Assert.IsEmpty(forbidden, string.Join(", ", forbidden));
+    }
+}
+''')
+write('tests/FlashMacOS.Desktop.Tests/ArchitectureTests.cs','''using System.Reflection;
+using FlashMacOS.Desktop.ViewModels;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class DesktopArchitectureTests
+{
+    [TestMethod]
+    public void ViewModelsDoNotHoldWindowsNativeControlsHandlesOrDialogs()
+    {
+        var failures = typeof(MainWindowViewModel).Assembly.GetTypes()
+            .Where(type => type.Namespace == "FlashMacOS.Desktop.ViewModels")
+            .SelectMany(type => type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            .Where(field => field.FieldType == typeof(nint) || field.FieldType == typeof(nuint)
+                || field.FieldType.FullName!.Contains("NativeWebView", StringComparison.Ordinal)
+                || field.FieldType.FullName.Contains("WKWebView", StringComparison.Ordinal)
+                || field.FieldType.FullName.Contains("FileDialog", StringComparison.Ordinal)
+                || field.FieldType.FullName.Contains("StorageProvider", StringComparison.Ordinal)
+                || field.FieldType.FullName.StartsWith("Avalonia.Controls.", StringComparison.Ordinal))
+            .Select(field => field.DeclaringType!.Name + "." + field.Name).ToArray();
+        Assert.IsEmpty(failures, string.Join(", ", failures));
+    }
+}
+''')
+write('docs/provenance/A01-test-import.json',json.dumps({'schemaVersion':1,'stage':'tests','files':entries},ensure_ascii=False,indent=2)+'\n')
+print('Created formal tests; files:',len(entries))

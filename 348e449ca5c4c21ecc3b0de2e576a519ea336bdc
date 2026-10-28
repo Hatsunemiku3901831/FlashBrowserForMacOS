@@ -1,0 +1,8 @@
+namespace FlashMacOS.Application.Threading;
+
+public interface IUiDispatcher
+{
+    bool CheckAccess();
+    void Post(Action action);
+    ValueTask InvokeAsync(Action action, CancellationToken cancellationToken = default);
+}

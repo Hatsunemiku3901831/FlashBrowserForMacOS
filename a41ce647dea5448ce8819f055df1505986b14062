@@ -1,0 +1,508 @@
+// Project-authored WKWebView bridge. Public Apple APIs only; ARC owns delegate/block lifetimes.
+#import <AppKit/AppKit.h>
+#import <WebKit/WebKit.h>
+#include <stdint.h>
+
+typedef void (*FMCallback)(void *, int, int64_t, const char *, const char *, int);
+static NSString *FMError;
+static NSString *FMJSON(NSDictionary *value) {
+    NSData *data = [NSJSONSerialization dataWithJSONObject:value options:0 error:nil];
+    return data ? [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding] : @"{}";
+}
+static NSString *FMOrigin(WKFrameInfo *frame) {
+    WKSecurityOrigin *origin = frame.securityOrigin;
+    if (!origin.host.length || !origin.protocol.length) return @"null";
+    NSURLComponents *components = [NSURLComponents new];
+    components.scheme = origin.protocol; components.host = origin.host;
+    if (origin.port && !([origin.protocol isEqual:@"http"] && origin.port == 80) &&
+        !([origin.protocol isEqual:@"https"] && origin.port == 443)) components.port = @(origin.port);
+    return components.URL.absoluteString ?: @"null";
+}
+static BOOL FMAllowed(NSURL *url) {
+    NSString *scheme = url.scheme.lowercaseString;
+    return [scheme isEqual:@"http"] || [scheme isEqual:@"https"] || [scheme isEqual:@"blob"] ||
+        ([scheme isEqual:@"about"] && [url.absoluteString hasPrefix:@"about:blank"]);
+}
+// A new window is a host-loaded page: only explicit web addresses or about:blank, as for host navigation.
+static BOOL FMPopupAllowed(NSURL *url) {
+    NSString *scheme = url.scheme.lowercaseString;
+    return [scheme isEqual:@"http"] || [scheme isEqual:@"https"] || ([scheme isEqual:@"about"] && [url.absoluteString isEqual:@"about:blank"]);
+}
+// Engine-originated downloads (download attribute, blob, data) keep their original request inside WebKit.
+static BOOL FMDownloadable(NSURL *url) {
+    NSString *scheme = url.scheme.lowercaseString;
+    return [scheme isEqual:@"http"] || [scheme isEqual:@"https"] || [scheme isEqual:@"blob"] || [scheme isEqual:@"data"];
+}
+static BOOL FMAttachment(NSURLResponse *response) {
+    if (![response isKindOfClass:NSHTTPURLResponse.class]) return NO;
+    NSString *disposition = [(NSHTTPURLResponse *)response valueForHTTPHeaderField:@"Content-Disposition"];
+    return [[disposition stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet].lowercaseString hasPrefix:@"attachment"];
+}
+static void *FMProgressContext = &FMProgressContext;
+
+@interface FMBridge : NSObject <WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler, WKDownloadDelegate>
+@property(nonatomic, weak) WKWebView *web;
+@property(nonatomic, strong) id<WKNavigationDelegate> previousNavigation;
+@property(nonatomic, strong) id<WKUIDelegate> previousUI;
+@property(nonatomic, copy) NSString *handler;
+@property(nonatomic, copy) NSString *applicationName;
+@property(nonatomic) FMCallback callback;
+@property(nonatomic) void *context;
+@property(nonatomic) int64_t generation;
+@property(nonatomic, strong) WKNavigation *currentNavigation;
+@property(nonatomic, strong) NSURL *pendingURL;
+@property(nonatomic, strong) NSAlert *alert;
+@property(nonatomic) BOOL disposed;
+@property(nonatomic) BOOL observing;
+@property(nonatomic, strong) id keyMonitor;
+// Download ID -> WKDownload, and the pending destination decisions. Main thread only.
+@property(nonatomic, strong) NSMutableDictionary<NSNumber *, WKDownload *> *downloads;
+@property(nonatomic, strong) NSMutableDictionary<NSNumber *, id> *destinations;
+@property(nonatomic, strong) NSMutableDictionary<NSNumber *, NSNumber *> *progressTimes;
+@property(nonatomic, strong) NSMutableSet<NSNumber *> *observedProgress;
+@property(nonatomic, strong) NSMutableSet<NSNumber *> *pendingStarts;
+@property(nonatomic, strong) NSMutableSet<NSNumber *> *cancelledStarts;
+@property(nonatomic) int64_t nextDownload;
+@property(nonatomic, strong) WKNavigation *convertedNavigation;
+- (void)emit:(int)kind generation:(int64_t)generation payload:(NSString *)payload origin:(NSString *)origin flags:(int)flags;
+- (void)detach;
+- (void)adoptDownload:(WKDownload *)download key:(NSNumber *)key;
+- (void)finishDownload:(NSNumber *)key kind:(int)kind payload:(NSDictionary *)payload;
+- (int)cancelDownload:(NSNumber *)key;
+- (void)watchProgress:(NSNumber *)key;
+@end
+
+@implementation FMBridge
+- (BOOL)respondsToSelector:(SEL)selector {
+    return [super respondsToSelector:selector] || [self.previousNavigation respondsToSelector:selector] || [self.previousUI respondsToSelector:selector];
+}
+- (id)forwardingTargetForSelector:(SEL)selector {
+    if ([self.previousNavigation respondsToSelector:selector]) return self.previousNavigation;
+    if ([self.previousUI respondsToSelector:selector]) return self.previousUI;
+    return [super forwardingTargetForSelector:selector];
+}
+- (void)emit:(int)kind generation:(int64_t)generation payload:(NSString *)payload origin:(NSString *)origin flags:(int)flags {
+    if (!self.disposed && self.callback) self.callback(self.context, kind, generation, (payload ?: @"").UTF8String, (origin ?: @"").UTF8String, flags);
+}
+- (void)detach {
+    if (self.disposed) return;
+    self.disposed = YES; self.callback = NULL; self.context = NULL;
+    if (self.keyMonitor) { [NSEvent removeMonitor:self.keyMonitor]; self.keyMonitor = nil; }
+    if (self.alert.window.sheetParent) [self.alert.window.sheetParent endSheet:self.alert.window returnCode:NSModalResponseCancel];
+    self.alert = nil;
+    // Managed disposal already cancelled and awaited downloads; anything left is cancelled without callbacks.
+    for (NSNumber *key in self.destinations.allKeys) ((void (^)(NSURL *))self.destinations[key])(nil);
+    for (NSNumber *key in self.downloads.allKeys) {
+        WKDownload *download = self.downloads[key];
+        if ([self.observedProgress containsObject:key]) [download.progress removeObserver:self forKeyPath:@"completedUnitCount" context:FMProgressContext];
+        [download cancel:nil];
+    }
+    [self.destinations removeAllObjects]; [self.downloads removeAllObjects]; [self.observedProgress removeAllObjects];
+    [self.cancelledStarts unionSet:self.pendingStarts]; [self.pendingStarts removeAllObjects];
+    self.convertedNavigation = nil;
+    WKWebView *web = self.web;
+    if (self.observing) {
+        for (NSString *key in @[@"title", @"URL", @"canGoBack", @"canGoForward", @"loading"]) [web removeObserver:self forKeyPath:key];
+        self.observing = NO;
+    }
+    [web.configuration.userContentController removeScriptMessageHandlerForName:self.handler];
+    if (web.navigationDelegate == self) web.navigationDelegate = self.previousNavigation;
+    if (web.UIDelegate == self) web.UIDelegate = self.previousUI;
+    self.previousNavigation = nil; self.previousUI = nil; self.currentNavigation = nil; self.web = nil;
+}
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
+    if (context == FMProgressContext) {
+        NSProgress *progress = object;
+        if (NSThread.isMainThread) [self progressChanged:progress];
+        else dispatch_async(dispatch_get_main_queue(), ^{ [self progressChanged:progress]; });
+        return;
+    }
+    WKWebView *web = self.web;
+    [self emit:8 generation:self.generation payload:FMJSON(@{@"url":web.URL.absoluteString ?: @"about:blank",@"title":web.title ?: @"",@"back":@(web.canGoBack),@"forward":@(web.canGoForward),@"loading":@(web.loading)}) origin:nil flags:0];
+}
+- (BOOL)allowAction:(WKNavigationAction *)action {
+    BOOL allowed = FMAllowed(action.request.URL);
+    if (!allowed) [self emit:5 generation:self.generation payload:action.request.URL.absoluteString origin:FMOrigin(action.sourceFrame) flags:action.targetFrame.isMainFrame];
+    if (allowed && action.targetFrame.isMainFrame) self.pendingURL = action.request.URL;
+    return allowed;
+}
+// Returns YES when this bridge decides the action itself: downloads, new windows and blocked schemes.
+- (BOOL)decideAction:(WKNavigationAction *)action policy:(WKNavigationActionPolicy *)policy {
+    *policy = WKNavigationActionPolicyCancel;
+    if (self.disposed) return YES;
+    if (action.shouldPerformDownload && FMDownloadable(action.request.URL)) { *policy = WKNavigationActionPolicyDownload; return YES; }
+    if (!action.targetFrame) { [self requestPopup:action]; return YES; }
+    return ![self allowAction:action];
+}
+- (void)webView:(WKWebView *)web decidePolicyForNavigationAction:(WKNavigationAction *)action decisionHandler:(void (^)(WKNavigationActionPolicy))decision {
+    WKNavigationActionPolicy policy;
+    if ([self decideAction:action policy:&policy]) { decision(policy); return; }
+    if ([self.previousNavigation respondsToSelector:_cmd]) [self.previousNavigation webView:web decidePolicyForNavigationAction:action decisionHandler:decision];
+    else decision(WKNavigationActionPolicyAllow);
+}
+- (void)webView:(WKWebView *)web decidePolicyForNavigationAction:(WKNavigationAction *)action preferences:(WKWebpagePreferences *)preferences decisionHandler:(void (^)(WKNavigationActionPolicy, WKWebpagePreferences *))decision {
+    WKNavigationActionPolicy policy;
+    if ([self decideAction:action policy:&policy]) { decision(policy, preferences); return; }
+    if ([self.previousNavigation respondsToSelector:_cmd]) [self.previousNavigation webView:web decidePolicyForNavigationAction:action preferences:preferences decisionHandler:decision];
+    else if ([self.previousNavigation respondsToSelector:@selector(webView:decidePolicyForNavigationAction:decisionHandler:)])
+        [self.previousNavigation webView:web decidePolicyForNavigationAction:action decisionHandler:^(WKNavigationActionPolicy policy) { decision(policy, preferences); }];
+    else decision(WKNavigationActionPolicyAllow, preferences);
+}
+// Content-Disposition attachment (any frame) or a main-frame type WebKit cannot show becomes a WKDownload
+// of the very same response: no second request, so POST bodies, cookies, auth and one-time URLs are preserved.
+- (void)webView:(WKWebView *)web decidePolicyForNavigationResponse:(WKNavigationResponse *)response decisionHandler:(void (^)(WKNavigationResponsePolicy))decision {
+    if (self.disposed) { decision(WKNavigationResponsePolicyCancel); return; }
+    if (FMAttachment(response.response) || (response.forMainFrame && !response.canShowMIMEType)) {
+        // Whatever order WebKit reports the interrupted provisional load in, it is not a page failure.
+        if (response.forMainFrame) self.convertedNavigation = self.currentNavigation;
+        decision(WKNavigationResponsePolicyDownload); return;
+    }
+    if ([self.previousNavigation respondsToSelector:_cmd]) [self.previousNavigation webView:web decidePolicyForNavigationResponse:response decisionHandler:decision];
+    else decision(WKNavigationResponsePolicyAllow);
+}
+- (void)webView:(WKWebView *)web navigationAction:(WKNavigationAction *)action didBecomeDownload:(WKDownload *)download {
+    [self adoptDownload:download key:nil];
+}
+- (void)webView:(WKWebView *)web navigationResponse:(WKNavigationResponse *)response didBecomeDownload:(WKDownload *)download {
+    [self adoptDownload:download key:nil];
+    // The provisional main-frame navigation ends here; the previous document stays. Its later failure callback is ignored.
+    if (response.forMainFrame) {
+        [self emit:15 generation:self.generation payload:web.URL.absoluteString ?: @"about:blank" origin:nil flags:0];
+    }
+}
+- (void)webView:(WKWebView *)web didStartProvisionalNavigation:(WKNavigation *)navigation {
+    self.currentNavigation = navigation; self.generation++;
+    [self emit:1 generation:self.generation payload:(self.pendingURL ?: web.URL).absoluteString origin:nil flags:0];
+    if ([self.previousNavigation respondsToSelector:_cmd]) [self.previousNavigation webView:web didStartProvisionalNavigation:navigation];
+}
+- (void)webView:(WKWebView *)web didReceiveServerRedirectForProvisionalNavigation:(WKNavigation *)navigation {
+    if (navigation == self.currentNavigation) [self emit:9 generation:self.generation payload:web.URL.absoluteString origin:nil flags:0];
+    if ([self.previousNavigation respondsToSelector:_cmd]) [self.previousNavigation webView:web didReceiveServerRedirectForProvisionalNavigation:navigation];
+}
+- (void)webView:(WKWebView *)web didFinishNavigation:(WKNavigation *)navigation {
+    if (navigation == self.currentNavigation) [self emit:2 generation:self.generation payload:FMJSON(@{@"url":web.URL.absoluteString ?: @"about:blank", @"title":web.title ?: @"",@"requested":self.pendingURL.absoluteString ?: @""}) origin:nil flags:0];
+    if ([self.previousNavigation respondsToSelector:_cmd]) [self.previousNavigation webView:web didFinishNavigation:navigation];
+}
+- (void)failed:(WKNavigation *)navigation error:(NSError *)error {
+    if (navigation == self.convertedNavigation) { self.convertedNavigation = nil; return; }
+    if (navigation != self.currentNavigation) return;
+    [self emit:3 generation:self.generation payload:FMJSON(@{@"code":@(error.code),@"domain":error.domain,@"message":error.localizedDescription ?: @"Navigation failed",@"url":self.pendingURL.absoluteString ?: @""}) origin:nil flags:0];
+}
+- (void)webView:(WKWebView *)web didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error {
+    [self failed:navigation error:error];
+    if ([self.previousNavigation respondsToSelector:_cmd]) [self.previousNavigation webView:web didFailProvisionalNavigation:navigation withError:error];
+}
+- (void)webView:(WKWebView *)web didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error {
+    [self failed:navigation error:error];
+    if ([self.previousNavigation respondsToSelector:_cmd]) [self.previousNavigation webView:web didFailNavigation:navigation withError:error];
+}
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)web {
+    [self emit:3 generation:self.generation payload:FMJSON(@{@"code":@1,@"domain":@"WebKitProcess",@"message":@"Web content process terminated",@"url":web.URL.absoluteString ?: @""}) origin:nil flags:0];
+    if ([self.previousNavigation respondsToSelector:_cmd]) [self.previousNavigation webViewWebContentProcessDidTerminate:web];
+}
+- (void)userContentController:(WKUserContentController *)controller didReceiveScriptMessage:(WKScriptMessage *)message {
+    if (![message.body isKindOfClass:NSString.class] || [(NSString *)message.body length] > 96 * 1024 * 1024) {
+        [self emit:10 generation:self.generation payload:@"Invalid or oversized native message" origin:FMOrigin(message.frameInfo) flags:message.frameInfo.isMainFrame]; return;
+    }
+    [self emit:4 generation:self.generation payload:message.body origin:FMOrigin(message.frameInfo) flags:message.frameInfo.isMainFrame];
+}
+- (void)showDialog:(NSString *)message defaultText:(NSString *)defaultText kind:(int)kind frame:(WKFrameInfo *)frame completion:(void (^)(BOOL, NSString *))completion {
+    // Always complete a WK callback, including a second overlapping request or window closure.
+    if (self.disposed || self.alert || !self.web.window) { completion(NO, nil); return; }
+    NSAlert *alert = [NSAlert new]; self.alert = alert;
+    alert.messageText = [NSString stringWithFormat:@"%@ — %@", self.applicationName, FMOrigin(frame)];
+    alert.informativeText = [message substringToIndex:MIN(message.length, 4096)];
+    [alert addButtonWithTitle:@"OK"];
+    if (kind != 0) [alert addButtonWithTitle:@"Cancel"];
+    NSTextField *text = nil;
+    if (kind == 2) { text = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 320, 24)]; text.stringValue = defaultText ?: @""; alert.accessoryView = text; }
+    [self emit:7 generation:self.generation payload:FMJSON(@{@"kind":@(kind),@"phase":@"opened",@"origin":FMOrigin(frame)}) origin:nil flags:0];
+    [alert beginSheetModalForWindow:self.web.window completionHandler:^(NSModalResponse result) {
+        BOOL accepted = !self.disposed && result == NSAlertFirstButtonReturn;
+        self.alert = nil; completion(accepted, accepted ? text.stringValue : nil);
+        [self emit:7 generation:self.generation payload:FMJSON(@{@"kind":@(kind),@"phase":@"completed",@"accepted":@(accepted)}) origin:nil flags:0];
+    }];
+}
+- (void)webView:(WKWebView *)web runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(void))completion {
+    [self showDialog:message defaultText:nil kind:0 frame:frame completion:^(BOOL accepted, NSString *text) { completion(); }];
+}
+- (void)webView:(WKWebView *)web runJavaScriptConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL))completion {
+    [self showDialog:message defaultText:nil kind:1 frame:frame completion:^(BOOL accepted, NSString *text) { completion(accepted); }];
+}
+- (void)webView:(WKWebView *)web runJavaScriptTextInputPanelWithPrompt:(NSString *)message defaultText:(NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString *))completion {
+    [self showDialog:message defaultText:defaultText kind:2 frame:frame completion:^(BOOL accepted, NSString *text) { completion(text); }];
+}
+
+// HTTP Basic/Digest for pages and downloads: a sheet naming the protection space; session-only credential.
+// Every other method (server trust, client certificates) keeps WebKit's default handling.
+- (void)authenticate:(NSURLAuthenticationChallenge *)challenge completion:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential *))completion {
+    NSURLProtectionSpace *space = challenge.protectionSpace;
+    if (![space.authenticationMethod isEqual:NSURLAuthenticationMethodHTTPBasic] && ![space.authenticationMethod isEqual:NSURLAuthenticationMethodHTTPDigest]) {
+        completion(NSURLSessionAuthChallengePerformDefaultHandling, nil); return;
+    }
+    if (self.disposed || self.alert || !self.web.window || challenge.previousFailureCount >= 3) {
+        completion(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil); return;
+    }
+    NSAlert *alert = [NSAlert new]; self.alert = alert;
+    NSString *host = space.port ? [NSString stringWithFormat:@"%@:%ld", space.host, (long)space.port] : space.host;
+    NSString *realm = space.realm ?: @"";
+    alert.messageText = [NSString stringWithFormat:@"%@ — Sign in to %@", self.applicationName, host];
+    alert.informativeText = [NSString stringWithFormat:@"%@%@%@", challenge.previousFailureCount ? @"The user name or password was not accepted. " : @"",
+        space.receivesCredentialSecurely ? @"" : @"The password is sent without encryption. ", [realm substringToIndex:MIN(realm.length, (NSUInteger)512)]];
+    [alert addButtonWithTitle:@"Sign In"]; [alert addButtonWithTitle:@"Cancel"];
+    NSTextField *user = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 30, 280, 24)];
+    user.placeholderString = @"User name"; user.stringValue = challenge.proposedCredential.user ?: @"";
+    NSSecureTextField *password = [[NSSecureTextField alloc] initWithFrame:NSMakeRect(0, 0, 280, 24)];
+    password.placeholderString = @"Password";
+    NSView *fields = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 280, 54)];
+    [fields addSubview:user]; [fields addSubview:password];
+    alert.accessoryView = fields;
+    [self emit:7 generation:self.generation payload:FMJSON(@{@"kind":@3,@"phase":@"opened",@"origin":host ?: @""}) origin:nil flags:0];
+    [alert beginSheetModalForWindow:self.web.window completionHandler:^(NSModalResponse result) {
+        BOOL accepted = !self.disposed && result == NSAlertFirstButtonReturn;
+        self.alert = nil;
+        if (accepted) completion(NSURLSessionAuthChallengeUseCredential,
+            [NSURLCredential credentialWithUser:user.stringValue password:password.stringValue persistence:NSURLCredentialPersistenceForSession]);
+        else completion(NSURLSessionAuthChallengeCancelAuthenticationChallenge, nil);
+        [self emit:7 generation:self.generation payload:FMJSON(@{@"kind":@3,@"phase":@"completed",@"accepted":@(accepted)}) origin:nil flags:0];
+    }];
+    [alert.window makeFirstResponder:user];
+}
+- (void)webView:(WKWebView *)web didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential *))completion {
+    [self authenticate:challenge completion:completion];
+}
+
+// New windows: the host opens its own popup surface with the original request (method, body, content type).
+- (void)requestPopup:(WKNavigationAction *)action {
+    NSURLRequest *request = action.request;
+    NSURL *url = request.URL.absoluteString.length ? request.URL : [NSURL URLWithString:@"about:blank"];
+    if (!FMPopupAllowed(url)) { [self emit:5 generation:self.generation payload:url.absoluteString origin:FMOrigin(action.sourceFrame) flags:0]; return; }
+    [self emit:13 generation:self.generation payload:FMJSON(@{@"url":url.absoluteString, @"method":request.HTTPMethod ?: @"GET",
+        @"body":request.HTTPBody ? (id)[request.HTTPBody base64EncodedStringWithOptions:0] : NSNull.null,
+        @"streamedBody":@((BOOL)(request.HTTPBody == nil && request.HTTPBodyStream != nil)),
+        @"contentType":(id)[request valueForHTTPHeaderField:@"Content-Type"] ?: NSNull.null}) origin:FMOrigin(action.sourceFrame) flags:action.sourceFrame.isMainFrame];
+}
+- (WKWebView *)webView:(WKWebView *)web createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)action windowFeatures:(WKWindowFeatures *)features {
+    if (!self.disposed) [self requestPopup:action];
+    return nil;
+}
+- (void)webViewDidClose:(WKWebView *)web {
+    [self emit:14 generation:self.generation payload:@"close" origin:nil flags:0];
+}
+
+// Downloads. IDs are this bridge's; the managed session maps each to exactly one terminal update.
+- (void)adoptDownload:(WKDownload *)download key:(NSNumber *)key {
+    if (self.disposed) { [download cancel:nil]; return; }
+    download.delegate = self;
+    self.downloads[key ?: @(++self.nextDownload)] = download;
+}
+- (NSNumber *)keyForDownload:(WKDownload *)download {
+    for (NSNumber *key in self.downloads) if (self.downloads[key] == download) return key;
+    return nil;
+}
+- (void)download:(WKDownload *)download decideDestinationUsingResponse:(NSURLResponse *)response suggestedFilename:(NSString *)suggestedFilename completionHandler:(void (^)(NSURL *))completionHandler {
+    NSNumber *key = [self keyForDownload:download];
+    if (self.disposed || !key) { completionHandler(nil); return; }
+    self.destinations[key] = [completionHandler copy];
+    NSURLRequest *original = download.originalRequest;
+    [self emit:20 generation:key.longLongValue payload:FMJSON(@{@"url":(response.URL ?: original.URL).absoluteString ?: @"",
+        @"method":original.HTTPMethod ?: @"GET", @"suggestedFilename":suggestedFilename ?: @"", @"mimeType":(id)response.MIMEType ?: NSNull.null,
+        @"expected":@(response.expectedContentLength)}) origin:nil flags:0];
+}
+- (void)download:(WKDownload *)download willPerformHTTPRedirection:(NSHTTPURLResponse *)response newRequest:(NSURLRequest *)request decisionHandler:(void (^)(WKDownloadRedirectPolicy))decisionHandler {
+    NSNumber *key = [self keyForDownload:download];
+    NSString *scheme = request.URL.scheme.lowercaseString;
+    BOOL allowed = !self.disposed && key && ([scheme isEqual:@"http"] || [scheme isEqual:@"https"]);
+    if (allowed) [self emit:24 generation:key.longLongValue payload:FMJSON(@{@"url":request.URL.absoluteString ?: @""}) origin:nil flags:0];
+    decisionHandler(allowed ? WKDownloadRedirectPolicyAllow : WKDownloadRedirectPolicyCancel);
+}
+- (void)download:(WKDownload *)download didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge completionHandler:(void (^)(NSURLSessionAuthChallengeDisposition, NSURLCredential *))completionHandler {
+    [self authenticate:challenge completion:completionHandler];
+}
+- (void)downloadDidFinish:(WKDownload *)download {
+    NSNumber *key = [self keyForDownload:download];
+    if (key) [self finishDownload:key kind:22 payload:@{}];
+}
+- (void)download:(WKDownload *)download didFailWithError:(NSError *)error resumeData:(NSData *)resumeData {
+    NSNumber *key = [self keyForDownload:download];
+    if (!key) return;
+    BOOL cancelled = [error.domain isEqual:NSURLErrorDomain] && error.code == NSURLErrorCancelled;
+    [self finishDownload:key kind:23 payload:@{@"cancelled":@(cancelled), @"code":@(error.code), @"domain":error.domain ?: @"",
+        @"message":error.localizedDescription ?: @"Download failed"}];
+}
+- (void)watchProgress:(NSNumber *)key {
+    [self.downloads[key].progress addObserver:self forKeyPath:@"completedUnitCount" options:0 context:FMProgressContext];
+    [self.observedProgress addObject:key];
+}
+- (void)progressChanged:(NSProgress *)progress {
+    if (self.disposed) return;
+    for (NSNumber *key in self.downloads) {
+        if (self.downloads[key].progress != progress) continue;
+        CFAbsoluteTime now = CFAbsoluteTimeGetCurrent();
+        if (now - self.progressTimes[key].doubleValue < 0.25) return;
+        self.progressTimes[key] = @(now);
+        [self emit:21 generation:key.longLongValue payload:FMJSON(@{@"received":@(progress.completedUnitCount), @"expected":@(progress.totalUnitCount)}) origin:nil flags:0];
+        return;
+    }
+}
+// Removes the download and emits its single terminal update; later callbacks for it find no key.
+- (void)finishDownload:(NSNumber *)key kind:(int)kind payload:(NSDictionary *)payload {
+    WKDownload *download = self.downloads[key];
+    if (!download) return;
+    if ([self.observedProgress containsObject:key]) {
+        [download.progress removeObserver:self forKeyPath:@"completedUnitCount" context:FMProgressContext];
+        [self.observedProgress removeObject:key];
+    }
+    [self.downloads removeObjectForKey:key]; [self.destinations removeObjectForKey:key]; [self.progressTimes removeObjectForKey:key];
+    NSMutableDictionary *body = [payload mutableCopy];
+    body[@"received"] = @(download.progress.completedUnitCount);
+    [self emit:kind generation:key.longLongValue payload:FMJSON(body) origin:nil flags:0];
+}
+- (int)cancelDownload:(NSNumber *)key {
+    if ([self.pendingStarts containsObject:key]) { [self.cancelledStarts addObject:key]; return 1; }
+    WKDownload *download = self.downloads[key];
+    if (!download) return 0;
+    void (^destination)(NSURL *) = self.destinations[key];
+    if (destination) {
+        [self.destinations removeObjectForKey:key];
+        destination(nil);
+        [self finishDownload:key kind:23 payload:@{@"cancelled":@YES}];
+        return 1;
+    }
+    __weak FMBridge *weakSelf = self;
+    [download cancel:^(NSData *resumeData) {
+        dispatch_async(dispatch_get_main_queue(), ^{ [weakSelf finishDownload:key kind:23 payload:@{@"cancelled":@YES}]; });
+    }];
+    return 1;
+}
+@end
+
+__attribute__((visibility("default"))) void *fm_attach(void *view, const char *handler, const char *applicationName, FMCallback callback, void *context) {
+    @try {
+        WKWebView *web = (__bridge WKWebView *)view;
+        if (!web || !NSThread.isMainThread) { FMError = @"WK attachment requires the main thread"; return NULL; }
+        FMBridge *bridge = [FMBridge new]; bridge.web = web; bridge.handler = [NSString stringWithUTF8String:handler];
+        bridge.downloads = [NSMutableDictionary new]; bridge.destinations = [NSMutableDictionary new]; bridge.progressTimes = [NSMutableDictionary new];
+        bridge.observedProgress = [NSMutableSet new]; bridge.pendingStarts = [NSMutableSet new]; bridge.cancelledStarts = [NSMutableSet new];
+        bridge.callback = callback; bridge.context = context; bridge.applicationName = [NSString stringWithUTF8String:applicationName];
+        bridge.previousNavigation = web.navigationDelegate; bridge.previousUI = web.UIDelegate;
+        web.navigationDelegate = bridge; web.UIDelegate = bridge;
+        // This is a distinct name: never remove or replace the vendor-owned registration.
+        [web.configuration.userContentController addScriptMessageHandler:bridge name:bridge.handler];
+        web.configuration.preferences.elementFullscreenEnabled = YES; web.inspectable = NO;
+        for (NSString *key in @[@"title", @"URL", @"canGoBack", @"canGoForward", @"loading"]) [web addObserver:bridge forKeyPath:key options:0 context:NULL];
+        bridge.observing = YES;
+        // WK's native first responder bypasses Avalonia's routed keyboard gestures.
+        // Route the standard application Quit command to the composition root, regardless of HTML/Flash focus.
+        __weak FMBridge *weakBridge = bridge;
+        bridge.keyMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown handler:^NSEvent *(NSEvent *event) {
+            FMBridge *owner = weakBridge; WKWebView *view = owner.web;
+            NSResponder *responder = view.window.firstResponder;
+            NSEventModifierFlags modifiers = event.modifierFlags;
+            BOOL quit = (modifiers & NSEventModifierFlagCommand) && !(modifiers & (NSEventModifierFlagControl | NSEventModifierFlagOption | NSEventModifierFlagShift)) &&
+                [event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"q"];
+            if (!owner.disposed && quit && [responder isKindOfClass:NSView.class] && [(NSView *)responder isDescendantOf:view]) {
+                [owner emit:11 generation:owner.generation payload:@"quit" origin:nil flags:0]; return nil;
+            }
+            return event;
+        }];
+        [bridge emit:12 generation:0 payload:web.inspectable ? @"true" : @"false" origin:nil flags:0];
+        return (__bridge_retained void *)bridge;
+    } @catch (NSException *error) { FMError = error.reason; return NULL; }
+}
+__attribute__((visibility("default"))) const char *fm_last_error(void) { return (FMError ?: @"Native WebKit operation failed").UTF8String; }
+__attribute__((visibility("default"))) void fm_detach(void *value) {
+    FMBridge *bridge = (__bridge_transfer FMBridge *)value; [bridge detach];
+}
+__attribute__((visibility("default"))) int fm_set_zoom(void *value, double zoom) {
+    FMBridge *bridge = (__bridge FMBridge *)value;
+    if (bridge.disposed || !NSThread.isMainThread || zoom < 0.25 || zoom > 5 || !isfinite(zoom)) return 0;
+    bridge.web.pageZoom = zoom; return 1;
+}
+__attribute__((visibility("default"))) int fm_set_inspection(void *value, int enabled) {
+    FMBridge *bridge = (__bridge FMBridge *)value;
+    if (bridge.disposed || !NSThread.isMainThread) return 0;
+    bridge.web.inspectable = enabled != 0;
+    [bridge emit:12 generation:bridge.generation payload:bridge.web.inspectable ? @"true" : @"false" origin:nil flags:0];
+    return bridge.web.inspectable == (enabled != 0);
+}
+__attribute__((visibility("default"))) int fm_find(void *value, const char *query, int backwards, int caseSensitive, int64_t command) {
+    FMBridge *bridge = (__bridge FMBridge *)value;
+    if (bridge.disposed || !NSThread.isMainThread) return 0;
+    WKFindConfiguration *configuration = [WKFindConfiguration new];
+    configuration.backwards = backwards != 0; configuration.caseSensitive = caseSensitive != 0; configuration.wraps = YES;
+    [bridge.web findString:[NSString stringWithUTF8String:query] withConfiguration:configuration completionHandler:^(WKFindResult *result) {
+        [bridge emit:6 generation:command payload:result.matchFound ? @"true" : @"false" origin:nil flags:0];
+    }]; return 1;
+}
+__attribute__((visibility("default"))) int64_t fm_download_start(void *value, const char *address) {
+    FMBridge *bridge = (__bridge FMBridge *)value;
+    NSURL *url = [NSURL URLWithString:[NSString stringWithUTF8String:address]];
+    if (bridge.disposed || !NSThread.isMainThread || !url) return 0;
+    NSNumber *key = @(++bridge.nextDownload);
+    [bridge.pendingStarts addObject:key];
+    __weak FMBridge *weakBridge = bridge;
+    [bridge.web startDownloadUsingRequest:[NSURLRequest requestWithURL:url] completionHandler:^(WKDownload *download) {
+        FMBridge *owner = weakBridge;
+        [owner.pendingStarts removeObject:key];
+        if (!owner || owner.disposed || [owner.cancelledStarts containsObject:key]) {
+            [owner.cancelledStarts removeObject:key];
+            [download cancel:nil];
+            [owner emit:23 generation:key.longLongValue payload:FMJSON(@{@"cancelled":@YES, @"received":@0}) origin:nil flags:0];
+            return;
+        }
+        [owner adoptDownload:download key:key];
+    }];
+    return key.longLongValue;
+}
+__attribute__((visibility("default"))) int fm_download_destination(void *value, int64_t download, const char *path) {
+    FMBridge *bridge = (__bridge FMBridge *)value;
+    NSNumber *key = @(download);
+    void (^completion)(NSURL *) = bridge.destinations[key];
+    if (bridge.disposed || !NSThread.isMainThread || !completion) return 0;
+    [bridge.destinations removeObjectForKey:key];
+    if (!path) { completion(nil); [bridge finishDownload:key kind:23 payload:@{@"cancelled":@YES}]; return 1; }
+    [bridge watchProgress:key];
+    completion([NSURL fileURLWithPath:[NSString stringWithUTF8String:path] isDirectory:NO]);
+    return 1;
+}
+__attribute__((visibility("default"))) int fm_download_cancel(void *value, int64_t download) {
+    FMBridge *bridge = (__bridge FMBridge *)value;
+    if (bridge.disposed || !NSThread.isMainThread) return 0;
+    return [bridge cancelDownload:@(download)];
+}
+__attribute__((visibility("default"))) int fm_download_cancel_all(void *value) {
+    FMBridge *bridge = (__bridge FMBridge *)value;
+    if (bridge.disposed || !NSThread.isMainThread) return 0;
+    int count = 0;
+    for (NSNumber *key in bridge.pendingStarts.allObjects) count += [bridge cancelDownload:key];
+    for (NSNumber *key in bridge.downloads.allKeys) count += [bridge cancelDownload:key];
+    return count;
+}
+__attribute__((visibility("default"))) int fm_load_request(void *value, const char *address, const char *method, const uint8_t *body, int length, const char *contentType) {
+    FMBridge *bridge = (__bridge FMBridge *)value;
+    NSURL *url = [NSURL URLWithString:[NSString stringWithUTF8String:address]];
+    if (bridge.disposed || !NSThread.isMainThread || !url || length < 0) return 0;
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
+    request.HTTPMethod = [NSString stringWithUTF8String:method];
+    if (length > 0) request.HTTPBody = [NSData dataWithBytes:body length:(NSUInteger)length];
+    if (contentType) [request setValue:[NSString stringWithUTF8String:contentType] forHTTPHeaderField:@"Content-Type"];
+    return [bridge.web loadRequest:request] != nil;
+}
+
+// Test diagnostics use public NSApplication window inventory to verify popup release after finalization.
+__attribute__((visibility("default"))) const char *fm_window_snapshot(void) {
+    static NSString *snapshot;
+    @autoreleasepool {
+        NSMutableArray *windows = [NSMutableArray new];
+        for (NSWindow *window in NSApp.windows) {
+            [windows addObject:@{@"id":@(window.windowNumber), @"title":window.title ?: @"", @"visible":@(window.visible), @"class":NSStringFromClass(window.class)}];
+        }
+        snapshot = FMJSON(@{@"windows":windows, @"currentEventWindow":@(NSApp.currentEvent.window.windowNumber), @"mainWindow":@(NSApp.mainWindow.windowNumber), @"keyWindow":@(NSApp.keyWindow.windowNumber)});
+    }
+    return snapshot.UTF8String;
+}
+
+__attribute__((visibility("default"))) int fm_window_number(void *value) {
+    return (int)((__bridge NSWindow *)value).windowNumber;
+}

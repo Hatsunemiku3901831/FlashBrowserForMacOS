@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <InternalsVisibleTo Include="FlashMacOS.Sol.Managed.Tests" />
+    <ProjectReference Include="../FlashMacOS.Domain/FlashMacOS.Domain.csproj" />
+    <ProjectReference Include="../FlashMacOS.Application/FlashMacOS.Application.csproj" />
+  </ItemGroup>
+</Project>

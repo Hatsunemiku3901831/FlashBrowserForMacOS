@@ -1,0 +1,303 @@
+using System.Net;
+using System.Net.Http.Headers;
+using FlashMacOS.Flash.Ruffle.Hosting;
+using FlashMacOS.Infrastructure.Persistence;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class LoopbackContentHostTests
+{
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public async Task MissingOrCorruptProductRuntimeStopsBeforeServerStartup(bool corrupt)
+    {
+        using var directory = new TemporaryDirectory();
+        var runtime = directory.GetPath("runtime"); Directory.CreateDirectory(runtime);
+        foreach (var file in RuffleAssetManifest.RuntimeFiles.Keys)
+            File.Copy(Path.Combine(TestAssets.RuffleDirectory, file), Path.Combine(runtime, file));
+        var entry = Path.Combine(runtime, "ruffle.js");
+        if (corrupt) await File.WriteAllTextAsync(entry, "corrupted test copy"); else File.Delete(entry);
+        using var store = new JsonRuffleSaveStore(directory.GetPath("store.json"), new SolHeaderInspector());
+        await using var host = new LoopbackContentHost(runtime, store);
+        if (corrupt)
+        {
+            var error = await Assert.ThrowsAsync<InvalidDataException>(() => host.StartAsync().AsTask());
+            StringAssert.Contains(error.Message, "hash mismatch");
+        }
+        else
+        {
+            var error = await Assert.ThrowsAsync<FileNotFoundException>(() => host.StartAsync().AsTask());
+            StringAssert.Contains(error.Message, "asset is missing");
+        }
+        Assert.IsNull(host.BaseUri);
+    }
+
+    [TestMethod]
+    public async Task ProductHostNeedsNoDiagnosticFixturesAndExposesNoTestRoutes()
+    {
+        using var directory = new TemporaryDirectory();
+        using var store = new JsonRuffleSaveStore(directory.GetPath("store.json"), new SolHeaderInspector());
+        await using var host = new LoopbackContentHost(TestAssets.RuffleDirectory, store);
+        await host.StartAsync();
+        Assert.IsNull(host.DiagnosticsUri);
+        using var http = new HttpClient();
+        var home = await http.GetStringAsync(host.HomeUri);
+        StringAssert.Contains(home, "Open a local SWF");
+        Assert.DoesNotContain("settings.sol", home);
+        using var diagnostics = await http.GetAsync(new Uri(host.HomeUri!, "diagnostics"));
+        Assert.AreEqual(HttpStatusCode.NotFound, diagnostics.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task LocalMovieKeepsItsOwnValidatedGameConfiguration()
+    {
+        using var directory = new TemporaryDirectory();
+        using var store = new JsonRuffleSaveStore(directory.GetPath("store.json"), new SolHeaderInspector());
+        await using var host = new LoopbackContentHost(TestAssets.RuffleDirectory, store);
+        var path = directory.GetPath("配置.swf"); await File.WriteAllBytesAsync(path, [70,87,83,10,0,0,0,0]);
+        var source = await host.RegisterSwfAsync(path, new FlashMacOS.Domain.Flash.RuffleGameConfiguration("fixture", "low", "noScale", .25));
+        using var http = new HttpClient(); var page = await http.GetStringAsync(source.PlayerUri);
+        StringAssert.Contains(page, "quality: \"low\"");
+        StringAssert.Contains(page, "scale: \"noScale\"");
+        StringAssert.Contains(page, "if (initialLoad) api.volume = 0.25");
+        await Assert.ThrowsAsync<ArgumentException>(() => host.RegisterSwfAsync(path,
+            new FlashMacOS.Domain.Flash.RuffleGameConfiguration(Quality: "guessed")).AsTask());
+    }
+
+    [TestMethod]
+    public async Task DisposeAsyncIsIdempotentBeforeStart()
+    {
+        using var directory = new TemporaryDirectory();
+        using var saveStore = new JsonRuffleSaveStore(directory.GetPath("saves.json"), new SolHeaderInspector());
+        var host = CreateHost(saveStore);
+
+        await host.DisposeAsync();
+        await host.DisposeAsync();
+
+        Assert.IsNull(host.BaseUri);
+        Assert.IsNull(host.DiagnosticsUri);
+        Assert.IsNull(host.RufflePublicPath);
+    }
+
+    [TestMethod]
+    public async Task DisposeAsyncIsIdempotentAfterStart()
+    {
+        using var directory = new TemporaryDirectory();
+        using var saveStore = new JsonRuffleSaveStore(directory.GetPath("saves.json"), new SolHeaderInspector());
+        var host = CreateHost(saveStore);
+        await host.StartAsync();
+
+        await host.DisposeAsync();
+        await host.DisposeAsync();
+
+        Assert.IsNull(host.BaseUri);
+        Assert.IsNull(host.DiagnosticsUri);
+        Assert.IsNull(host.RufflePublicPath);
+    }
+
+    [TestMethod]
+    public async Task ConcurrentDisposeAsyncCallsCompleteWithinFiveSeconds()
+    {
+        using var directory = new TemporaryDirectory();
+        using var saveStore = new JsonRuffleSaveStore(directory.GetPath("saves.json"), new SolHeaderInspector());
+        var host = CreateHost(saveStore);
+        await host.StartAsync();
+
+        var disposals = Enumerable.Range(0, 8)
+            .Select(_ => host.DisposeAsync().AsTask())
+            .ToArray();
+
+        await Task.WhenAll(disposals).WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.IsNull(host.BaseUri);
+        Assert.IsNull(host.DiagnosticsUri);
+        Assert.IsNull(host.RufflePublicPath);
+    }
+
+    [TestMethod]
+    public async Task StartAndRegisterThrowAfterDispose()
+    {
+        using var directory = new TemporaryDirectory();
+        using var saveStore = new JsonRuffleSaveStore(directory.GetPath("saves.json"), new SolHeaderInspector());
+        var host = CreateHost(saveStore);
+        await host.DisposeAsync();
+
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(
+            async () => await host.StartAsync().AsTask());
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(
+            async () => await host.RegisterSwfAsync(directory.GetPath("movie.swf")).AsTask());
+        Assert.IsNull(host.BaseUri);
+    }
+
+    [TestMethod]
+    public async Task RepeatedStartAsyncKeepsTheSameBaseUri()
+    {
+        using var directory = new TemporaryDirectory();
+        using var saveStore = new JsonRuffleSaveStore(directory.GetPath("saves.json"), new SolHeaderInspector());
+        await using var host = CreateHost(saveStore);
+
+        await host.StartAsync();
+        var firstBaseUri = host.BaseUri;
+        await host.StartAsync();
+
+        Assert.IsNotNull(firstBaseUri);
+        Assert.AreEqual(firstBaseUri, host.BaseUri);
+    }
+
+    [TestMethod]
+    public async Task HostServesPinnedAssetsAndConfinedContentOverAuthenticatedLoopback()
+    {
+        using var directory = new TemporaryDirectory();
+        var moviePath = directory.GetPath("movie.swf");
+        var sidecarPath = directory.GetPath("levels.xml");
+        var movieBytes = new byte[] { 0x46, 0x57, 0x53, 0x0a, 0x01, 0x02, 0x03, 0x04 };
+        await File.WriteAllBytesAsync(moviePath, movieBytes);
+        await File.WriteAllTextAsync(sidecarPath, "<levels />");
+
+        using var saveStore = new JsonRuffleSaveStore(directory.GetPath("saves.json"), new SolHeaderInspector());
+        await using var host = new LoopbackContentHost(
+            TestAssets.RuffleDirectory,
+            TestAssets.Sol("settings.sol"),
+            TestAssets.ExternalInterfaceDirectory,
+            saveStore);
+        await host.StartAsync();
+
+        var baseUri = host.BaseUri ?? throw new AssertFailedException("The host did not publish its base URI.");
+        var diagnosticsUri = host.DiagnosticsUri
+            ?? throw new AssertFailedException("The host did not publish its diagnostics URI.");
+        var rufflePublicPath = host.RufflePublicPath
+            ?? throw new AssertFailedException("The host did not publish its Ruffle path.");
+        Assert.AreEqual("http", baseUri.Scheme);
+        Assert.IsTrue(IPAddress.IsLoopback(IPAddress.Parse(baseUri.Host)));
+        Assert.AreNotEqual(0, baseUri.Port);
+
+        var source = await host.RegisterSwfAsync(moviePath);
+        var duplicate = await host.RegisterSwfAsync(moviePath);
+        Assert.AreEqual(source.Id, duplicate.Id);
+        Assert.AreEqual(source.PlayerUri, duplicate.PlayerUri);
+
+        using var anonymousClient = new HttpClient();
+        using var unauthorized = await anonymousClient.GetAsync(
+            new Uri(baseUri, $"content/{source.Id}/{Uri.EscapeDataString(Path.GetFileName(moviePath))}"));
+        Assert.AreEqual(HttpStatusCode.NotFound, unauthorized.StatusCode);
+
+        using var movieRequest = new HttpRequestMessage(HttpMethod.Get, source.SwfUri);
+        movieRequest.Headers.Range = new RangeHeaderValue(0, 2);
+        using var rangedMovie = await anonymousClient.SendAsync(movieRequest);
+        Assert.AreEqual(HttpStatusCode.PartialContent, rangedMovie.StatusCode);
+        Assert.AreEqual("application/x-shockwave-flash", rangedMovie.Content.Headers.ContentType?.MediaType);
+        CollectionAssert.AreEqual(movieBytes[..3], await rangedMovie.Content.ReadAsByteArrayAsync());
+
+        using var cookieHandler = new HttpClientHandler
+        {
+            CookieContainer = new CookieContainer(),
+            UseCookies = true,
+        };
+        using var cookieClient = new HttpClient(cookieHandler);
+        using var playerResponse = await cookieClient.GetAsync(source.PlayerUri);
+        playerResponse.EnsureSuccessStatusCode();
+        var playerHtml = await playerResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(playerHtml, "RufflePlayer.newest");
+        StringAssert.Contains(playerHtml, source.SwfUri.AbsoluteUri);
+        StringAssert.Contains(playerHtml, "const installTraceObserver = () => {");
+        StringAssert.Contains(playerHtml, "const runWithTraceObserver = async (operation, signal) => {");
+        StringAssert.Contains(playerHtml, "await operation();");
+        StringAssert.Contains(playerHtml, "reload: (updateStorage, signal) => runWithTraceObserver(() =>");
+        StringAssert.Contains(playerHtml, "window.__cefFlashBrowserReloadWithStorage(player, api, updateStorage)");
+        StringAssert.Contains(playerHtml, "player.remove();");
+        StringAssert.Contains(playerHtml, "await runWithTraceObserver(() => api.load({");
+        StringAssert.Contains(playerHtml, "window.addEventListener(\"pagehide\"");
+        StringAssert.Contains(playerHtml, "api.traceObserver = null;");
+        Assert.IsTrue(
+            playerHtml.IndexOf("const runWithTraceObserver", StringComparison.Ordinal)
+            < playerHtml.IndexOf("api.load({", StringComparison.Ordinal));
+
+        var cookieAuthorizedUri = new Uri(
+            baseUri,
+            $"content/{source.Id}/{Uri.EscapeDataString(Path.GetFileName(sidecarPath))}");
+        using var sidecarResponse = await cookieClient.GetAsync(cookieAuthorizedUri);
+        sidecarResponse.EnsureSuccessStatusCode();
+        Assert.AreEqual("application/xml", sidecarResponse.Content.Headers.ContentType?.MediaType);
+        Assert.AreEqual("<levels />", await sidecarResponse.Content.ReadAsStringAsync());
+
+        using var ruffleResponse = await anonymousClient.GetAsync(new Uri(rufflePublicPath, "ruffle.js"));
+        ruffleResponse.EnsureSuccessStatusCode();
+        Assert.AreEqual("text/javascript", ruffleResponse.Content.Headers.ContentType?.MediaType);
+        Assert.AreEqual("nosniff", ruffleResponse.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.AreEqual("cross-origin", ruffleResponse.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
+
+        using var diagnosticsResponse = await cookieClient.GetAsync(diagnosticsUri);
+        diagnosticsResponse.EnsureSuccessStatusCode();
+        var diagnosticsHtml = await diagnosticsResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(diagnosticsHtml, "macOS Gate 0 diagnostics");
+        StringAssert.Contains(diagnosticsHtml, "Write existing SOL fixture");
+        StringAssert.Contains(diagnosticsHtml, "Open ExternalInterface fixture");
+        StringAssert.Contains(diagnosticsHtml, "Persistent cookie observed before this response: no.");
+        Assert.IsTrue(diagnosticsResponse.Headers.Contains("Content-Security-Policy"));
+
+        var externalInterfaceUri = new Uri(
+            diagnosticsUri.AbsoluteUri.Replace(
+                "/diagnostics",
+                "/fixtures/external-interface",
+                StringComparison.Ordinal));
+        using var externalInterfaceResponse = await cookieClient.GetAsync(externalInterfaceUri);
+        externalInterfaceResponse.EnsureSuccessStatusCode();
+        var externalInterfaceHtml = await externalInterfaceResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(externalInterfaceHtml, "ExternalInterface bidirectional gate");
+        StringAssert.Contains(externalInterfaceHtml, "callExternalInterface(\"returnAValue\", 123.4)");
+        StringAssert.Contains(externalInterfaceHtml, "callMethodWithDelay");
+        StringAssert.Contains(externalInterfaceHtml, "external-interface/v1");
+        StringAssert.Contains(externalInterfaceHtml, "let resultPosted = false;");
+        Assert.IsFalse(externalInterfaceHtml.Contains("callMethodImmediately", StringComparison.Ordinal));
+        Assert.IsTrue(externalInterfaceResponse.Headers.Contains("Content-Security-Policy"));
+        Assert.AreEqual(
+            "no-store",
+            externalInterfaceResponse.Headers.CacheControl?.ToString());
+
+        using var externalInterfaceSwfResponse = await cookieClient.GetAsync(
+            new Uri(externalInterfaceUri.AbsoluteUri + "/test.swf"));
+        externalInterfaceSwfResponse.EnsureSuccessStatusCode();
+        Assert.AreEqual(
+            "application/x-shockwave-flash",
+            externalInterfaceSwfResponse.Content.Headers.ContentType?.MediaType);
+        Assert.AreEqual(
+            "nosniff",
+            externalInterfaceSwfResponse.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.AreEqual(
+            2_308,
+            (await externalInterfaceSwfResponse.Content.ReadAsByteArrayAsync()).Length);
+        using var anonymousExternalInterfaceSwfResponse = await anonymousClient.GetAsync(
+            new Uri(externalInterfaceUri.AbsoluteUri + "/test.swf"));
+        Assert.AreEqual(
+            HttpStatusCode.NotFound,
+            anonymousExternalInterfaceSwfResponse.StatusCode);
+
+        using var arbitraryFixtureResponse = await cookieClient.GetAsync(
+            new Uri(externalInterfaceUri.AbsoluteUri + "/Test.as"));
+        Assert.AreEqual(HttpStatusCode.NotFound, arbitraryFixtureResponse.StatusCode);
+        using var traversalFixtureResponse = await cookieClient.GetAsync(
+            new Uri(externalInterfaceUri.AbsoluteUri + "/%2e%2e/settings.sol"));
+        Assert.AreEqual(HttpStatusCode.NotFound, traversalFixtureResponse.StatusCode);
+        using var wrongTokenFixtureResponse = await cookieClient.GetAsync(
+            new Uri(baseUri, "wrong-token/fixtures/external-interface"));
+        Assert.AreEqual(HttpStatusCode.NotFound, wrongTokenFixtureResponse.StatusCode);
+
+        using var repeatedDiagnosticsResponse = await cookieClient.GetAsync(diagnosticsUri);
+        repeatedDiagnosticsResponse.EnsureSuccessStatusCode();
+        var repeatedDiagnosticsHtml = await repeatedDiagnosticsResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(repeatedDiagnosticsHtml, "Persistent cookie observed before this response: yes.");
+        Assert.IsTrue(cookieHandler.CookieContainer
+            .GetCookies(baseUri)
+            .Cast<Cookie>()
+            .Any(cookie => cookie.Name.Equals("CefFlashBrowser-Gate0", StringComparison.Ordinal)
+                && cookie.Expires > DateTime.UtcNow.AddDays(29)));
+    }
+
+    private static LoopbackContentHost CreateHost(IRuffleSaveStore saveStore) =>
+        new(
+            TestAssets.RuffleDirectory,
+            TestAssets.Sol("settings.sol"),
+            TestAssets.ExternalInterfaceDirectory,
+            saveStore);
+}

@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "taskId": "P03",
+  "unit": "Net person-days, planning ranges only; not agent runtime hours",
+  "basis": "97 original behaviors + 10 added managed tests and real WK corpus reused; no existing managed AMF codec or product UI claimed. Source WPF/C++ are behavior references, not directly reusable macOS runtime.",
+  "excludes": "Credential/device availability and external waiting time",
+  "tasks": [
+    {
+      "id": "A01",
+      "min": 3,
+      "max": 5,
+      "remaining": "Move proven ports/fixtures/test names into formal modules and replace internal project references"
+    },
+    {
+      "id": "A02",
+      "min": 3,
+      "max": 5,
+      "remaining": "Unify cancellation, ownership, generations and popup shutdown; retain queue/disposal regressions"
+    },
+    {
+      "id": "A03",
+      "min": 3,
+      "max": 5,
+      "remaining": "Add candidate transactions, backup/recovery, product identity, aliases and bounded logging"
+    },
+    {
+      "id": "A04",
+      "min": 2,
+      "max": 4,
+      "remaining": "Port Legacy settings/favorites JSON with unknown-field and schema behavior"
+    },
+    {
+      "id": "S01",
+      "min": 2,
+      "max": 4,
+      "remaining": "Freeze explicit value/reference graph and independent golden corpus"
+    },
+    {
+      "id": "S02",
+      "min": 4,
+      "max": 6,
+      "remaining": "Implement bounded AMF0 codec; source C++ is algorithm reference only"
+    },
+    {
+      "id": "S03",
+      "min": 7,
+      "max": 11,
+      "remaining": "Implement AMF3 traits/reference tables, cycles, vectors/dictionary and unknown externalizable policy"
+    },
+    {
+      "id": "S04",
+      "min": 4,
+      "max": 6,
+      "remaining": "SOL integration and undo/redo/edit transactions with semantic roundtrips"
+    },
+    {
+      "id": "S05",
+      "min": 3,
+      "max": 5,
+      "remaining": "Boundary/property/fuzz validation, coverage and 10 MiB allocation/performance work"
+    },
+    {
+      "id": "W01",
+      "min": 4,
+      "max": 7,
+      "remaining": "Production browser capabilities, profiles, frame/CSP paths and composition-input fix"
+    },
+    {
+      "id": "W02",
+      "min": 4,
+      "max": 7,
+      "remaining": "Native equivalent-request downloads, edge cases and owned popups"
+    },
+    {
+      "id": "W03",
+      "min": 3,
+      "max": 5,
+      "remaining": "Production Ruffle control/error/site-rule layer and development-route separation"
+    },
+    {
+      "id": "W04",
+      "min": 5,
+      "max": 8,
+      "remaining": "Content identity, transactional save bridge, conflict/restart and editor writeback"
+    },
+    {
+      "id": "U01",
+      "min": 2,
+      "max": 3,
+      "remaining": "Shared design system, native menus and keyboard commands"
+    },
+    {
+      "id": "U02",
+      "min": 4,
+      "max": 6,
+      "remaining": "Browser, settings and favorites UI; existing WPF UI is reference only"
+    },
+    {
+      "id": "U03",
+      "min": 5,
+      "max": 8,
+      "remaining": "SOL typed tree/editor and live save manager UI"
+    },
+    {
+      "id": "U04",
+      "min": 3,
+      "max": 5,
+      "remaining": "Five languages, VoiceOver/keyboard/layout/IME acceptance"
+    },
+    {
+      "id": "M01",
+      "min": 3,
+      "max": 5,
+      "remaining": "File association, drag/drop, repeat activation and native file routing"
+    },
+    {
+      "id": "M02",
+      "min": 4,
+      "max": 7,
+      "remaining": "Read-only Windows data preflight, mapping, idempotent migration and rollback"
+    },
+    {
+      "id": "Q01",
+      "min": 3,
+      "max": 5,
+      "remaining": "Whole regression/desktop acceptance and disconnected clean-source build"
+    },
+    {
+      "id": "Q02",
+      "min": 2,
+      "max": 4,
+      "remaining": "Frozen performance and long-run resource budget measurements"
+    },
+    {
+      "id": "Q03",
+      "min": 1,
+      "max": 3,
+      "remaining": "Formal ARM64 app/dmg, runtime patch review, content/license and ad-hoc verification"
+    },
+    {
+      "id": "Q04",
+      "min": 1,
+      "max": 2,
+      "remaining": "Actual Developer ID/notary/staple/Gatekeeper on one immutable package"
+    },
+    {
+      "id": "Q05",
+      "min": 2,
+      "max": 4,
+      "remaining": "Real OS/device/clean-account install, upgrade, offline and recovery acceptance"
+    }
+  ],
+  "total": {
+    "min": 77,
+    "max": 130
+  },
+  "uncertainties": [
+    "Managed object graph allocations/reference coverage",
+    "Equivalent-request native downloads",
+    "Frame/CSP and specific game behavior beyond current login goal",
+    "Native file activation/accessibility/system versions"
+  ]
+}

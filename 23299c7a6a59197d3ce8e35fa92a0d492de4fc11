@@ -1,0 +1,1843 @@
+{
+  "schemaVersion": 1,
+  "legacyTestCount": 117,
+  "tests": [
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_Zero_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_One_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_Max1Byte_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_Min2Byte_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_Max2Byte_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_Min3Byte_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_Max3Byte_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_Min4Byte_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_NegativeOne_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_Negative256_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3Int_LargePositive_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3_StringReferencePooling_DuplicatesSmallerFile",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf3_StringReferencePooling_ValuesPreserved",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "BinaryFormat_MagicBytes",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "BinaryFormat_TcsoConstant",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "BinaryFormat_ChunkSize_MatchesFileSize",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "BinaryFormat_SolName_Encoded",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "BinaryFormat_VersionField_AMF3",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "BinaryFormat_VersionField_AMF0",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Double_NaN_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Double_PositiveInfinity_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Double_NegativeInfinity_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Double_PositiveZero_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Double_NegativeZero_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Double_VerySmall_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Double_VeryLarge_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Double_MinValue_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0VsAmf3_IntegerEncoding_DifferentSizes",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0_BooleanTrueFalse_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0_IntStoredAsNumber_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0_StringValue_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0_DoubleValue_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0_SettingsFixture_ReadTypes",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_EmptyString_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_UnicodeString_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_LongString_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_EmptyArray_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_EmptyObject_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_DeepNesting_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_BinaryAllZeros_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_BinaryAllOnes_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_ArrayOnlyDense_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_ArrayOnlyAssoc_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_MixedTypesInArray_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "EdgeCase_MultipleKeyValuePairs_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Date_UnixEpoch_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Date_RecentDate_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Date_MillisecondPrecision_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Date_Amf0_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0_EcmaArray_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0_StrictArray_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0_Object_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "sourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "legacyTestName": "Amf0_NestedObjectInArray_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf0_Settings_VerifySolName",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf0_Settings_VerifyVersion",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf0_Settings_HasData",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_Mao_VerifySolName",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_Mao_VerifyVersion",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_Mao_LevelIsInt",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_Mao_LevelValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_Pvz_VerifySolName",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_Pvz_HasSaveData",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_Pvz_SaveDataIsObject",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_Pvz_SaveDataHasExpectedProperties",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_FBCookie_VerifySolName",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_FBCookie_HasStats",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ReadAmf3_FBCookie_StatsIsArray",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_IntValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_DoubleValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_BoolValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_StringValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_DateTimeValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_BinaryValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_UndefinedValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_NullValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_MultipleValues",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_AMF0_IntAndString",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_SolArray_DenseAndAssoc",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_SolObject_WithProperties",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_SolXml",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "RoundTrip_SolXmlDoc",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ModifyExistingFile_ChangeValue",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "ModifyExistingFile_AddNewKey",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_Int_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_Double_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_Bool_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_String_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_DateTime_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_ByteArray_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_Undefined_Properties",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_Null_Properties",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_SolXml_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_SolXmlDoc_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_Array_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolValueWrapper_Object_TypeIsCorrect",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_GetAllValues_FromFixtureFile",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_GetAllValues_ObjectBecomsSolObject",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_GetAllValues_ArrayBecomsSolArray",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_SetAllValues_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_GetValueWrapper_Int",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_GetValueWrapper_SolObject",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_GetValueWrapper_SolArray",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_GetTypeString_AllKnownTypes",
+      "targetTask": "U03",
+      "status": "PENDING_EDITOR_TYPE_CATALOG",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": null,
+      "reason": "Legacy CLR UI descriptors replaced by localized typed graph catalog; preserve legacy type membership while adding standard Vector/Dictionary types. No maximum-of-12 restriction."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_GetDefaultValueOfType_SolSpecificTypes",
+      "targetTask": "U03",
+      "status": "PENDING_EDITOR_TYPE_CATALOG",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": null,
+      "reason": "Legacy CLR UI descriptors replaced by localized typed graph catalog; preserve legacy type membership while adding standard Vector/Dictionary types. No maximum-of-12 restriction."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolHelper_GetSupportedTypes_Returns12Types",
+      "targetTask": "U03",
+      "status": "PENDING_EDITOR_TYPE_CATALOG",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": null,
+      "reason": "Legacy CLR UI descriptors replaced by localized typed graph catalog; preserve legacy type membership while adding standard Vector/Dictionary types. No maximum-of-12 restriction."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolObject_FromWrapper_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolObject_DefaultConstructor_EmptyState",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolArray_FromWrapper_RoundTrip",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolArray_DefaultConstructor_EmptyState",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolTypeDesc_CreatesCorrectTypeName",
+      "targetTask": "U03",
+      "status": "PENDING_EDITOR_TYPE_CATALOG",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": null,
+      "reason": "Legacy CLR UI descriptors replaced by localized typed graph catalog; preserve legacy type membership while adding standard Vector/Dictionary types. No maximum-of-12 restriction."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolTypeDesc_CreateInstance_ReturnsDefaultValue",
+      "targetTask": "U03",
+      "status": "PENDING_EDITOR_TYPE_CATALOG",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": null,
+      "reason": "Legacy CLR UI descriptors replaced by localized typed graph catalog; preserve legacy type membership while adding standard Vector/Dictionary types. No maximum-of-12 restriction."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolTypeDesc_NullType",
+      "targetTask": "U03",
+      "status": "PENDING_EDITOR_TYPE_CATALOG",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": null,
+      "reason": "Legacy CLR UI descriptors replaced by localized typed graph catalog; preserve legacy type membership while adding standard Vector/Dictionary types. No maximum-of-12 restriction."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "CreateEmpty_ReturnsEmptyFile",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolFileWrapper_Constructor_ReadsFile",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolFileWrapper_PathProperty",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolFileWrapper_SetSolName",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    },
+    {
+      "sourcePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "sourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "legacyTestName": "SolFileWrapper_SetVersion",
+      "targetTask": "S04",
+      "status": "SEMANTIC_EQUIVALENCE_VERIFIED",
+      "assertionPolicy": "Preserve original value/type assertions, strengthen identity/raw-number checks; AMF0 integer is Number by specification, not Int32",
+      "formalEquivalent": [
+        "SolContentTests",
+        "LegacySolValueAssertionsTests",
+        "SolEditorTransactionTests",
+        "SolConversionTests",
+        "AmfGraphModelTests"
+      ],
+      "reason": "Original field/value/header assertions are covered through pure typed graphs and whole SOL files; C++/CLI wrapper classes are not runtime APIs. DateTime wrapper becomes raw millisecond Date, direct encoding mutation becomes a validated conversion preview."
+    }
+  ],
+  "note": "111 format/data/type semantics have equivalents in the new repository; six UI type-description/default catalog assertions remain explicitly U03. This is not a claim that the original Windows C++/CLI test binary ran."
+}

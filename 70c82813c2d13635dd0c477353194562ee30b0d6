@@ -1,0 +1,29 @@
+namespace FlashMacOS.Application.Sol;
+
+// Registration is explicit and immutable for the lifetime of an AMF codec.
+public interface IAmfExternalizableCodec
+{
+    string ClassName { get; }
+    string CodecId { get; }
+    AmfValue Read(IAmfExternalInput input);
+    void Write(IAmfExternalOutput output, AmfValue value);
+}
+
+public interface IAmfExternalInput
+{
+    AmfValue ReadValue();
+    byte ReadByte();
+    uint ReadUInt32();
+    string ReadUtf8(int length);
+    ReadOnlyMemory<byte> ReadBytes(int length);
+    AmfReference AddNode(Func<AmfNodeId, AmfNode> create);
+}
+
+public interface IAmfExternalOutput
+{
+    void WriteValue(AmfValue value);
+    void WriteByte(byte value);
+    void WriteUInt32(uint value);
+    void WriteBytes(ReadOnlySpan<byte> bytes);
+    AmfNode GetNode(AmfReference reference);
+}

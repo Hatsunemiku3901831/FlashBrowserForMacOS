@@ -1,0 +1,100 @@
+using FlashMacOS.Application.Browser;
+using FlashMacOS.Domain.Browser;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class BrowserWorkspaceTests
+{
+    [TestMethod]
+    public async Task PurposeRoutingRetainsSeparateHistoryAndIgnoresInactiveMessages()
+    {
+        var web = new Session(); var local = new Session();
+        await using var workspace = new BrowserWorkspace(web, local, address => address.Host == "local.test" ? BrowserPurpose.LocalPlayer : BrowserPurpose.Web);
+        var traces = new List<string>(); var surfaces = new List<BrowserPurpose>();
+        workspace.BridgeMessageReceived += value => traces.Add(value.Message!); workspace.SurfaceChanged += surfaces.Add;
+        await workspace.NavigateAsync(new Uri("https://web.test/first"));
+        await workspace.NavigateAsync(new Uri("https://local.test/game"));
+        web.Publish("inactive"); local.Publish("active");
+        Assert.AreEqual(BrowserPurpose.LocalPlayer, workspace.Purpose); Assert.AreSame(local, workspace.ActiveSession);
+        Assert.HasCount(1, traces); Assert.AreEqual("active", traces[0]);
+        await workspace.NavigateAsync(new Uri("https://web.test/second"));
+        Assert.AreSame(web, workspace.ActiveSession); Assert.HasCount(2, web.History); Assert.HasCount(1, local.History);
+        Assert.HasCount(3, surfaces);
+        await workspace.DisposeAsync(); web.Publish("closed"); local.Publish("closed");
+        Assert.HasCount(1, traces); Assert.AreEqual(0, web.Disposals); Assert.AreEqual(0, local.Disposals);
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(async () => await workspace.ReloadAsync());
+    }
+
+    [TestMethod]
+    public async Task PopupRequestsComeOnlyFromTheActiveSurfaceAndKeepTheirPurposeAndBody()
+    {
+        var web = new Session(); var local = new Session();
+        await using var workspace = new BrowserWorkspace(web, local, address => address.Host == "local.test" ? BrowserPurpose.LocalPlayer : BrowserPurpose.Web);
+        var popups = new List<BrowserPopupRequest>(); workspace.PopupRequested += popups.Add;
+        await workspace.NavigateAsync(new Uri("https://local.test/game"));
+        var post = new BrowserPopupRequest(new BrowserRequest(new Uri("https://local.test/echo"), "POST", "a=1"u8.ToArray(), "application/x-www-form-urlencoded"), BrowserPurpose.LocalPlayer);
+        web.Popup(new BrowserPopupRequest(new BrowserRequest(new Uri("https://web.test/hidden")), BrowserPurpose.Web));
+        local.Popup(post);
+        Assert.HasCount(1, popups); Assert.AreSame(post, popups[0]);
+        await workspace.NavigateAsync(post.Request);
+        Assert.AreSame(post.Request, local.Requests[^1]); Assert.IsEmpty(web.Requests);
+        Assert.ThrowsExactly<NotSupportedException>(() => workspace.NavigateAsync(new BrowserRequest(new Uri("file:///tmp/x"), "POST", [])).AsTask());
+    }
+
+    [TestMethod]
+    public async Task ClosingCancelsNativeWaitersAndDrainsBeforeReturning()
+    {
+        var web = new Session { Block = true }; var local = new Session();
+        await using var workspace = new BrowserWorkspace(web, local, _ => BrowserPurpose.Web);
+        var first = workspace.ExecuteScriptAsync("wait").AsTask(); await web.Entered.Task;
+        await workspace.DisposeAsync();
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(async () => await first);
+        Assert.IsTrue(web.WaitEnded);
+    }
+
+    [TestMethod]
+    public async Task PrecancelAndUnsupportedAddressDoNotChangeActivePurpose()
+    {
+        var web = new Session(); var local = new Session();
+        await using var workspace = new BrowserWorkspace(web, local, _ => BrowserPurpose.LocalPlayer);
+        using var cancellation = new CancellationTokenSource(); await cancellation.CancelAsync();
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(async () => await workspace.NavigateAsync(new Uri("https://local.test"), cancellation.Token));
+        Assert.ThrowsExactly<NotSupportedException>(() => workspace.NavigateAsync(new Uri("custom://external")).AsTask());
+        Assert.AreEqual(BrowserPurpose.Web, workspace.Purpose); Assert.IsEmpty(local.History);
+    }
+
+    private sealed class Session : IBrowserSession
+    {
+        public BrowserState State { get; private set; } = BrowserState.Empty;
+        public Task Ready => Task.CompletedTask;
+        public List<Uri> History { get; } = [];
+        public bool Block { get; init; }
+        public bool WaitEnded { get; private set; }
+        public int Disposals { get; private set; }
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public event Action<BrowserState>? StateChanged;
+        public event Action<WebBridgeMessage>? BridgeMessageReceived;
+        public event Action<BrowserPopupRequest>? PopupRequested;
+        public List<BrowserRequest> Requests { get; } = [];
+        public void Popup(BrowserPopupRequest request) => PopupRequested?.Invoke(request);
+        public event Action? CloseRequested { add { } remove { } }
+        public event Action<Exception>? Faulted { add { } remove { } }
+        public void Publish(string value) => BridgeMessageReceived?.Invoke(new WebBridgeMessage("trace", Message:value));
+        public ValueTask NavigateAsync(Uri address, CancellationToken cancellationToken = default)
+        { cancellationToken.ThrowIfCancellationRequested(); History.Add(address); State = State with { Address=address }; StateChanged?.Invoke(State); return ValueTask.CompletedTask; }
+        public ValueTask GoBackAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask GoForwardAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask ReloadAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask StopAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public async ValueTask<string?> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default)
+        {
+            if (!Block) return "true";
+            Entered.TrySetResult();
+            try { await Task.Delay(Timeout.Infinite, cancellationToken); return null; }
+            finally { WaitEnded = true; }
+        }
+        public ValueTask NavigateAsync(BrowserRequest request, CancellationToken cancellationToken = default) { Requests.Add(request); return NavigateAsync(request.Address, cancellationToken); }
+        public ValueTask DisposeAsync() { Disposals++; return ValueTask.CompletedTask; }
+    }
+}

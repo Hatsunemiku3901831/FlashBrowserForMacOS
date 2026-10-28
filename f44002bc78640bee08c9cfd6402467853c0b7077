@@ -1,0 +1,1723 @@
+{
+  "schemaVersion": 1,
+  "sourceRun": "p03-evidence-isolation-20261028-01",
+  "destinationRun": "browser-final-managed-20261028-01",
+  "originalTests": 97,
+  "migratedTests": 107,
+  "newArchitectureTests": 3,
+  "tests": [
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"data\":\"{}\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"data\":\"{}\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"mao.sol\",\"mao\",3)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"mao.sol\",\"mao\",3)",
+        "className": "FlashMacOS.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.Sol.Managed.Tests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"settings.sol\",\"settings\",0)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"settings.sol\",\"settings\",0)",
+        "className": "FlashMacOS.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.Sol.Managed.Tests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleDocumentStartScriptBuilderTests",
+        "methodName": "BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode",
+        "className": "FlashMacOS.Tests.RuffleDocumentStartScriptBuilderTests",
+        "methodName": "BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "RejectsLegacyDataAndHomeAncestorsWithoutCreatingFiles",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.TestProfileTests",
+        "methodName": "RejectsLegacyDataAndHomeAncestorsWithoutCreatingFiles"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "RejectsLegacyDataAndHomeAncestorsWithoutCreatingFiles",
+        "className": "FlashMacOS.Tests.TestProfileTests",
+        "methodName": "RejectsLegacyDataAndHomeAncestorsWithoutCreatingFiles",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"file:///tmp/movie.swf\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"file:///tmp/movie.swf\",False)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ConcurrentDisposeAsyncCallsCompleteWithinFiveSeconds",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "ConcurrentDisposeAsyncCallsCompleteWithinFiveSeconds"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ConcurrentDisposeAsyncCallsCompleteWithinFiveSeconds",
+        "className": "FlashMacOS.Tests.LoopbackContentHostTests",
+        "methodName": "ConcurrentDisposeAsyncCallsCompleteWithinFiveSeconds",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"documentStartMilliseconds\":0}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"documentStartMilliseconds\":0}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ReadHeaderRejectsInvalidMagic",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderRejectsInvalidMagic"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ReadHeaderRejectsInvalidMagic",
+        "className": "FlashMacOS.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderRejectsInvalidMagic",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.Sol.Managed.Tests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ImportAndDeleteDoNotReturnPromisesToTheNativeWebView",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "ImportAndDeleteDoNotReturnPromisesToTheNativeWebView"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ImportAndDeleteDoNotReturnPromisesToTheNativeWebView",
+        "className": "FlashMacOS.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "ImportAndDeleteDoNotReturnPromisesToTheNativeWebView",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "MessagesPublishedAfterDisposeStartsAreIgnored",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "MessagesPublishedAfterDisposeStartsAreIgnored"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "MessagesPublishedAfterDisposeStartsAreIgnored",
+        "className": "FlashMacOS.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "MessagesPublishedAfterDisposeStartsAreIgnored",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"message\":\"PASS\",\"data\":\"{}\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"message\":\"PASS\",\"data\":\"{}\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"3.14\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"3.14\",False)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "DisposeAsyncIsIdempotentBeforeStart",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "DisposeAsyncIsIdempotentBeforeStart"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "DisposeAsyncIsIdempotentBeforeStart",
+        "className": "FlashMacOS.Tests.LoopbackContentHostTests",
+        "methodName": "DisposeAsyncIsIdempotentBeforeStart",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMissingNullOrBlankType (\"{}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMissingNullOrBlankType"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMissingNullOrBlankType (\"{}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMissingNullOrBlankType",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"http://example.com\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"http://example.com\",True)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "CompatibilityResultProjectsOnlyItsShortMessageToStatus",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "CompatibilityResultProjectsOnlyItsShortMessageToStatus"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "CompatibilityResultProjectsOnlyItsShortMessageToStatus",
+        "className": "FlashMacOS.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "CompatibilityResultProjectsOnlyItsShortMessageToStatus",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "CorruptFixturePreventsServerStartup",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.CompatibilityContentHostTests",
+        "methodName": "CorruptFixturePreventsServerStartup"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "CorruptFixturePreventsServerStartup",
+        "className": "FlashMacOS.Tests.CompatibilityContentHostTests",
+        "methodName": "CorruptFixturePreventsServerStartup",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.ts\",11769,\"ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.ts\",11769,\"ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894\")",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "StartAndRegisterThrowAfterDispose",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "StartAndRegisterThrowAfterDispose"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "StartAndRegisterThrowAfterDispose",
+        "className": "FlashMacOS.Tests.LoopbackContentHostTests",
+        "methodName": "StartAndRegisterThrowAfterDispose",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "BridgeStoreFailureRaisesFaultExactlyOnceAndIsObserved",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "BridgeStoreFailureRaisesFaultExactlyOnceAndIsObserved"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "BridgeStoreFailureRaisesFaultExactlyOnceAndIsObserved",
+        "className": "FlashMacOS.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "BridgeStoreFailureRaisesFaultExactlyOnceAndIsObserved",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"pvz.sol\",\"pvz\",3)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"pvz.sol\",\"pvz\",3)",
+        "className": "FlashMacOS.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.Sol.Managed.Tests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "BuildPageBootstrapUsesValidComputedBridgeMemberAccess",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleDocumentStartScriptBuilderTests",
+        "methodName": "BuildPageBootstrapUsesValidComputedBridgeMemberAccess"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "BuildPageBootstrapUsesValidComputedBridgeMemberAccess",
+        "className": "FlashMacOS.Tests.RuffleDocumentStartScriptBuilderTests",
+        "methodName": "BuildPageBootstrapUsesValidComputedBridgeMemberAccess",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"saveDeleted\",\"key\":\"save-key\"}\",\"saveDeleted\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"saveDeleted\",\"key\":\"save-key\"}\",\"saveDeleted\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"42\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"42\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"trace\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"trace\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"{\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"{\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "SecondOriginHasExplicitCorsAndRedirectWithoutGeneralProxy",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.CompatibilityContentHostTests",
+        "methodName": "SecondOriginHasExplicitCorsAndRedirectWithoutGeneralProxy"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "SecondOriginHasExplicitCorsAndRedirectWithoutGeneralProxy",
+        "className": "FlashMacOS.Tests.CompatibilityContentHostTests",
+        "methodName": "SecondOriginHasExplicitCorsAndRedirectWithoutGeneralProxy",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"downloadRequested\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"downloadRequested\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"flashElementCount\":0}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"flashElementCount\":0}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"abc:abc\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"abc:abc\",False)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ResolvePlainTextUsesSelectedSearchEngineAndEncodesKeyword",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "ResolvePlainTextUsesSelectedSearchEngineAndEncodesKeyword"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ResolvePlainTextUsesSelectedSearchEngineAndEncodesKeyword",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "ResolvePlainTextUsesSelectedSearchEngineAndEncodesKeyword",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"output.txt\",\"0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"output.txt\",\"0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8\")",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "SymlinkAliasesShareProfileAndCannotEnterLegacyData",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.TestProfileTests",
+        "methodName": "SymlinkAliasesShareProfileAndCannotEnterLegacyData"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "SymlinkAliasesShareProfileAndCannotEnterLegacyData",
+        "className": "FlashMacOS.Tests.TestProfileTests",
+        "methodName": "SymlinkAliasesShareProfileAndCannotEnterLegacyData",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "DisposeAsyncWaitsForAnAcceptedBridgeWriteToFinish",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "DisposeAsyncWaitsForAnAcceptedBridgeWriteToFinish"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "DisposeAsyncWaitsForAnAcceptedBridgeWriteToFinish",
+        "className": "FlashMacOS.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "DisposeAsyncWaitsForAnAcceptedBridgeWriteToFinish",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.fla\",4804,\"1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.fla\",4804,\"1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9\")",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"RuffleTest.sol\",\"RuffleTest\",0)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"RuffleTest.sol\",\"RuffleTest\",0)",
+        "className": "FlashMacOS.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.Sol.Managed.Tests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"example.com/path\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"example.com/path\",True)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"[]\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"[]\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "DescribeTruncatesMessageAndKeyContextsWithAnExplicitMarker",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "DescribeTruncatesMessageAndKeyContextsWithAnExplicitMarker"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "DescribeTruncatesMessageAndKeyContextsWithAnExplicitMarker",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "DescribeTruncatesMessageAndKeyContextsWithAnExplicitMarker",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"key\":\"key\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"key\":\"key\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":false,\"flashElementCount\":0,\"documentStartMilliseconds\":0}\",\"diagnostics\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":false,\"flashElementCount\":0,\"documentStartMilliseconds\":0}\",\"diagnostics\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"trace\",\"message\":\"\"}\",\"trace\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"trace\",\"message\":\"\"}\",\"trace\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"FBCookie.sol\",\"FBCookie\",3)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"FBCookie.sol\",\"FBCookie\",3)",
+        "className": "FlashMacOS.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.Sol.Managed.Tests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"Test.as\",\"b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"Test.as\",\"b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e\")",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"\"PRIVATE_BODY_SENTINEL\"\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"\"PRIVATE_BODY_SENTINEL\"\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMissingNullOrBlankType (\"{\"type\":\"  \"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMissingNullOrBlankType"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMissingNullOrBlankType (\"{\"type\":\"  \"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMissingNullOrBlankType",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "Avm2HelloWorldExpectedOutputNormalizesExactly",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldExpectedOutputNormalizesExactly"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "Avm2HelloWorldExpectedOutputNormalizesExactly",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldExpectedOutputNormalizesExactly",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"  \",\"message\":\"PASS\",\"data\":\"{}\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"  \",\"message\":\"PASS\",\"data\":\"{}\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "RemoveAsyncReportsWhetherEntryExisted",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleSaveStoreTests",
+        "methodName": "RemoveAsyncReportsWhetherEntryExisted"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "RemoveAsyncReportsWhetherEntryExisted",
+        "className": "FlashMacOS.Tests.RuffleSaveStoreTests",
+        "methodName": "RemoveAsyncReportsWhetherEntryExisted",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "RepeatedStartAsyncKeepsTheSameBaseUri",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "RepeatedStartAsyncKeepsTheSameBaseUri"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "RepeatedStartAsyncKeepsTheSameBaseUri",
+        "className": "FlashMacOS.Tests.LoopbackContentHostTests",
+        "methodName": "RepeatedStartAsyncKeepsTheSameBaseUri",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ReadHeaderRejectsUnsupportedEncoding",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderRejectsUnsupportedEncoding"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ReadHeaderRejectsUnsupportedEncoding",
+        "className": "FlashMacOS.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderRejectsUnsupportedEncoding",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.Sol.Managed.Tests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\",\"data\":\"{}\"}\",\"compatibilityResult\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\",\"data\":\"{}\"}\",\"compatibilityResult\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMissingNullOrBlankType (\"{\"type\":null}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMissingNullOrBlankType"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMissingNullOrBlankType (\"{\"type\":null}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMissingNullOrBlankType",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "AcceptedBridgeWritesCompleteInArrivalOrder",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "AcceptedBridgeWritesCompleteInArrivalOrder"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "AcceptedBridgeWritesCompleteInArrivalOrder",
+        "className": "FlashMacOS.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "AcceptedBridgeWritesCompleteInArrivalOrder",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "UpsertAsyncInvalidBase64DoesNotOverwriteExistingStore",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleSaveStoreTests",
+        "methodName": "UpsertAsyncInvalidBase64DoesNotOverwriteExistingStore"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "UpsertAsyncInvalidBase64DoesNotOverwriteExistingStore",
+        "className": "FlashMacOS.Tests.RuffleSaveStoreTests",
+        "methodName": "UpsertAsyncInvalidBase64DoesNotOverwriteExistingStore",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.swf\",2308,\"d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.swf\",2308,\"d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5\")",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"hello\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"hello\",False)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ProfilesSeparateDataLogsAndPersistentWebKitIdentity",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.TestProfileTests",
+        "methodName": "ProfilesSeparateDataLogsAndPersistentWebKitIdentity"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "ProfilesSeparateDataLogsAndPersistentWebKitIdentity",
+        "className": "FlashMacOS.Tests.TestProfileTests",
+        "methodName": "ProfilesSeparateDataLogsAndPersistentWebKitIdentity",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"bridgeError\",\"message\":\"\"}\",\"bridgeError\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"bridgeError\",\"message\":\"\"}\",\"bridgeError\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"downloadRequested\",\"url\":\"  \"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"downloadRequested\",\"url\":\"  \"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "HostServesPinnedAssetsAndConfinedContentOverAuthenticatedLoopback",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "HostServesPinnedAssetsAndConfinedContentOverAuthenticatedLoopback"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "HostServesPinnedAssetsAndConfinedContentOverAuthenticatedLoopback",
+        "className": "FlashMacOS.Tests.LoopbackContentHostTests",
+        "methodName": "HostServesPinnedAssetsAndConfinedContentOverAuthenticatedLoopback",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "CompatibilityResultDescriptionUsesOnlyTheShortMessage",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "CompatibilityResultDescriptionUsesOnlyTheShortMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "CompatibilityResultDescriptionUsesOnlyTheShortMessage",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "CompatibilityResultDescriptionUsesOnlyTheShortMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"  \",\"data\":\"{}\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"  \",\"data\":\"{}\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "DisposeAsyncIsIdempotentAfterStart",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "DisposeAsyncIsIdempotentAfterStart"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "DisposeAsyncIsIdempotentAfterStart",
+        "className": "FlashMacOS.Tests.LoopbackContentHostTests",
+        "methodName": "DisposeAsyncIsIdempotentAfterStart",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ResolveRegularFileAllowsOnlyRegularFilesInsideRoot",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.PathSafetyTests",
+        "methodName": "ResolveRegularFileAllowsOnlyRegularFilesInsideRoot"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ResolveRegularFileAllowsOnlyRegularFilesInsideRoot",
+        "className": "FlashMacOS.Tests.PathSafetyTests",
+        "methodName": "ResolveRegularFileAllowsOnlyRegularFilesInsideRoot",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ServesOnlyHashVerifiedFixedAssetsAndRangeRequests",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.CompatibilityContentHostTests",
+        "methodName": "ServesOnlyHashVerifiedFixedAssetsAndRangeRequests"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "ServesOnlyHashVerifiedFixedAssetsAndRangeRequests",
+        "className": "FlashMacOS.Tests.CompatibilityContentHostTests",
+        "methodName": "ServesOnlyHashVerifiedFixedAssetsAndRangeRequests",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"downloadRequested\",\"url\":\"https://example.test/file\",\"fileName\":\"file.bin\"}\",\"downloadRequested\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"downloadRequested\",\"url\":\"https://example.test/file\",\"fileName\":\"file.bin\"}\",\"downloadRequested\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"savesSnapshot\",\"data\":\"\"}\",\"savesSnapshot\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"savesSnapshot\",\"data\":\"\"}\",\"savesSnapshot\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "CookieAndPolicyFixturesHaveDistinctSuccessAndFailureConditions",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.CompatibilityContentHostTests",
+        "methodName": "CookieAndPolicyFixturesHaveDistinctSuccessAndFailureConditions"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "CookieAndPolicyFixturesHaveDistinctSuccessAndFailureConditions",
+        "className": "FlashMacOS.Tests.CompatibilityContentHostTests",
+        "methodName": "CookieAndPolicyFixturesHaveDistinctSuccessAndFailureConditions",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"bridgeError\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"bridgeError\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"saveChanged\",\"key\":\"save-key\",\"data\":\"\"}\",\"saveChanged\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"saveChanged\",\"key\":\"save-key\",\"data\":\"\"}\",\"saveChanged\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"localhost:8080\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"localhost:8080\",True)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"flashElementCount\":0,\"documentStartMilliseconds\":0}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"flashElementCount\":0,\"documentStartMilliseconds\":0}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"192.168.1.1:8080\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"192.168.1.1:8080\",True)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"test.toml\",\"fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"test.toml\",\"fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd\")",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "DataNeverAppearsInDescriptionsOrValidationErrors",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "DataNeverAppearsInDescriptionsOrValidationErrors"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "DataNeverAppearsInDescriptionsOrValidationErrors",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "DataNeverAppearsInDescriptionsOrValidationErrors",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "CancellationAndConcurrentShutdownKeepEndpointsClosed",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.CompatibilityContentHostTests",
+        "methodName": "CancellationAndConcurrentShutdownKeepEndpointsClosed"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "CancellationAndConcurrentShutdownKeepEndpointsClosed",
+        "className": "FlashMacOS.Tests.CompatibilityContentHostTests",
+        "methodName": "CancellationAndConcurrentShutdownKeepEndpointsClosed",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParsePreservesUnknownNonEmptyTypeForForwardCompatibility",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParsePreservesUnknownNonEmptyTypeForForwardCompatibility"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParsePreservesUnknownNonEmptyTypeForForwardCompatibility",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParsePreservesUnknownNonEmptyTypeForForwardCompatibility",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"data\":\"value\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"data\":\"value\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"ftp://files.example.com\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"ftp://files.example.com\",True)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ResolveDomainWithoutSchemeAddsHttpScheme",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "ResolveDomainWithoutSchemeAddsHttpScheme"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ResolveDomainWithoutSchemeAddsHttpScheme",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "ResolveDomainWithoutSchemeAddsHttpScheme",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"Test.as\",5715,\"d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"Test.as\",5715,\"d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d\")",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"test.swf\",\"708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"test.swf\",\"708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17\")",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "UpsertAsyncPersistsAtomicallyAndSurvivesReload",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleSaveStoreTests",
+        "methodName": "UpsertAsyncPersistsAtomicallyAndSurvivesReload"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "UpsertAsyncPersistsAtomicallyAndSurvivesReload",
+        "className": "FlashMacOS.Tests.RuffleSaveStoreTests",
+        "methodName": "UpsertAsyncPersistsAtomicallyAndSurvivesReload",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"https://example.com/path?q=flash\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"https://example.com/path?q=flash\",True)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"hello world\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"hello world\",False)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"index.html\",1906,\"e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"index.html\",1906,\"e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0\")",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "RejectsImplicitOrSharedRoots (\"/\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.TestProfileTests",
+        "methodName": "RejectsImplicitOrSharedRoots"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "RejectsImplicitOrSharedRoots (\"/\")",
+        "className": "FlashMacOS.Tests.TestProfileTests",
+        "methodName": "RejectsImplicitOrSharedRoots",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"123\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"123\",False)",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "SharedObjectFixturesMatchPinnedUpstreamHashes",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "SharedObjectFixturesMatchPinnedUpstreamHashes"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "SharedObjectFixturesMatchPinnedUpstreamHashes",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "SharedObjectFixturesMatchPinnedUpstreamHashes",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "RejectsImplicitOrSharedRoots (\"relative/profile\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.TestProfileTests",
+        "methodName": "RejectsImplicitOrSharedRoots"
+      },
+      "original97": false,
+      "formal": {
+        "testName": "RejectsImplicitOrSharedRoots (\"relative/profile\")",
+        "className": "FlashMacOS.Tests.TestProfileTests",
+        "methodName": "RejectsImplicitOrSharedRoots",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "IsLocalFileWithExtensionRequiresExistingMatchingFile",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "IsLocalFileWithExtensionRequiresExistingMatchingFile"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "IsLocalFileWithExtensionRequiresExistingMatchingFile",
+        "className": "FlashMacOS.Tests.NavigationResolverTests",
+        "methodName": "IsLocalFileWithExtensionRequiresExistingMatchingFile",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (null)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (null)",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ReadHeaderRejectsMismatchedChunkLength",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderRejectsMismatchedChunkLength"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ReadHeaderRejectsMismatchedChunkLength",
+        "className": "FlashMacOS.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderRejectsMismatchedChunkLength",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.Sol.Managed.Tests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "Avm2HelloWorldSourceAndSwfCarryDeterministicEvidence",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldSourceAndSwfCarryDeterministicEvidence"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "Avm2HelloWorldSourceAndSwfCarryDeterministicEvidence",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldSourceAndSwfCarryDeterministicEvidence",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"key\":\"  \",\"data\":\"value\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"key\":\"  \",\"data\":\"value\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"playerReady\"}\",\"playerReady\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"playerReady\"}\",\"playerReady\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"  \t\r\n\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"  \t\r\n\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "PlayerCommandsUseOneSerializableResultBoundary",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "PlayerCommandsUseOneSerializableResultBoundary"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "PlayerCommandsUseOneSerializableResultBoundary",
+        "className": "FlashMacOS.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "PlayerCommandsUseOneSerializableResultBoundary",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ResolveRegularFileRejectsSymbolicLinkEscape",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.PathSafetyTests",
+        "methodName": "ResolveRegularFileRejectsSymbolicLinkEscape"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ResolveRegularFileRejectsSymbolicLinkEscape",
+        "className": "FlashMacOS.Tests.PathSafetyTests",
+        "methodName": "ResolveRegularFileRejectsSymbolicLinkEscape",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"null\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"null\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ExternalInterfaceFixtureCarriesThePinnedBidirectionalOracle",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFixtureCarriesThePinnedBidirectionalOracle"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ExternalInterfaceFixtureCarriesThePinnedBidirectionalOracle",
+        "className": "FlashMacOS.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFixtureCarriesThePinnedBidirectionalOracle",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"savesSnapshot\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"savesSnapshot\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    },
+    {
+      "prototype": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveDeleted\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      },
+      "original97": true,
+      "formal": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveDeleted\"}\")",
+        "className": "FlashMacOS.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+        "outcome": "Passed",
+        "trx": "artifacts/evidence/W01/browser-final-managed-20261028-01/TestResults/FlashMacOS.IntegrationTests.trx"
+      }
+    }
+  ],
+  "formalTotal": 420
+}

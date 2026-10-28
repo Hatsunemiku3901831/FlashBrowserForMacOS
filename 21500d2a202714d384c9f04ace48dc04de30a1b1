@@ -1,0 +1,336 @@
+using System.Globalization;
+using System.Text.Json;
+using CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Storage;
+using CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Persistence;
+using CefFlashBrowser.MacOS.Spike.Core.Sol;
+
+namespace CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle;
+
+public sealed class RufflePlayerCoordinator : IAsyncDisposable
+{
+    private const int MaxSaveBytes = 64 * 1024 * 1024;
+
+    private readonly IBrowserSession _browser;
+    private readonly ILocalContentHost _contentHost;
+    private readonly IRuffleSaveStore _saveStore;
+    private readonly object _bridgeWorkLock = new();
+    private Task _bridgeTail = Task.CompletedTask;
+    private Task? _disposeTask;
+    private volatile bool _disposed;
+
+    public RufflePlayerCoordinator(
+        IBrowserSession browser,
+        ILocalContentHost contentHost,
+        IRuffleSaveStore saveStore)
+    {
+        ArgumentNullException.ThrowIfNull(browser);
+        ArgumentNullException.ThrowIfNull(contentHost);
+        ArgumentNullException.ThrowIfNull(saveStore);
+
+        _browser = browser;
+        _contentHost = contentHost;
+        _saveStore = saveStore;
+        _browser.BridgeMessageReceived += OnBridgeMessageReceived;
+    }
+
+    public LocalSwfSource? CurrentSource { get; private set; }
+
+    public event Action<RuffleSaveEntry>? SaveChanged;
+
+    public event Action<string>? SaveDeleted;
+
+    public event Action<string>? TraceReceived;
+
+    public event Action<string>? StatusChanged;
+
+    public event Action<Exception>? Faulted;
+
+    public async ValueTask<LocalSwfSource> OpenSwfAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        var source = await _contentHost.RegisterSwfAsync(filePath, cancellationToken).ConfigureAwait(false);
+        CurrentSource = source;
+        await _browser.NavigateAsync(source.PlayerUri, cancellationToken).ConfigureAwait(false);
+        StatusChanged?.Invoke($"Loading {Path.GetFileName(source.FilePath)} with Ruffle {RuffleAssetManifest.Version}.");
+        return source;
+    }
+
+    public ValueTask<IReadOnlyList<RuffleSaveEntry>> GetSavesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        return _saveStore.GetAllAsync(cancellationToken);
+    }
+
+    public async ValueTask CapturePageSavesAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        const string script = """
+            (() => {
+              const saves = {};
+              const looksLikeSol = value => {
+                if (typeof value !== "string" || value.length < 24) return false;
+                try {
+                  const bytes = atob(value.slice(0, 24));
+                  return bytes.charCodeAt(0) === 0 && bytes.charCodeAt(1) === 191;
+                } catch (_) { return false; }
+              };
+              for (let index = 0; index < localStorage.length; index++) {
+                const key = localStorage.key(index);
+                const value = key === null ? null : localStorage.getItem(key);
+                if (key !== null && looksLikeSol(value)) saves[key] = value;
+              }
+              window.__cefFlashBrowserPost?.({
+                type: "savesSnapshot",
+                data: JSON.stringify(saves)
+              });
+            })();
+            """;
+        _ = await _browser.ExecuteScriptAsync(script, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask<RuffleSaveEntry> ImportAsync(
+        string sourcePath,
+        string? replaceKey = null,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+
+        var fileInfo = new FileInfo(sourcePath);
+        if (!fileInfo.Exists)
+        {
+            throw new FileNotFoundException("The SOL file to import does not exist.", sourcePath);
+        }
+
+        if (fileInfo.Length > MaxSaveBytes)
+        {
+            throw new InvalidDataException($"The SOL file exceeds {MaxSaveBytes} bytes.");
+        }
+
+        var bytes = await File.ReadAllBytesAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        var header = SolFileInspector.ReadHeader(bytes);
+        var key = replaceKey;
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            key = CurrentSource is null
+                ? throw new InvalidOperationException(
+                    "Select an existing save when importing outside the local SWF player.")
+                : $"{CurrentSource.StoragePrefix}/{header.Name}";
+        }
+
+        var base64 = Convert.ToBase64String(bytes);
+        var entry = await _saveStore.UpsertAsync(key, base64, cancellationToken).ConfigureAwait(false);
+        var script = $$"""
+            (() => {
+              localStorage.setItem({{JsonSerializer.Serialize(key)}}, {{JsonSerializer.Serialize(base64)}});
+              if (window.__cefFlashBrowserPlayerApi) {
+                void window.__cefFlashBrowserPlayerApi.reload();
+              }
+              return true;
+            })();
+            """;
+        _ = await _browser.ExecuteScriptAsync(script, cancellationToken).ConfigureAwait(false);
+        SaveChanged?.Invoke(entry);
+        StatusChanged?.Invoke($"Imported {entry.SolName}.sol into {entry.Key}.");
+        return entry;
+    }
+
+    public async ValueTask ExportAsync(
+        RuffleSaveEntry entry,
+        string destinationPath,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+
+        var bytes = Convert.FromBase64String(entry.Base64Data);
+        _ = SolFileInspector.ReadHeader(bytes);
+        await AtomicFileWriter.WriteAsync(
+                destinationPath,
+                async (stream, token) =>
+                {
+                    await stream.WriteAsync(bytes, token).ConfigureAwait(false);
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+        StatusChanged?.Invoke($"Exported {entry.SolName}.sol.");
+    }
+
+    public async ValueTask DeleteAsync(
+        RuffleSaveEntry entry,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (!await _saveStore.RemoveAsync(entry.Key, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var script = $$"""
+            (() => {
+              localStorage.removeItem({{JsonSerializer.Serialize(entry.Key)}});
+              if (window.__cefFlashBrowserPlayerApi) {
+                void window.__cefFlashBrowserPlayerApi.reload();
+              }
+              return true;
+            })();
+            """;
+        _ = await _browser.ExecuteScriptAsync(script, cancellationToken).ConfigureAwait(false);
+        SaveDeleted?.Invoke(entry.Key);
+        StatusChanged?.Invoke($"Deleted {entry.SolName}.sol.");
+    }
+
+    public ValueTask PauseAsync(CancellationToken cancellationToken = default)
+    {
+        return ExecutePlayerCommandAsync("api.suspend()", cancellationToken);
+    }
+
+    public ValueTask ResumeAsync(CancellationToken cancellationToken = default)
+    {
+        return ExecutePlayerCommandAsync("api.resume()", cancellationToken);
+    }
+
+    public ValueTask ReloadAsync(CancellationToken cancellationToken = default)
+    {
+        return ExecutePlayerCommandAsync("api.reload()", cancellationToken);
+    }
+
+    public ValueTask RequestFullscreenAsync(CancellationToken cancellationToken = default)
+    {
+        return ExecutePlayerCommandAsync(
+            "api.requestFullscreen()",
+            cancellationToken);
+    }
+
+    public ValueTask SetVolumeAsync(double volume, CancellationToken cancellationToken = default)
+    {
+        var normalized = Math.Clamp(volume, 0d, 1d);
+        return ExecutePlayerCommandAsync(
+            $"api.volume = {normalized.ToString("R", CultureInfo.InvariantCulture)}",
+            cancellationToken);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_bridgeWorkLock)
+        {
+            if (_disposeTask is not null)
+            {
+                return new ValueTask(_disposeTask);
+            }
+
+            _disposed = true;
+            _browser.BridgeMessageReceived -= OnBridgeMessageReceived;
+            _disposeTask = _bridgeTail;
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async ValueTask ExecutePlayerCommandAsync(
+        string commandExpression,
+        CancellationToken cancellationToken)
+    {
+        ThrowIfDisposed();
+        var script = BuildSerializablePlayerCommand(commandExpression);
+        _ = await _browser.ExecuteScriptAsync(script, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static string BuildSerializablePlayerCommand(string commandExpression)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(commandExpression);
+        return $$"""
+            (() => {
+              const api = window.__cefFlashBrowserPlayerApi;
+              if (api) {
+                void ({{commandExpression}});
+              }
+              return true;
+            })();
+            """;
+    }
+
+    private void OnBridgeMessageReceived(WebBridgeMessage message)
+    {
+        lock (_bridgeWorkLock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _bridgeTail = ProcessBridgeMessageAfterAsync(_bridgeTail, message);
+        }
+    }
+
+    private async Task ProcessBridgeMessageAfterAsync(Task precedingWork, WebBridgeMessage message)
+    {
+        await precedingWork.ConfigureAwait(false);
+        try
+        {
+            switch (message.Type)
+            {
+                case "saveChanged" when message.Key is not null && message.Data is not null:
+                    {
+                        var entry = await _saveStore.UpsertAsync(message.Key, message.Data).ConfigureAwait(false);
+                        SaveChanged?.Invoke(entry);
+                        break;
+                    }
+                case "saveDeleted" when message.Key is not null:
+                    {
+                        if (await _saveStore.RemoveAsync(message.Key).ConfigureAwait(false))
+                        {
+                            SaveDeleted?.Invoke(message.Key);
+                        }
+
+                        break;
+                    }
+                case "savesSnapshot" when message.Data is not null:
+                    {
+                        var saves = JsonSerializer.Deserialize<Dictionary<string, string>>(message.Data)
+                            ?? [];
+                        foreach (var save in saves)
+                        {
+                            var entry = await _saveStore.UpsertAsync(save.Key, save.Value).ConfigureAwait(false);
+                            SaveChanged?.Invoke(entry);
+                        }
+
+                        break;
+                    }
+                case "trace" when message.Message is not null:
+                    TraceReceived?.Invoke(message.Message);
+                    break;
+                case "playerReady":
+                    StatusChanged?.Invoke($"Ruffle player ready: {message.Message}");
+                    break;
+                case "diagnostics":
+                    StatusChanged?.Invoke(
+                        $"Document-start: {message.DocumentStartMilliseconds:0.0} ms; " +
+                        $"Ruffle: {(message.RuffleAvailable == true ? "ready" : "missing")}; " +
+                        $"polyfilled elements: {message.FlashElementCount ?? 0}.");
+                    break;
+                case "compatibilityResult" when message.Message is not null:
+                    StatusChanged?.Invoke(message.Message);
+                    break;
+                case "bridgeError" when message.Message is not null:
+                    throw new InvalidOperationException(message.Message);
+            }
+        }
+        catch (Exception exception)
+        {
+            Faulted?.Invoke(exception);
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+}

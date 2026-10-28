@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../FlashMacOS.Domain/FlashMacOS.Domain.csproj" />
+    <ProjectReference Include="../FlashMacOS.Application/FlashMacOS.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <EmbeddedResource Include="Hosting/CompatibilityRunner.js" />
+    <EmbeddedResource Include="Runtime/MoleCompatibility.js" />
+    <EmbeddedResource Include="Runtime/RuffleStorageReload.js" />
+  </ItemGroup>
+</Project>

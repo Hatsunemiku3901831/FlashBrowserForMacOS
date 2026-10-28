@@ -1,0 +1,29 @@
+using System.Text.Json;
+
+namespace FlashMacOS.Infrastructure.Persistence;
+
+internal static class JsonDocumentGuard
+{
+    public static void Validate(ReadOnlySpan<byte> bytes, CancellationToken cancellationToken)
+    {
+        var reader = new Utf8JsonReader(bytes, new JsonReaderOptions { MaxDepth = 64 });
+        var members = new Stack<HashSet<string>?>();
+        var tokens = 0;
+        while (reader.Read())
+        {
+            if ((++tokens & 1023) == 0) cancellationToken.ThrowIfCancellationRequested();
+            switch (reader.TokenType)
+            {
+                case JsonTokenType.StartObject: members.Push(new HashSet<string>(StringComparer.Ordinal)); break;
+                case JsonTokenType.StartArray: members.Push(null); break;
+                case JsonTokenType.EndObject:
+                case JsonTokenType.EndArray: members.Pop(); break;
+                case JsonTokenType.PropertyName:
+                    if (reader.ValueSpan.Length > 64 * 1024) throw new InvalidDataException("A JSON member name exceeds its limit.");
+                    if (!members.Peek()!.Add(reader.GetString()!)) throw new InvalidDataException("Duplicate JSON member names are not accepted.");
+                    break;
+            }
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+}

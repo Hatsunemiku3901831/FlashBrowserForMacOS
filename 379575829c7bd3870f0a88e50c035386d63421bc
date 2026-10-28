@@ -1,0 +1,177 @@
+# FlashMacOS 任务状态
+
+初始版本日期为 2026 年 10 月 28 日。本表随执行更新；任务定义和验收标准以 [实施方案](implementation-plan.zh-CN.md) 为唯一来源。初始文档包已完成导入与独立原型验收；当前进度如下。
+
+## 当前接手点
+
+- 当前执行：W02（IN_PROGRESS，2026-10-28 23:15 AEDT 因额度不足按用户要求暂停并交接）。接手见 [HANDOFF2.md](../HANDOFF2.md)；W01 交接见 [HANDOFF.md](../HANDOFF.md)。
+- 下一任务：W02 完成后按依赖选择；本轮用户只要求 W02 与交接文档。
+- 当前阶段：G0/G1/G2 已通过；P00—P03、A01—A04、S01—S05、W01 共 14 项验收完成，完整产品与发布未完成。
+- 已知源仓库：/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser。
+- 目标目录：/Users/umisonoda/PycharmProjects/flash/flashMacOS。
+- 目标现状：八个正式模块、五个测试工程和 13 份锁已建立；bootstrap 冻结；正式构建不读取 reference/bootstrap/原仓库；无提交。
+- 当前动作：W02 暂停于收尾阶段——包 05 原生 24/24 PASS 且下载中退出 exit 0；剩余人工保存面板场景、Release 托管验证、finalize、报告，以及已关闭 popup 原生窗口壳残留的定论（详见 HANDOFF2.md）。
+- 原仓库验证：97 项测试和 ARM64 包检查属于来源基线，不计为本表任何任务 DONE。
+- 目标原型：107 项回归及 G0 已验收；W01 最终同输入 Debug/Release 420 托管+21 工具通过，同一 ARM64 package04 的两进程各 12 原生检查、人工操作及新的摩尔庄园登录/Flash 焦点退出通过。中文 IME、完整设置/收藏/编辑器 UI、下载及发布仍未验收。
+
+## 任务看板
+
+状态只允许 TODO、IN_PROGRESS、BLOCKED、DONE。DONE 必须填写证据相对路径及关联的代码/输入 hash；不得仅填“已完成”。
+
+| ID | 任务 | 前置依赖 | 状态 | 证据或阻塞 |
+|---|---|---|---|---|
+| P00 | 初始化与冻结来源 | 无 | DONE | [报告](evidence/P00/2026-10-28/report.md)；[296 文件 hash manifest](provenance/source-import.json) |
+| P01 | 独立原型与隔离 profile | P00 | DONE | [报告](evidence/P01/2026-10-28/report.md)；97 原始+5 新测试；真实 WKWebView/profile 验证 |
+| P02 | 剩余 Flash 兼容语料 | P01 | DONE | [报告](evidence/P02/2026-10-28/report.md)；[29 项矩阵记录](compatibility-matrix.json)；[代码/产物 hash 索引](evidence/P02/2026-10-28/acceptance-index.json) |
+| P03 | 可行性与支持范围 | P02 | DONE | [报告](evidence/P03/2026-10-28/report.md)；[11 组真实闭环/hash 门禁](evidence/P03/2026-10-28/gate0-new-repository.json)；支持/预算/估算/ADR 已冻结 |
+| A01 | 正式工程与原型迁移 | P03 | DONE | [报告](evidence/A01/2026-10-28/report.md)；[147 文件来源映射](provenance/A01-changes.json)；107 原型逐名迁入，110+12 通过；来源禁读及中文/空格新路径干净构建通过 |
+| A02 | 端口和生命周期 | A01 | DONE | [报告](evidence/A02/2026-10-28/report.md)；[来源/输入/证据 hash](evidence/A02/2026-10-28/acceptance-index.json)；145+12 通过，正式 native 释放及文档/runId 验证 |
+| A03 | 持久化和产品身份 | A02 | DONE | [报告](evidence/A03/2026-10-28/report.md)；[hash 索引](evidence/A03/2026-10-28/acceptance-index.json)；185+16 通过；最终同包普通启动/重启/Test 隔离、退出与 bundle 不变 |
+| A04 | 设置和收藏夹 | A03 | DONE | [报告](evidence/A04/2026-10-28/report.md)；[来源/证据 hash](evidence/A04/2026-10-28/acceptance-index.json)；222+18 通过；27 字段/独立 golden、收藏事务及真实配置失败退出 |
+| S01 | SOL 类型与测试冻结 | A02 | DONE | [报告](evidence/S01/2026-10-28/report.md)；[hash 索引](evidence/S01/2026-10-28/acceptance-index.json)；231+18，通过模型/31 手工字节/五内容预期，codec 待后续 |
+| S02 | AMF0 | S01 | DONE | [报告](evidence/S02/2026-10-28/report.md)；[hash/源码归档](evidence/S02/2026-10-28/acceptance-index.json)；275+18 通过，AMF0 固定字节、全部前缀截断/资源边界；AVM+ 受控委派 |
+| S03 | AMF3 与引用 | S02 | DONE | [报告](evidence/S03/2026-10-28/report.md)；[hash/源码归档](evidence/S03/2026-10-28/acceptance-index.json)；334+18 通过，标准类型与身份、显式类 registry、AVM+ 实际接线 |
+| S04 | SOL 文件与编辑事务 | S03、A03 | DONE | [报告](evidence/S04/2026-10-28/report.md)；[hash/源码归档](evidence/S04/2026-10-28/acceptance-index.json)；384+18，五完整内容、编辑/转换/原件备份与冲突/取消 |
+| S05 | 格式边界和性能 | S04 | DONE | [报告](evidence/S05/2026-10-28/report.md)；[hash/源码归档](evidence/S05/2026-10-28/acceptance-index.json)；402+21，12 万受限突变/384 图、各模块 ≥90%、10 MiB/取消预算通过 |
+| W01 | WKWebView 产品化 | A02、A03 | DONE | [报告](evidence/W01/2026-10-28/report.md)；[输入/证据 hash](evidence/W01/2026-10-28/acceptance-index.json)；420+21、两进程各 12 原生项、15 项清单；三次同包 native Quit/真实销毁与新摩尔庄园登录通过；历史失败保留 |
+| W02 | 下载和 popup | W01 | IN_PROGRESS | 原生 WKDownload/popup 已实现；托管 454+21 PASS；包 05（b49ffb03…）原生 24/24 PASS、下载中退出 failures=0/exit 0（run 01 失败与 02–04 修复均保留）。未完成：人工场景、Release 验证、finalize、report；未决：关闭 popup 的 NSWindow 壳残留。见 HANDOFF2.md |
+| W03 | Ruffle 产品化 | W01、P02 | TODO | — |
+| W04 | 实时存档和身份 | W03、S04、A03 | TODO | — |
+| U01 | 设计系统和菜单 | A02 | TODO | — |
+| U02 | 主窗口设置收藏 | U01、A04、W01、W03 | TODO | — |
+| U03 | 编辑器与存档管理器 | U01、S04、W04 | TODO | — |
+| U04 | 本地化和可访问性 | U02、U03 | TODO | — |
+| M01 | 文件与激活集成 | U02、U03、A03 | TODO | — |
+| M02 | 数据迁移向导 | A04、W04、M01 | TODO | — |
+| Q01 | 全回归和独立构建 | S05、W02、W04、U04、M02 | TODO | — |
+| Q02 | 性能和长期运行 | Q01 | TODO | — |
+| Q03 | ARM64 候选开发包 | Q01；最终声明依赖 Q02 | TODO | — |
+| Q04 | 签名和公证 | Q02、Q03、实际凭据 | TODO | — |
+| Q05 | 安装升级与交付 | Q04、系统与设备矩阵 | TODO | — |
+
+## 交接记录模板
+
+每次结束会话前，在下方新增记录；历史记录保持，最新记录置顶。
+
+```text
+实际日期和执行者：
+当前任务与已完成子步骤：
+目标 HEAD、dirty 文件与输入 manifest：
+实际执行命令和结果：
+证据相对路径及 hash：
+尚未执行的验证：
+阻塞与解除条件：
+可继续的独立任务：
+下一任务、工作目录和精确起始动作：
+```
+
+## 2026-10-28 W01 完成并按用户要求暂停
+
+- 当前执行已暂停，不启动 W02 或 U01；详细接手状态、未完成/外部条件、失败经过与下一动作见根 HANDOFF.md。W02 维持 TODO，provenance/W02-before.json 只冻结输入。
+- same-document-transport-20261028-02（Debug）和 browser-final-managed-20261028-01（Release）均为 420 托管+21 工具通过，372 份正式输入一致。package04 的开发 zip SHA de519a77ef5cc78e230ff3670de445a6a1eba381a876e754813f0e6868bfeb23，19 Mach-O 均 ARM64，运行后整包与归档/严格签名保持。
+- final-native-20261028-01 汇总两进程各 12 原生自动项、跨进程用途 Cookie、人工 sheet/全屏/同文档/frame/协议/检查、本地 SWF 切换及摩尔庄园。三个最终进程均 native-focus Command-Q、exit 0、failures=0、两个 adapter 实际 destroyed。闭合 profile 的完整副本及前三轮失败原件已冻结。
+- W01 修复了隐藏 surface Ready、同文档 loading、iframe 地址污染和 WK/Flash 焦点 Quit。第三轮退出 Objective-C abort 通过独立消息注册解决，完整 ips 保留；没有替换第三方注册或修改固定 JS/WASM。后台 AX-only 全屏失败未改写，最终同包前台实际点击通过。
+- 新摩尔庄园截图确实显示空账号/密码/登录按钮，账号框点击后 Quit 通过。未输入或提交凭据。Safari Inspector 窗口流程仍未验证；中文 IME 重复事件保持未解决，由 U04 跟踪。较长驻留包含中断/可能挂起，不作为 Q02 长期负载预算。
+- 原仓库 332 文件/HEAD/dirty、四个旧数据根、104 资产和 13 锁保持；正式输入归档、来源映射与 2082 项证据 hash 已落盘。无提交、推送、公证或发布；当前无本任务 app/验证 runner 运行。
+- 恢复后的首步：在本仓库核查现场与 W01 索引，读实施方案 W02 及现有下载/popup/端口/调用方/测试，优先验证公开 WKDownload 保持原请求，再建立 POST/blob/attachment/认证/重定向/取消/失败与落盘 hash 的 red 用例。
+
+## 2026-10-28 S05 完成交接
+
+- final-managed-release-20261028-02 与 final-managed-debug-20261028-02 均为 402 托管+21 工具通过，正式输入一致。final-quality-20261028-02 各模块分支覆盖率 Domain.Sol 98.79%、codec 91.13%，无文件排除，DLL/PDB 恢复。
+- 三个固定种子各 4 万输入突变与 128 个生成图在实际 512 MiB heap、45 秒/CPU/RSS 预算内完成，完整原始输入和结果均落盘。10 MiB 读/保存 P95 8.709/35.533 毫秒，最大额外托管分配约 2 倍/1 倍输入；60 次取消最慢 10.9064 毫秒。五份小/游戏样本各 30 轮记录完整。
+- 最初分配、覆盖率和取消缺陷均保留 red 证据后修复，未降低预算。UI 树和 Q02 的其他五个整体预算未冒称通过，六个 Legacy UI 类型目录断言仍待 U03。G2 通过仅指存档核心。
+- 原仓库 332 文件/HEAD/dirty、四个旧数据根、104 资产和 13 产品锁保持；正式源码完整归档。无提交、推送或发布。
+- 当前 W01；provenance/W01-before.json 为修改前输入。下一步读取 adapter/注入器/安装包 API 与 composition root，分开网页和本地播放器持久 store，验证真实主 frame 导航、打印/查找/UA/对话框和焦点。
+
+## 2026-10-28 S04 完成交接
+
+- sol-final-managed-20261028-01：384 托管+18 工具通过。五份原样本完整内容与身份图往返、整文件共享池、编辑/撤销/另存为、原子失败/取消/冲突、只读原件导出和备份恢复均验证。
+- 111 个 Legacy 语义断言有新 API 等价，6 个旧 CLR UI 目录/default 断言转 U03。原始 oracle 中 AMF0 未初始化 trait bool 明确排除其非 wire 字段，不修改原始输出；AMF3 和所有负载完整比较。
+- 默认转换先报告损失并拒绝；明确 AMF3 封套可保留完整图，旧预览不能覆盖新编辑。实际桌面编辑器仍待 U03，G2 要等 S05；没有把 managed 核心当作新 GUI 验收。
+- 正式输入归档与来源/证据 hash 已冻结；原仓库、旧数据、104 资产和锁保持，无提交/推送/发布。
+- 当前 S05，provenance/S05-before.json。下一步确认覆盖率工具并建立受限子进程 fuzz 与 Release 10 MiB/30 次读写/分配/取消样本，任何预算失败保留并修复后复测。
+
+## 2026-10-28 S03 完成交接
+
+- amf3-managed-20261028-03：334 托管+18 工具通过；标准 AMF3 marker、三个表、先登记身份、Vector/Dictionary、真实 AVM+ 与 32 并发独立会话已验证。
+- 注册类只按明确 alias/CodecId 解析，默认产品表为空；T/B 是已知布局的测试类，未知真实类没有虚报支持。自定义长度异常先见 red failure，再补 offset/marker/cause，读写重试均通过。
+- source-inputs.tar.gz 可复核所有正式输入，原仓库/旧数据/104 资产/依赖锁保持；无提交/推送/发布。文件级往返尚待 S04。
+- 当前 S04；provenance/S04-before.json 为修改前输入。下一步接完整 SOL 会话与文件端口，先以五份独立完整内容预期验证，再实施编辑、原子保存、冲突与撤销重做。
+
+## 2026-10-28 S02 完成交接
+
+- amf0-managed-20261028-03：275 托管+18 工具通过，AMF0 固定预期/字节、完整截断前缀、数值极值、Unicode 边界、图身份/循环和资源限制已验证。
+- 两个类信息丢失用例先失败后修复，保留 red-metadata 原始日志。AVM+ 只完成受控单值委派，真实 AMF3 尚未冒称通过。
+- 所有正式输入完整归档在 S02/source-inputs.tar.gz；原仓库 332 文件/HEAD/dirty、旧用户数据、104 资产和依赖锁保持。无提交/推送/发布。
+- 当前 S03；provenance/S03-before.json 为修改前输入。下一步加入三个池和先登记对象身份、U29、Vector/Dictionary/注册类 codec 与全部规范 golden。
+
+## 2026-10-28 S01 完成交接
+
+- graph-managed-20261028-04：231 托管+18 工具通过；类型图可表达共享/环、位模式、trait、Vector/Dictionary，未知内容拒绝编辑保存。
+- 31 个手工 AMF golden、12 个 signed U29 边界、五份 SOL 完整内容预期冻结。隔离 Legacy oracle 四份成功；RuffleTest 的 ECMA 计数差异导致旧解析失败，原始 exit 1 保留，手工内容预期不冒称旧解析成功。
+- 26 行支持矩阵及 117 个 Legacy 测试去向已保存，codec/file 用例仍明确待 S02/S03/S04。原仓库/旧数据与 104 资产未变，无提交/推送/发布。
+- 当前 S02，修改前输入 provenance/S02-before.json；下一步添加有界 reader/writer 与 AMF0 固定字节/损坏输入回归。独立构建不读取原仓库、reference 或 oracle。
+
+## 2026-10-28 A04 完成交接
+
+- configuration-managed-20261028-07：222 托管、18 工具通过；27 个设置字段、5 个 Legacy 设置与 20 个 URL 断言有去向，原型 107（含原 97）逐名保留。7 份合成 fixture，独立预期逐内容比对。
+- schema v2 的未知/legacy/null、收藏顺序/重复/独立 ID、原子提交/取消/重试/版本冲突均验证。实际主题/语言/窗口/收藏 UI 与浏览器偏好仍是 U02/W01/U04，不把存值当生效。
+- 同一 configuration-package-20261028-01 真机加载两个旧格式文件后运行 Hello，退出 0；两字节坏 JSON 显示启动错误、文件不变、没有 browser adapter，关闭退出 1，错误被正确保留。包与最终产品源码一致，后两轮仅补强同一测试文件，差异清单已保存。
+- CUA 退出后读状态曾额外启动 Product PID 79446，已关闭、日志保留，不计来源禁读验收。原仓库/旧数据与开发包 hash/严格签名保持。未提交/推送/发布。
+- 当前 S01，修改前输入在 provenance/S01-before.json；精确下一步读取 reference/legacy/Docs 下 AMF PDF、CefFlashBrowser.Sol 算法及 Tests/Sol 类型断言，建立 Domain 强类型图与 codec-support-matrix。根 README/HRNESS 已同步。
+
+## 2026-10-28 A03 完成交接
+
+- 最终 persistence-managed-20261028-04：185 托管、16 工具通过；40 个新 A03 用例含三个阶段取消/写失败、真实权限、版本冲突/租约、恢复、限额、部分加载与日志期限。13 锁/104 固定资产未变。
+- Product.props 为唯一身份源，普通 Release 无测试环境即可启动，数据在 Library 独立命名空间。product-package-20261028-02 与最终输入一致；最终两个普通进程恢复 845-byte fixture/Cookie，Test 进程打开 Hello，均退出 0、failures=0；整包/严格签名运行后不变。
+- 第一个开发包发现短暂旧标题，修复所有初始/播放器标题后生成最终第二包。旧包一次 CUA 退出后读状态意外重开已关闭，完整日志留存，不算来源禁读通过。
+- 原仓库 332 文件/HEAD/dirty、四个旧数据根均未改写。产品默认数据是新建命名空间，未将其当作迁移来源。没有提交/推送/发布。
+- v1 store 保留 key 与 Base64，完整 AMF/新身份索引、用户恢复入口和性能仍待 S/W/U/Q；旧 Flash 焦点 Command-Q/中文 IME/frame 问题仍为 FAIL。具体边界见 contracts/storage.zh-CN.md、variables.zh-CN.md。
+- 当前 A04，修改前正式输入在 provenance/A04-before.json。下一步建立纯设置/收藏模型及 schema v2、Legacy 字段完整保留与幂等迁移 fixture；正式 UI 接入由 U02 实施。
+
+## 2026-10-28 A02 完成交接
+
+- 最终 lifecycle-managed-20261028-04：145 托管、12 工具通过，原始 97 项逐名保留；13 锁和 104 固定资产不变。五个缺陷先见失败回归再修复。来源/旧数据均未改写。
+- 正式 self-contained package-03/04 在原仓库/reference/bootstrap 禁读、无系统 dotnet 环境真实运行。本地四次播放有四个 runId/两个文档 ID；popup 三个 adapter 均实际 destroyed、共享 store；正常关闭清理 failures=0。
+- 摩尔庄园最终 native 会话 lifecycle-mole-login-native-20261028-03 的 snapshot-24 真正显示空账号/密码与登录按钮；本目录 A02/mole-login-native.png 可核验。前两轮预加载 Login.swf 但仍为开始画面的截图明确排除。
+- 必须继续处理：Flash 输入框焦点下 Command-Q 为 FAIL（U01/W01/U04）；中文 IME 重复事件未解决；iframe 事件短暂改地址栏（W01）。原生关闭按钮和地址栏焦点退出成功不覆盖这些失败。
+- 新 scripts/package-development.py、run-native.py 为开发入口；早期两轮签名失败保留，当前严格开发签名通过，正式布局与 entitlement 仍由 Q03/Q04 验收。契约见 contracts/interfaces.zh-CN.md。
+- 当前 A03；修改前输入在 provenance/A03-before.json。下一步为 JsonRuffleSaveStore 提前修改内存/部分加载建立失败回归，再实施事务基础和产品路径。全部未提交，无推送或发布。
+
+## 2026-10-28 A01 完成交接
+
+- 正式八模块/五测试工程已建立，13 个新图依赖锁经受控生成与审查，第三方版本/hash 没有变化。104 个固定资产 hash 完整。
+- 最终 independent-20261028-03：110 托管、12 工具回归通过，禁读原仓库/reference/bootstrap，输入与锁不变。relocated-20261028-02：正式源码复制到中文/空格路径，无 bin/obj/reference/bootstrap，禁读整个原工作目录和来源，再次全部通过。
+- 107 原型测试（含原始 97）逐名称去向见 provenance/A01-test-map.json；完整源码来源与最终 hash 见 A01-changes.json。原仓库 332 业务文件/HEAD/dirty 状态保持。
+- 早期路径别名误判、CA1859、ARM64 复数 RID 检查及 sandbox 构建节点复用问题均有原始失败记录；最终验证隔离后台节点。CI 仅配置，未远程执行。
+- 目前无正式工程的新 GUI 验收；P03 原型 GUI 证据只证明 G0。下一步 A02 在正式源码建立 Ready 失败、并发关闭、已接受 bridge 排空、导航世代及 popup 所有权契约与回归。
+
+## 外部输入登记
+
+初始仅列可能需要的条件，不代表已验证缺失。到对应任务时查询实际可用性并更新。
+
+| 条件 | 用途 | 查询时点 | 当前状态 |
+|---|---|---|---|
+| 源工作树及未提交原型可读 | 冻结输入 | P00 | 编制时可读，接手重查 |
+| Apple Silicon 桌面会话 | WKWebView 与系统交互 | P02/P03 | 可用；26.5.1 arm64，P01 实际 app/profile 已验证 |
+| 用户真正需要的 SWF/站点与预期 | 内容级产品验收 | P02/P03，最迟 Q01 前 | 已登记并更正：摩尔庄园，官方入口可打开并进入游戏登录界面；赛尔号不再是目标 |
+| 最低/最高声明系统及两代设备 | 发布支持范围 | P03 规划，Q05 验收 | 尚未安排 |
+| Developer ID 和公证凭据 | 正式发行包 | Q04 | 尚未查询；开发包不依赖它 |
+| 用户旧数据副本 | 真实迁移验证 | M02 | 尚未登记；fixture 可先实施 |
+| 新远程仓库地址和对外发布指令 | 推送或发布 | 用户要求时 | 未提供，不猜测 |
+
+## 2026-10-28 P02 完成交接
+
+- 无提交的 main；全部输入与变更 hash 见 provenance/P02-changes.json、evidence/P02/2026-10-28/acceptance-index.json。原仓库 332 份业务文件、HEAD 与 dirty 状态不变。
+- 原生最终会话 p02-suite-native-20261028-06：23 个固定记录全部 PASS；矩阵含 29 个结果条目，另外汇总 Hello World 四模式。独立 renderer 非空 golden 差异 0，摩尔庄园登录原生截图已保存。107 托管 +7 工具回归通过。
+- 所有新包/运行都位于本项目，原型 self-contained 无系统 dotnet；最终会话启动前逐文件核对当前 app 等于 p02-package-20261028-09 归档。
+- 未解决：固定上游策略解释器、同步重入不支持；组合输入重复事件保留 FAIL，W01/U04 必须跟踪。ASCII 通过不代表全部 IME。
+- 当前 P03，下一步在新的隔离 profile 启动默认诊断页，执行存档捕获/导回/重启、popup、Open panel 和真实下载；随后生成支持矩阵、预算、任务估算和 ADR。P03 尚未 DONE，不能进入 A01。
+
+## 2026-10-28 P03 完成交接
+
+- G0 通过；代码修改映射 provenance/P03-changes.json，门禁 evidence/P03/2026-10-28/gate0-new-repository.json。107 托管 +8 工具回归通过，self-contained ARM64 包与实际运行逐文件匹配。
+- 原生文件面板、中文/空格路径、本地 SWF、279-byte 捕获/导出、变体导回真实读取及 289-byte 写回、不同端口跨进程、Cookie/popup/下载实际落盘和退出已验证。
+- 修复：旧播放器销毁 flush 覆盖导回；默认导出双扩展；诊断重启文件名覆盖。首轮丢失的两张截图明确记录并排除，最终新 profile 重启前后 10 个不可变证据文件 hash 保持。
+- 原仓库与旧数据 hash 未变。系统矩阵 15/27、第二代 Apple Silicon 和干净账户待 Q05 真机，性能目标未冒充实测。
+- 下一任务 A01，工作目录仍本仓库；先读取当前 Core/Desktop/测试工程依赖，再建立 FlashMacOS.slnx 与八个正式模块。正式项目不得引用 reference/bootstrap/原仓库；迁移后只维护正式边界。

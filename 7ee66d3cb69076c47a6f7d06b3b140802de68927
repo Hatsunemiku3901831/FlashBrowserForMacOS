@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 2,
+  "favorites": [
+    {
+      "id": "4170d11f-c184-7f6e-bcd9-e462ebb3ebbd",
+      "name": "Mole",
+      "url": "http://mole.61.com/",
+      "futureFavorite": {
+        "priority": 7
+      }
+    },
+    {
+      "id": "c9e06bc7-3cc7-6201-b5c7-1d5348b7102c",
+      "name": "Mole",
+      "url": "http://mole.61.com/"
+    },
+    {
+      "id": "80c656fd-6986-445e-d505-e4309f97c3b2",
+      "name": null,
+      "url": null
+    },
+    {
+      "id": "dd5b074a-135b-743e-48b5-b47918e051f2",
+      "name": null,
+      "url": null,
+      "legacyNullSlot": true
+    },
+    {
+      "id": "c16d9399-e396-dd8e-2d47-891670f17736",
+      "name": "Local copy",
+      "url": "C:\\Games\\movie.swf"
+    }
+  ],
+  "legacy": {
+    "sourceFavorites": {
+      "Favorites": [
+        {
+          "Name": "Mole",
+          "Url": "http://mole.61.com/",
+          "futureFavorite": {
+            "priority": 7
+          }
+        },
+        {
+          "Name": "Mole",
+          "Url": "http://mole.61.com/"
+        },
+        {
+          "Name": null,
+          "Url": null
+        },
+        null,
+        {
+          "Name": "Local copy",
+          "Url": "C:\\Games\\movie.swf"
+        }
+      ],
+      "futureFavoritesRoot": {
+        "keep": true
+      }
+    }
+  }
+}

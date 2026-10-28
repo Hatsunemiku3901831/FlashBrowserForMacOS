@@ -1,0 +1,200 @@
+using FlashMacOS.Application.Sol;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class Amf0CodecTests
+{
+    [TestMethod]
+    [DataRow("0a00000000")]
+    [DataRow("0800000000000009")]
+    [DataRow("08ffffffff000009")]
+    [DataRow("03000009")]
+    [DataRow("0a00000001070000")]
+    public void EmptyContainersAdvisoryCountAndArrayCycleHaveExactBytes(string hex)
+    {
+        var source = Convert.FromHexString(hex); var codec = new AmfCodec();
+        CollectionAssert.AreEqual(source, codec.Encode(codec.Decode(source, SolEncoding.Amf0), SolEncoding.Amf0));
+    }
+
+    [TestMethod]
+    [DataRow("0000000000000000")]
+    [DataRow("0000000000000001")]
+    [DataRow("0010000000000000")]
+    [DataRow("7fefffffffffffff")]
+    [DataRow("ffefffffffffffff")]
+    [DataRow("3fb999999999999a")]
+    public void FiniteIeee754ExtremesRetainAllBits(string bits)
+    {
+        var bytes = Convert.FromHexString("00" + bits); var codec = new AmfCodec();
+        var graph = codec.Decode(bytes, SolEncoding.Amf0);
+        Assert.AreEqual(unchecked((long)Convert.ToUInt64(bits, 16)), ((AmfNumber)graph.Entries[0].Value).RawBits);
+        CollectionAssert.AreEqual(bytes, codec.Encode(graph, SolEncoding.Amf0));
+    }
+
+    [TestMethod]
+    public void DateAndXmlDoNotOccupyAmf0ObjectReferenceSlots()
+    {
+        var source = Convert.FromHexString("0a00000004 0b00000000000000000000 0f00000000 03000009 070001".Replace(" ", "", StringComparison.Ordinal));
+        var codec = new AmfCodec(); var graph = codec.Decode(source, SolEncoding.Amf0);
+        var array = (AmfArrayNode)graph.Nodes[((AmfReference)graph.Entries[0].Value).Target];
+        Assert.AreEqual(array.Dense[2], array.Dense[3]);
+        Assert.AreNotEqual(array.Dense[0], array.Dense[3]); Assert.AreNotEqual(array.Dense[1], array.Dense[3]);
+        CollectionAssert.AreEqual(source, codec.Encode(graph, SolEncoding.Amf0));
+    }
+
+    [TestMethod]
+    public void UnicodeSupplementaryNullAndCombiningCharactersRemainExact()
+    {
+        const string text = "你好世界🎮\0e\u0301"; var codec = new AmfCodec();
+        var graph = codec.Decode(codec.Encode(Root(new AmfString(text)), SolEncoding.Amf0), SolEncoding.Amf0);
+        Assert.AreEqual(text, ((AmfString)graph.Entries[0].Value).Value);
+    }
+
+    [TestMethod]
+    [DataRow(true)]
+    [DataRow(false)]
+    public void UnrepresentableAmf0ClassMetadataCannotBeSilentlyDiscarded(bool hasClassName)
+    {
+        var node = new AmfObjectNode(new(0), new AmfTraits(hasClassName ? "CannotDrop" : "", hasClassName), objectKind: AmfObjectKind.Amf0Object);
+        Assert.AreEqual("ConversionRequired", Assert.ThrowsExactly<AmfFormatException>(() => new AmfCodec().Encode(Root(new AmfReference(node.Id), node), SolEncoding.Amf0)).Code);
+    }
+
+    [TestMethod]
+    [DataRow("amf0-scalars")]
+    [DataRow("amf0-null-array")]
+    [DataRow("amf0-self-object")]
+    [DataRow("amf0-shared-object")]
+    [DataRow("amf0-empty-and-duplicate-keys")]
+    [DataRow("amf0-ecma-advisory-count")]
+    [DataRow("amf0-date-fraction-timezone")]
+    [DataRow("amf0-xml-document")]
+    [DataRow("amf0-typed-object")]
+    [DataRow("amf0-empty-typed-class")]
+    public void NormativeValuesDecodeAndEncodeAgainstIndependentBytes(string name)
+    {
+        var fixture = AmfGolden.Fixture(name); var source = AmfGolden.Bytes(fixture); var codec = new AmfCodec();
+        var graph = codec.Decode(source, SolEncoding.Amf0);
+        AmfGolden.AssertExpected(fixture.GetProperty("expected"), graph.Entries[0].Value, graph);
+        var bytes = codec.Encode(graph, SolEncoding.Amf0);
+        if (fixture.GetProperty("canonicalWriterBytes").GetBoolean()) CollectionAssert.AreEqual(source, bytes);
+        var reread = codec.Decode(bytes, SolEncoding.Amf0);
+        AmfGolden.AssertExpected(fixture.GetProperty("expected"), reread.Entries[0].Value, reread);
+    }
+
+    [TestMethod]
+    [DataRow("amf0-reject-movieclip")]
+    [DataRow("amf0-reject-unsupported")]
+    [DataRow("amf0-reject-recordset")]
+    [DataRow("amf0-reject-unknown")]
+    public void UnsupportedMarkersHaveOffsetTypeAndDoNotMutateInput(string name)
+    {
+        var fixture = AmfGolden.Fixture(name); var bytes = AmfGolden.Bytes(fixture); var copy = (byte[])bytes.Clone();
+        var error = Assert.ThrowsExactly<AmfFormatException>(() => new AmfCodec().Decode(bytes, SolEncoding.Amf0));
+        Assert.AreEqual("UnsupportedMarker", error.Code); Assert.AreEqual(0, error.Offset);
+        Assert.AreEqual(fixture.GetProperty("diagnostic").GetProperty("marker").GetByte(), error.Marker);
+        Assert.AreEqual(SolEncoding.Amf0, error.Encoding); CollectionAssert.AreEqual(copy, bytes);
+    }
+
+    [TestMethod]
+    public void EveryTruncationOfCompositeNormativeInputsFailsWithAFormatDiagnostic()
+    {
+        foreach (var name in new[] { "amf0-scalars", "amf0-self-object", "amf0-shared-object", "amf0-date-fraction-timezone", "amf0-typed-object" })
+        {
+            var source = AmfGolden.Bytes(AmfGolden.Fixture(name));
+            for (var length = 0; length < source.Length; length++)
+            {
+                var prefix = source.AsMemory(0, length);
+                var error = Assert.ThrowsExactly<AmfFormatException>(() => new AmfCodec().Decode(prefix, SolEncoding.Amf0), name + ":" + length);
+                Assert.IsTrue(error.Offset >= 0 && error.Offset <= length);
+            }
+        }
+    }
+
+    [TestMethod]
+    [DataRow("0affffffff", "ElementLimit")]
+    [DataRow("0cffffffff", "LengthLimit")]
+    [DataRow("070000", "InvalidReference")]
+    [DataRow("09", "UnsupportedMarker")]
+    [DataRow("020002c080", "InvalidUtf8")]
+    [DataRow("020004f4908080", "InvalidUtf8")]
+    [DataRow("0505", "TrailingData")]
+    public void MalformedLengthsReferencesUtf8AndTrailingBytesAreRejected(string hex, string code)
+    {
+        var error = Assert.ThrowsExactly<AmfFormatException>(() => new AmfCodec().Decode(Convert.FromHexString(hex), SolEncoding.Amf0));
+        Assert.AreEqual(code, error.Code);
+    }
+
+    [TestMethod]
+    [DataRow(21845, 2)]
+    [DataRow(21846, 12)]
+    [DataRow(70000, 12)]
+    public void LongStringsUseUtf8ByteLengthAndPreserveUnicode(int count, int marker)
+    {
+        var text = new string('好', count); var codec = new AmfCodec();
+        var bytes = codec.Encode(Root(new AmfString(text)), SolEncoding.Amf0);
+        Assert.AreEqual((byte)marker, bytes[0]);
+        Assert.AreEqual(text, ((AmfString)codec.Decode(bytes, SolEncoding.Amf0).Entries[0].Value).Value);
+    }
+
+    [TestMethod]
+    public void LimitsAreCheckedBeforeAllocationAndWriterOutput()
+    {
+        var codec = new AmfCodec();
+        var source = AmfGolden.Bytes(AmfGolden.Fixture("amf0-null-array"));
+        Assert.AreEqual("ElementLimit", Assert.ThrowsExactly<AmfFormatException>(() => codec.Decode(source, SolEncoding.Amf0, new(MaximumElements: 3))).Code);
+        Assert.AreEqual("FileLimit", Assert.ThrowsExactly<AmfFormatException>(() => codec.Decode(source, SolEncoding.Amf0, new(MaximumFileBytes: 4))).Code);
+        var nested = Convert.FromHexString(string.Concat(Enumerable.Repeat("0a00000001", 257)) + "05");
+        Assert.AreEqual("DepthLimit", Assert.ThrowsExactly<AmfFormatException>(() => codec.Decode(nested, SolEncoding.Amf0)).Code);
+        Assert.AreEqual("NodeLimit", Assert.ThrowsExactly<AmfFormatException>(() => codec.Decode(Convert.FromHexString("0a0000000103000009"), SolEncoding.Amf0, new(MaximumNodes: 1))).Code);
+        Assert.AreEqual("FileLimit", Assert.ThrowsExactly<AmfFormatException>(() => codec.Encode(Root(new AmfNumber(1)), SolEncoding.Amf0, new(MaximumFileBytes: 4))).Code);
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => codec.Decode(source, SolEncoding.Amf0, new(MaximumDepth: int.MaxValue)));
+    }
+
+    [TestMethod]
+    public void InvalidNamesUtf16UnsupportedValuesAndLossyRepresentationsRefuseWriting()
+    {
+        var codec = new AmfCodec();
+        Assert.AreEqual("InvalidUtf16", Assert.ThrowsExactly<AmfFormatException>(() => codec.Encode(Root(new AmfString("\ud800")), SolEncoding.Amf0)).Code);
+        Assert.AreEqual("ConversionRequired", Assert.ThrowsExactly<AmfFormatException>(() => codec.Encode(Root(new AmfInteger(42)), SolEncoding.Amf0)).Code);
+        Assert.ThrowsExactly<AmfFormatException>(() => codec.Encode(Root(new AmfUnsupported(SolEncoding.Amf0, 4, 0, "MovieClip")), SolEncoding.Amf0));
+        var node = new AmfObjectNode(new(0), new AmfTraits("", true), properties: [new(new string('好', 21846), AmfNull.Instance)], objectKind: AmfObjectKind.Amf0Object);
+        Assert.AreEqual("StringLength", Assert.ThrowsExactly<AmfFormatException>(() => codec.Encode(Root(new AmfReference(new(0)), node), SolEncoding.Amf0)).Code);
+        var date = new AmfDateNode(new(0), new AmfNumber(0));
+        var array = new AmfArrayNode(new(1), AmfArrayKind.Amf0Strict, [new AmfReference(date.Id), new AmfReference(date.Id)]);
+        Assert.AreEqual("ConversionRequired", Assert.ThrowsExactly<AmfFormatException>(() => codec.Encode(Root(new AmfReference(array.Id), date, array), SolEncoding.Amf0)).Code);
+    }
+
+    [TestMethod]
+    public void CanceledOperationsStopBeforeReadingOrWriting()
+    {
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel(); var codec = new AmfCodec();
+        Assert.ThrowsExactly<OperationCanceledException>(() => codec.Decode(new byte[] { 5 }, SolEncoding.Amf0, cancellationToken: cancellation.Token));
+        Assert.ThrowsExactly<OperationCanceledException>(() => codec.Encode(Root(AmfNull.Instance), SolEncoding.Amf0, cancellationToken: cancellation.Token));
+    }
+
+    [TestMethod]
+    public void AvmPlusDelegatesOneValueAndContinuesAmf0()
+    {
+        var handler = new IntegerDelegate(); var codec = new AmfCodec(handler);
+        var fixture = AmfGolden.Fixture("amf0-avmplus-and-following"); var source = AmfGolden.Bytes(fixture);
+        var graph = codec.Decode(source, SolEncoding.Amf0);
+        AmfGolden.AssertExpected(fixture.GetProperty("expected"), graph.Entries[0].Value, graph);
+        CollectionAssert.AreEqual(source, codec.Encode(graph, SolEncoding.Amf0));
+        Assert.AreEqual(1, handler.ReadCalls); Assert.AreEqual(1, handler.WriteCalls);
+        var unavailable = new AmfCodec(new MissingAmf3Codec());
+        Assert.AreEqual("Amf3DelegateUnavailable", Assert.ThrowsExactly<AmfFormatException>(() => unavailable.Decode(source, SolEncoding.Amf0)).Code);
+    }
+
+    private static AmfGraph Root(AmfValue value, params AmfNode[] nodes) => new([new("", value)], nodes);
+    private sealed class IntegerDelegate : IAmf3ValueCodec
+    {
+        public int ReadCalls { get; private set; }
+        public int WriteCalls { get; private set; }
+        public AmfValue Read(AmfReadContext context, int depth)
+        { ReadCalls++; context.CountValue(depth); Assert.AreEqual((byte)4, context.ReadByte()); return new AmfInteger(context.ReadByte()); }
+        public void Write(AmfWriteContext context, AmfValue value, int depth)
+        { WriteCalls++; context.CountValue(depth); context.WriteByte(4); context.WriteByte((byte)((AmfInteger)value).Value); }
+    }
+}

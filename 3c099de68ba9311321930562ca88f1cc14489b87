@@ -1,0 +1,124 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:FlashMacOS.Desktop.ViewModels"
+        xmlns:storage="clr-namespace:FlashMacOS.Domain.Flash;assembly=FlashMacOS.Domain"
+        x:Class="FlashMacOS.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Width="1180"
+        Height="760"
+        MinWidth="780"
+        MinHeight="520"
+        d:DesignWidth="1180"
+        d:DesignHeight="760"
+        mc:Ignorable="d">
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+    <Border Grid.Row="0"
+            Padding="10"
+            BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+            BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" ColumnSpacing="7">
+        <Button Grid.Column="0" Classes="toolbar" Content="←" ToolTip.Tip="Back"
+                Command="{Binding BackCommand}" />
+        <Button Grid.Column="1" Classes="toolbar" Content="→" ToolTip.Tip="Forward"
+                Command="{Binding ForwardCommand}" />
+        <Button Grid.Column="2" Classes="toolbar" Content="{Binding ReloadOrStopLabel}"
+                Command="{Binding ReloadOrStopCommand}" />
+        <TextBox Grid.Column="3" x:Name="AddressBox"
+                 PlaceholderText="Enter a URL, search, or local .swf path"
+                 Text="{Binding Address, Mode=TwoWay}"
+                 KeyDown="OnAddressKeyDown" />
+        <Button Grid.Column="4" Classes="toolbar" Content="Go" Command="{Binding NavigateCommand}" />
+        <Button Grid.Column="5" Classes="toolbar" Content="Open SWF…" Click="OnOpenSwfClick" />
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1"
+            IsVisible="{Binding IsPlayerPage}"
+            Padding="10,7"
+            Background="{DynamicResource ThemeControlLowBrush}"
+            BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+            BorderThickness="0,0,0,1">
+      <StackPanel Orientation="Horizontal" Spacing="7" VerticalAlignment="Center">
+        <TextBlock Text="Ruffle 0.4.1" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,8,0" />
+        <Button Classes="toolbar" Content="Pause" Command="{Binding PauseCommand}" />
+        <Button Classes="toolbar" Content="Resume" Command="{Binding ResumeCommand}" />
+        <Button Classes="toolbar" Content="Reload player" Command="{Binding ReloadPlayerCommand}" />
+        <Button Classes="toolbar" Content="Fullscreen" Command="{Binding FullscreenCommand}" />
+        <TextBlock Text="Volume" VerticalAlignment="Center" Margin="14,0,0,0" />
+        <Slider Width="150" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}" />
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="2" Padding="10,4" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="6">
+        <TextBox x:Name="FindBox" Text="{Binding FindText, Mode=TwoWay}" PlaceholderText="Find in page" />
+        <Button Grid.Column="1" Content="Previous" Command="{Binding FindPreviousCommand}" />
+        <Button Grid.Column="2" Content="Next" Command="{Binding FindNextCommand}" />
+        <Button Grid.Column="3" Content="−" Command="{Binding ZoomOutCommand}" ToolTip.Tip="Zoom out" />
+        <Button Grid.Column="4" Content="{Binding ZoomLabel}" Command="{Binding ZoomResetCommand}" ToolTip.Tip="Reset zoom" />
+        <Button Grid.Column="5" Content="+" Command="{Binding ZoomInCommand}" ToolTip.Tip="Zoom in" />
+        <Button Grid.Column="6" Content="Print…" Command="{Binding PrintCommand}" />
+      </Grid>
+    </Border>
+    <Border Grid.Row="3" Padding="10,4" BorderBrush="{DynamicResource ThemeBorderLowBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+        <TextBox Text="{Binding UserAgentText, Mode=TwoWay}" PlaceholderText="Default user agent (leave empty to restore)" />
+        <Button Grid.Column="1" Content="Apply UA and reload" Command="{Binding ApplyUserAgentCommand}" />
+        <Button Grid.Column="2" Content="Web inspection" Command="{Binding InspectionCommand}" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="4" ColumnDefinitions="*,5,330">
+      <Border Grid.Column="0" Background="#10141B">
+        <ContentControl x:Name="BrowserHost" />
+      </Border>
+      <GridSplitter Grid.Column="1" Background="{DynamicResource ThemeBorderLowBrush}" />
+      <Border Grid.Column="2" Padding="12" Background="{DynamicResource ThemeControlLowBrush}">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+            <StackPanel>
+              <TextBlock Text="SharedObjects" FontSize="18" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" Text="Ruffle live SOL bridge" FontSize="12" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="toolbar" Content="Refresh" Command="{Binding RefreshSavesCommand}" />
+          </Grid>
+
+          <ListBox Grid.Row="1"
+                   Margin="0,10"
+                   ItemsSource="{Binding Saves}"
+                   SelectedItem="{Binding SelectedSave, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="storage:RuffleSaveEntry">
+                <StackPanel Margin="3,6">
+                  <TextBlock Text="{Binding SolName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="muted" Text="{Binding Key}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                  <StackPanel Orientation="Horizontal" Spacing="5">
+                    <TextBlock Classes="muted" Text="{Binding Encoding}" FontSize="11" />
+                    <TextBlock Classes="muted" Text="·" FontSize="11" />
+                    <TextBlock Classes="muted" Text="{Binding ByteLength, StringFormat={}{0:N0} bytes}" FontSize="11" />
+                  </StackPanel>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <Grid Grid.Row="2" ColumnDefinitions="*,*,*" ColumnSpacing="6">
+            <Button Grid.Column="0" Content="Import…" Click="OnImportSaveClick" />
+            <Button Grid.Column="1" Content="Export…" Click="OnExportSaveClick" />
+            <Button Grid.Column="2" Content="Delete" Command="{Binding DeleteSaveCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <Border Grid.Row="5"
+            Padding="10,6"
+            BorderBrush="{DynamicResource ThemeBorderLowBrush}"
+            BorderThickness="0,1,0,0">
+      <StackPanel Spacing="3"><TextBlock Classes="muted" Text="{Binding Status}" TextTrimming="CharacterEllipsis" /><TextBlock Classes="muted" Text="{Binding CompatibilityNotice}" FontSize="11" TextTrimming="CharacterEllipsis" /></StackPanel>
+    </Border>
+  </Grid>
+</Window>

@@ -1,0 +1,9 @@
+namespace FlashMacOS.Application.Files;
+
+public enum NativeFileKind { Any, FlashMovie, SharedObject }
+
+public interface IFileDialogs
+{
+    ValueTask<string?> OpenAsync(NativeFileKind kind, string title, CancellationToken cancellationToken = default);
+    ValueTask<string?> SaveAsync(NativeFileKind kind, string title, string suggestedName, string? defaultExtension = null, CancellationToken cancellationToken = default);
+}

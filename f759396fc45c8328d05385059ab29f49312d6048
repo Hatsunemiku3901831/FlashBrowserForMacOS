@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/BrowserWorkspace.cs",
+      "beforeSha256": "c01a4617021fccf1745366eab16951c3cbe937e323d8b96ba7acaf29efe074c4",
+      "targetSha256": "c7fb08ccdff8769468b6946650a9f82656c2480aa18c7d6080968e42ba8e5ebf",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/DownloadManager.cs",
+      "beforeSha256": null,
+      "targetSha256": "03f84f34507e2fcfad19080f62a67db21e296beec42558a3dd37ae84c883ab45",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/IBrowserSession.cs",
+      "beforeSha256": "c69240dca776a32488c2b058ac4cfdb24bf05f6c3a6588abf138ef9c1eae910a",
+      "targetSha256": "e90dd799ff919174d80be3b41fa99778267369adf07776bef7c05941abb8d15e",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/SaveDialogDownloadDestinations.cs",
+      "beforeSha256": null,
+      "targetSha256": "5ce21a97e223f52e39351cf3ab89c0bfa3b96287aa9a018e1aef3fc786fbab83",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Files/IDownloadFiles.cs",
+      "beforeSha256": null,
+      "targetSha256": "1e1e44e71887c888ee495c677b195fd48d02add8f345bfc326548efbba784278",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/AvaloniaNativeWebViewSession.cs",
+      "beforeSha256": "62e302ecae0e7d6e73fd8a8fb8bda11f7e088ecbdd465cad9eb3fa0a43922962",
+      "targetSha256": "502319f46f787e0e3b1ebbff106876707cca9c54d6265dbd9182bc698f35522a",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/Diagnostics/DownloadPopupNativeVerification.cs",
+      "beforeSha256": null,
+      "targetSha256": "4ef57191cb28e7a59d419077be178d67282fd4f7b2d2a36c2f170d4634101dec",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/Diagnostics/NativeWindowDiagnostics.cs",
+      "beforeSha256": null,
+      "targetSha256": "291153afad7a0faac582729b120226eb3707ce59d722c8d3f89b0bac8a97d132",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/MacBrowserBridge.cs",
+      "beforeSha256": "d9c748eb7d745e652dada2d823cba3aa851104c0b1ad98500f5eb1400f50d49e",
+      "targetSha256": "4be818462d60ccbd99ca19755e6c9a719ba791fd56944c39c05600e586712b78",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/Native/FlashMacOSWebKit.m",
+      "beforeSha256": "e82c85df8e47dab172d7fcc27bfb9e91977d985a3e48649aa1613d197da6b47b",
+      "targetSha256": "3f67374042ebd3b344c1a66fd8eebe9dae59af0b91a5ca3196ffd3f9328bd1ee",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/NativeBrowserPayloads.cs",
+      "beforeSha256": null,
+      "targetSha256": "8200b38444843c3da5be1226ffe8328b1c258922f0b0f6ac54df89b8be22b5fb",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Composition/CompositionRoot.cs",
+      "beforeSha256": "823972ecda2610167cbec07a652f8986a36d983048aca5ec11364e9c5daeacb6",
+      "targetSha256": "8c88e5cdcc1775a9ca4a7a02d53c1a9be58ac39a7f217d0aeaf2ba21b7559114",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs",
+      "beforeSha256": "3bfdf9bf98314f6765cb4ec53740542d0063d164820e6a10b91721a47816e9df",
+      "targetSha256": "a1a353b6befbe039354e73de917736317a14022aaeb875369b40181e60912766",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Views/MainWindow.axaml.cs",
+      "beforeSha256": "df86c0c7b90847e2e0c287a0bfe1289219831c2b3e47c3e04b754285d6e2d4cd",
+      "targetSha256": "d7e3fbbf79814393719d2a0dcbd9433bff263e902956b805f8e365b1f15ba937",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Views/PopupWindow.axaml.cs",
+      "beforeSha256": "44c354a100e80314fb77e730fff2b8211b402cdb3e6dbb9c20e09ab5e80677ff",
+      "targetSha256": "a83a2f485332e6c7999387eb50932a8ff2f3e022facb2cb02156a6b20a2ed217",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Browser/BrowserModels.cs",
+      "beforeSha256": "6f395c97611b8df8f0aa260276477a12bed0bfe7cd8a413b30ea2ef8004b29f3",
+      "targetSha256": "6d9e00195db313e083c135d147bc0ab6acc40e089a122ca50ee9047b82da5849",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Hosting/CompatibilityContentHost.cs",
+      "beforeSha256": "72a85188575719dbb9e2c282bf2a9af8da6b6aec013c7a778fa7f38a8b1685ce",
+      "targetSha256": "632f289ae3b7a17f71d55fa883d6d16d6b28b39e1bc1eb4ed65a9cae25d0f769",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Hosting/DownloadValidationSite.cs",
+      "beforeSha256": null,
+      "targetSha256": "0f7b738449feeae1abdb6847398eebc4d889f261a243c92cabb2d74707487fda",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleDocumentStartScriptBuilder.cs",
+      "beforeSha256": "06c134edafea6899c014ecaf2887f48b219138148d9cafd0020757ac786af415",
+      "targetSha256": "0c5e3073efab0aad83c7f166b8f8b94df99b6fd937db2f8520d8b783871729a4",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Persistence/LocalDownloadFiles.cs",
+      "beforeSha256": null,
+      "targetSha256": "0a1c9af3160c4321633a4591d4f34c49b07b3a7468a222dba6e336a961b6a632",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Application.Tests/BrowserWorkspaceTests.cs",
+      "beforeSha256": "9aca2d21329ce1354c8544cf9fcdc96bfb080fe16970ec082562638763df5fa3",
+      "targetSha256": "623fe01cc596a158fac72f02c968aead8c2c82358d3aa70f0dc9cbb382ff5a92",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Application.Tests/CoordinatorLifetimeTests.cs",
+      "beforeSha256": "812ac6a69ac72b8487b27d57929a66bbc5c0a99117c754eeab47cedb0124d538",
+      "targetSha256": "3a3723d12110dbedff4d1e03051f4ea9197d1087caad2f5db86fd446bf71f03e",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Desktop.Tests/ViewModelLifetimeTests.cs",
+      "beforeSha256": "4ce316469ff646cc7f6a644935c3a2ab8adfe5155e1b7380d900dbd5f5c73c94",
+      "targetSha256": "ee5a7afac49711b13be9f8724d4ddfe3cf1a5ba3d5a600cb23bc6028fb4fabbb",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/DownloadManagerTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "b3509d7ab030bff8d92e20a9117556df21f826d4349c690765efa4740f9d300b",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/DownloadValidationSiteTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "266c8aa61a127065d08e489ed2fb898636253791b84dc5fb5d4ab5dfd92ee207",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/NativeBrowserPayloadTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "bc08acd070517d4e3509e67e46e6a23e50c350e60994860e90984b87936cbf76",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/NativeSessionLifetimeTests.cs",
+      "beforeSha256": "236a9fc614514686569c86cab4cc25dc9e72697c0262dff2ba2cdf9f19a6a98f",
+      "targetSha256": "63e0827c80e154c813a75afb9c5d7ded7b12a1a9d8203a12e1841b05560e6975",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/RuffleDocumentStartScriptBuilderTests.cs",
+      "beforeSha256": "500c26c49d77dd7b93147b96dc276e2fd95e3f94b6732d63a5212958b816c42a",
+      "targetSha256": "a71782f7461e6b554778dce6f07516f6ca59700a237356e5af1534920bed6b80",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/RufflePlayerCoordinatorTests.cs",
+      "beforeSha256": "676d7526d0e9b51c58a2436ae44a6cfacaaf36dd981eb953c78459da8f8fe364",
+      "targetSha256": "3f76fb7835d967833c4e1314d750e222c7accac0006436c4f3dd268916999af3",
+      "reason": "W02 native WKDownload/popup implementation, deterministic offline endpoints and nearest regressions; see W02 report and ADR 0003",
+      "origin": "Project-authored implementation; no reference algorithm or third-party asset changed",
+      "referenceSources": []
+    }
+  ]
+}

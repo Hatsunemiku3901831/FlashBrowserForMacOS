@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+"""Freeze an evidence index from actual P02 native records; never changes raw runs."""
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+from pathlib import Path
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--suite-run', required=True)
+    parser.add_argument('--input-run', default='p02-suite-native-20261028-04')
+    parser.add_argument('--output-dir', type=Path, required=True)
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parents[1]
+    output = args.output_dir.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    evidence = set()
+    cases = []
+
+    def records(run):
+        profile = root / 'artifacts/profiles' / run
+        result = root / 'artifacts/evidence/P02' / run / 'process-result.json'
+        if json.loads(result.read_text())['exitCode'] != 0:
+            raise ValueError('Native run did not exit normally: ' + run)
+        evidence.add(result)
+        evidence.add(result.with_name('launch.json'))
+        paths = sorted(profile.glob('compatibility-*.jsonl'))
+        if not paths:
+            raise ValueError('Missing native compatibility records: ' + run)
+        rows = []
+        for path in paths:
+            evidence.add(path)
+            for number, line in enumerate(path.read_text().splitlines(), 1):
+                envelope = json.loads(line)
+                payload = json.loads(envelope['rawData'])
+                rows.append((payload, {'path': str(path.relative_to(root)), 'line': number,
+                                       'processRunId': run, 'receivedAt': envelope['receivedAt']}))
+        return rows
+
+    suite = records(args.suite_run)
+    required = ['hello-world','bitmap-clone','bitmap-fillrect','bitmap-pixels','programmatic-events',
+                'timer-events','timer-finished','sound-play','sound-stop','url-loader',
+                'as3-relative','as3-absolute','as3-redirect','as3-cookie','as3-missing',
+                'as3-cross-origin-allowed','as3-cross-origin-denied','project-network',
+                'audio-load-and-failure','audio-user-gesture','audio-control-apis','audio-output-capture','browser-network']
+    for fixture in required:
+        matches = [(payload, raw) for payload, raw in suite if payload.get('fixtureId') == fixture]
+        if len(matches) != 1:
+            raise ValueError(f'Expected exactly one {fixture} result; found {len(matches)}')
+        payload, raw = matches[0]
+        cases.append({**payload, 'rawEvidence': raw})
+    for fixture, run in [('keyboard-input',args.input_run),('mouse-click','p02-suite-native-20261028-03')]:
+        matches = [(payload, raw) for payload, raw in records(run) if payload.get('fixtureId') == fixture]
+        payload, raw = matches[-1]
+        cases.append({**payload, 'rawEvidence': raw})
+    for relative in [
+        'artifacts/evidence/P02/p02-hello-reloads-20261028-01/reload-modes.json',
+        'artifacts/evidence/P02/p02-external-interface-20261028-01/exact-result.json',
+        'artifacts/evidence/P02/p02-renderer-fillrect-20261028-01/golden/result.json',
+        'docs/evidence/P02/2026-10-28/mole-login-result.json',
+    ]:
+        path = root / relative
+        evidence.add(path)
+        cases.append({**json.loads(path.read_text()), 'resultEvidence': relative})
+    for relative in ['test-assets/flash/ruffle-v0.4.1/manifest.json','test-assets/flash/p02-project/manifest.json',
+                     'test-assets/web/mole/provenance.json']:
+        evidence.add(root / relative)
+    status = 'PASS' if all(case['status'] == 'PASS' for case in cases) else 'FAIL'
+    matrix = {'schemaVersion': 1, 'taskId': 'P02', 'status': status,
+              'generatedAt': datetime.now(timezone.utc).isoformat(),
+              'scope': 'Fixed native WKWebView corpus on M1 Pro/macOS 26.5.1; not full product, all Flash or release validation',
+              'cases': cases,
+              'limitations': [
+                  {'id':'flash-policy-interpreter','status':'BLOCKED','scope':'Unsupported by pinned upstream, not counted as Adobe policy enforcement',
+                   'reason':'Ruffle 0.4.1 Security.loadPolicyFile is a stub. Actual AS3/WK CORS outcomes and fixed policy endpoints are recorded separately.'},
+                  {'id':'external-interface-synchronous-reentry','status':'BLOCKED','scope':'Unsupported upstream; nonreentrant numeric/structured/delayed roundtrip passed'},
+                  {'id':'native-composition-input','status':'FAIL','scope':'Additional IME path, not the passing ASCII subset',
+                   'evidenceRunId':'p02-suite-native-20261028-04','reason':'Composition-generated synthetic keys and trusted keyCode229 produce duplicate AS3 letter events; must address during W01/U04'}],
+              'artifactHashes': {str(path.relative_to(root)): sha(path) for path in sorted(evidence)}}
+    (output / 'compatibility-matrix.json').write_text(json.dumps(matrix, ensure_ascii=False, indent=2) + '\n')
+    print(json.dumps({'status': status, 'cases': len(cases), 'output': str(output)}, ensure_ascii=False))
+    return 0 if status == 'PASS' else 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

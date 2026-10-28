@@ -1,0 +1,14 @@
+from pathlib import Path
+import subprocess
+import unittest
+
+
+class MoleCompatibilityTests(unittest.TestCase):
+    def test_observed_site_gate_and_scope(self):
+        root = Path(__file__).resolve().parents[2]
+        result = subprocess.run(['node', 'scripts/tests/mole-compatibility.cjs'], cwd=root, text=True, capture_output=True)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+
+if __name__ == '__main__':
+    unittest.main()

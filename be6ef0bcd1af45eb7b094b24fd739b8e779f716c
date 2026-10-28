@@ -1,0 +1,145 @@
+using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text.Json;
+using FlashMacOS.Domain.Identity;
+
+namespace FlashMacOS.Browser.WebKit.Diagnostics;
+
+/// <summary>Explicit Test-profile native evidence. Never used by an ordinary product session.</summary>
+public static class BrowserNativeVerification
+{
+    private static readonly JsonSerializerOptions ReportOptions = new() { WriteIndented = true };
+    public static async Task RunAsync(IBrowserSession web, IBrowserSession local, Uri site, string root, CancellationToken token)
+    {
+        var directory = Path.Combine(root, "browser-verification"); Directory.CreateDirectory(directory);
+        var id = $"{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfffZ}-{Environment.ProcessId}-{Guid.NewGuid():N}";
+        var journal = Path.Combine(directory, id + ".jsonl"); var report = Path.Combine(directory, id + ".json");
+        var checks = new List<object>(); var failed = 0;
+        async Task Check(string name, string expected, Func<Task<object>> operation)
+        {
+            var watch = Stopwatch.StartNew(); object result;
+            try { result = new { name, expected, status="PASS", actual=await operation().ConfigureAwait(false), elapsedMs=watch.Elapsed.TotalMilliseconds }; }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            catch (Exception exception) { failed++; result = new { name, expected, status="FAIL", error=exception.ToString(), elapsedMs=watch.Elapsed.TotalMilliseconds }; }
+            checks.Add(result); await File.AppendAllTextAsync(journal, JsonSerializer.Serialize(result)+Environment.NewLine, token).ConfigureAwait(false);
+        }
+        static void Require(bool condition, string actual) { if (!condition) throw new InvalidDataException(actual); }
+        async Task Load(IBrowserSession session, Uri uri)
+        {
+            var previous = session.State.NavigationSequence;
+            await session.NavigateAsync(uri, token).ConfigureAwait(false);
+            await Until(() => session.State.NavigationSequence > previous && !session.State.IsLoading && session.State.NavigationId is not null && session.State.Error is null, token).ConfigureAwait(false);
+        }
+        async Task<string> Text(IBrowserSession session, string expression) => JsonSerializer.Deserialize<string>(await session.ExecuteScriptAsync("JSON.stringify(" + expression + ")", token).ConfigureAwait(false) ?? "null") ?? "";
+        var tools = (IBrowserTools)web;
+        try
+        {
+            await Check("both-purpose-ready", "Two real retained WKWebViews complete Ready", async () => { await Task.WhenAll(web.Ready,local.Ready).WaitAsync(TimeSpan.FromSeconds(15),token).ConfigureAwait(false); return new { ready=true }; });
+            await Load(web,site).ConfigureAwait(false); await Load(local,site).ConfigureAwait(false);
+            await Check("document-start-and-strict-csp", "User script exists before nonce-authorized page script", async () =>
+            { var actual=await web.ExecuteScriptAsync("JSON.stringify({before:__w01.injectedBefore,frames:document.querySelectorAll('iframe').length})",token).ConfigureAwait(false);
+              using var d=JsonDocument.Parse(actual!); Require(d.RootElement.GetProperty("before").GetBoolean() && d.RootElement.GetProperty("frames").GetInt32()==2,actual!); return actual!; });
+            await Check("cookie-purpose-isolation-and-restart", "Same-origin Web and Local cookies isolated; retained across a second process", async () =>
+            {
+                var marker=Path.Combine(directory,"cookie-baseline.json"); var restart=File.Exists(marker);
+                var beforeWeb=await Text(web,"document.cookie").ConfigureAwait(false); var beforeLocal=await Text(local,"document.cookie").ConfigureAwait(false);
+                Require(restart ? beforeWeb.Contains("W01-Shared=web",StringComparison.Ordinal) && beforeLocal.Contains("W01-Shared=local",StringComparison.Ordinal)
+                    : !beforeWeb.Contains("W01-Shared=",StringComparison.Ordinal) && !beforeLocal.Contains("W01-Shared=",StringComparison.Ordinal),JsonSerializer.Serialize(new {restart,beforeWeb,beforeLocal}));
+                await web.ExecuteScriptAsync("document.cookie='W01-Shared=web;path=/;max-age=604800;SameSite=Lax';true",token).ConfigureAwait(false);
+                await local.ExecuteScriptAsync("document.cookie='W01-Shared=local;path=/;max-age=604800;SameSite=Lax';true",token).ConfigureAwait(false);
+                var afterWeb=await Text(web,"document.cookie").ConfigureAwait(false); var afterLocal=await Text(local,"document.cookie").ConfigureAwait(false);
+                Require(afterWeb.Contains("W01-Shared=web",StringComparison.Ordinal) && !afterWeb.Contains("W01-Shared=local",StringComparison.Ordinal)
+                    && afterLocal.Contains("W01-Shared=local",StringComparison.Ordinal) && !afterLocal.Contains("W01-Shared=web",StringComparison.Ordinal),JsonSerializer.Serialize(new {afterWeb,afterLocal}));
+                if (!restart) await File.WriteAllTextAsync(marker,JsonSerializer.Serialize(new {beforeWeb,beforeLocal,afterWeb,afterLocal}),token).ConfigureAwait(false);
+                return new {restart,beforeWeb,beforeLocal,afterWeb,afterLocal};
+            });
+            await Check("native-find", "Native find reports hit, missing text, case and backwards", async () =>
+            {
+                var hit=await tools.FindAsync(new("LocateNeedleK7"),token).ConfigureAwait(false);
+                var absent=await tools.FindAsync(new("W01-never-present-9e3779b9"),token).ConfigureAwait(false);
+                var wrongCase=await tools.FindAsync(new("locateneedlek7",CaseSensitive:true),token).ConfigureAwait(false);
+                var backwards=await tools.FindAsync(new("LocateNeedleK7",Backwards:true),token).ConfigureAwait(false);
+                Require(hit && !absent && !wrongCase && backwards,JsonSerializer.Serialize(new {hit,absent,wrongCase,backwards})); return new {hit,absent,wrongCase,backwards};
+            });
+            await Check("native-zoom", "WK page zoom changes rendered viewport and resets", async () =>
+            {
+                await tools.SetZoomAsync(1,token).ConfigureAwait(false); var before=await Text(web,"String(innerWidth)").ConfigureAwait(false);
+                await tools.SetZoomAsync(1.5,token).ConfigureAwait(false); await Task.Delay(150,token).ConfigureAwait(false); var after=await Text(web,"String(innerWidth)").ConfigureAwait(false);
+                await tools.SetZoomAsync(1,token).ConfigureAwait(false); Require(double.Parse(after,System.Globalization.CultureInfo.InvariantCulture)<double.Parse(before,System.Globalization.CultureInfo.InvariantCulture)*.85, before+" -> "+after);
+                return new {before,after,reset=tools.Zoom};
+            });
+            await Check("user-agent-header-and-javascript", "Explicit UA matches network request and navigator; default restored", async () =>
+            {
+                var initial=await Text(web,"navigator.userAgent").ConfigureAwait(false); Require(initial.Contains(ProductIdentity.UserAgentProduct,StringComparison.Ordinal),initial);
+                await tools.SetUserAgentAsync("FlashMacOS-W01/1.0",token).ConfigureAwait(false); await Load(web,site).ConfigureAwait(false);
+                var js=await Text(web,"navigator.userAgent").ConfigureAwait(false); var header=await Text(web,"__w01.requestUserAgent").ConfigureAwait(false);
+                Require(js=="FlashMacOS-W01/1.0" && header==js,JsonSerializer.Serialize(new {js,header}));
+                await tools.SetUserAgentAsync(null,token).ConfigureAwait(false); await Load(web,site).ConfigureAwait(false);
+                var restored=await Text(web,"navigator.userAgent").ConfigureAwait(false); Require(restored.Contains(ProductIdentity.UserAgentProduct,StringComparison.Ordinal),restored);
+                return new {initial,js,header,restored};
+            });
+            await Check("native-pdf-export", "Native PDF bytes are actually produced", async () =>
+            {
+                var pdf=await tools.ExportPdfAsync(token).ConfigureAwait(false); var path=Path.Combine(directory,id+".pdf");
+                await File.WriteAllBytesAsync(path,pdf,token).ConfigureAwait(false); Require(pdf.Length>1024 && pdf.AsSpan(0,4).SequenceEqual("%PDF"u8),"PDF bytes="+pdf.Length);
+                return new {path,bytes=pdf.Length,sha256=Convert.ToHexStringLower(SHA256.HashData(pdf))};
+            });
+            await Check("history-and-reload", "Main-frame address/title, back, forward, fresh document ID on reload", async () =>
+            {
+                var first=web.State; var next=new Uri(site,"next"); await Load(web,next).ConfigureAwait(false); var second=web.State;
+                Require(second.Address==next && second.Title=="W01 Browser next" && second.CanGoBack,JsonSerializer.Serialize(second));
+                await web.GoBackAsync(token).ConfigureAwait(false); await Until(()=>!web.State.IsLoading && web.State.Address==site,token).ConfigureAwait(false);
+                var back=web.State; Require(back.CanGoForward,JsonSerializer.Serialize(back));
+                await web.GoForwardAsync(token).ConfigureAwait(false); await Until(()=>!web.State.IsLoading && web.State.Address==next,token).ConfigureAwait(false);
+                var before=web.State.NavigationId; await web.ReloadAsync(token).ConfigureAwait(false);
+                await Until(()=>!web.State.IsLoading && web.State.NavigationId is not null && web.State.NavigationId!=before,token).ConfigureAwait(false);
+                return new {first,second,back,reloaded=web.State};
+            });
+            await Check("same-document-history", "pushState/back/forward update the native address without a stuck loading state or new document ID", async () =>
+            {
+                await Load(web,site).ConfigureAwait(false); var document=web.State.NavigationId;
+                await web.ExecuteScriptAsync("history.pushState({},'', '?spa=1');document.title='W01 Dynamic title';true",token).ConfigureAwait(false);
+                await Until(()=>!web.State.IsLoading && web.State.Address!.Query=="?spa=1" && web.State.Title=="W01 Dynamic title",token).ConfigureAwait(false);
+                await web.GoBackAsync(token).ConfigureAwait(false);
+                await Until(()=>!web.State.IsLoading && web.State.Address==site,token).ConfigureAwait(false); var back=web.State;
+                await web.GoForwardAsync(token).ConfigureAwait(false);
+                await Until(()=>!web.State.IsLoading && web.State.Address!.Query=="?spa=1",token).ConfigureAwait(false); var forward=web.State;
+                Require(back.NavigationId==document && forward.NavigationId==document,JsonSerializer.Serialize(new {document,back,forward}));
+                await Load(web,site).ConfigureAwait(false); return new {document,back,forward};
+            });
+            await Check("error-and-recovery", "Failed navigation exposes domain/code and clears loading; next page succeeds", async () =>
+            {
+                await web.NavigateAsync(new Uri(site,"abort"),token).ConfigureAwait(false);
+                await Until(()=>web.State.Error is not null && !web.State.IsLoading,token).ConfigureAwait(false); var error=web.State;
+                await Load(web,site).ConfigureAwait(false); return new {error,recovered=web.State};
+            });
+            await Check("stop-and-recovery", "Stop clears loading and subsequent navigation succeeds", async () =>
+            {
+                await web.NavigateAsync(new Uri(site,"slow"),token).ConfigureAwait(false); await Until(()=>web.State.IsLoading,token).ConfigureAwait(false);
+                await web.StopAsync(token).ConfigureAwait(false); Require(!web.State.IsLoading,"Stop still loading");
+                await Load(web,site).ConfigureAwait(false); return new {recovered=web.State};
+            });
+            await Check("cancel-without-ui-hang", "Precancelled native operations cancel and the next script still executes", async () =>
+            {
+                using var canceled=new CancellationTokenSource(); await canceled.CancelAsync().ConfigureAwait(false); var canceledObserved=false;
+                try { await tools.FindAsync(new("LocateNeedleK7"),canceled.Token).ConfigureAwait(false); }
+                catch (OperationCanceledException) { canceledObserved=true; }
+                var result=await web.ExecuteScriptAsync("JSON.stringify(2+2)",token).ConfigureAwait(false);
+                Require(canceledObserved && result=="4",JsonSerializer.Serialize(new {canceledObserved,result})); return new {canceledObserved,result};
+            });
+            var summary=new {status=failed==0?"PASS":"FAIL",failures=failed,process=Environment.ProcessId,environment=new {os=Environment.OSVersion.VersionString,architecture=System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),runtime=System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription},site,checks,manual="Print sheet/dialog buttons/fullscreen/focus/unknown scheme require CUA evidence; not inferred from these checks"};
+            await File.WriteAllTextAsync(report,JsonSerializer.Serialize(summary,ReportOptions),token).ConfigureAwait(false);
+            await web.ExecuteScriptAsync("document.getElementById('host').textContent="+JsonSerializer.Serialize($"Native checks: {(failed==0?"PASS":"FAIL")} ({checks.Count-failed}/{checks.Count}). Manual controls below.")+";true",token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        { await File.AppendAllTextAsync(journal,JsonSerializer.Serialize(new {status="CANCELLED",checksCompleted=checks.Count})+Environment.NewLine,CancellationToken.None).ConfigureAwait(false); }
+        catch (Exception exception)
+        { await File.WriteAllTextAsync(report,JsonSerializer.Serialize(new {status="FAIL",error=exception.ToString(),checks}),CancellationToken.None).ConfigureAwait(false); }
+    }
+
+    private static async Task Until(Func<bool> condition,CancellationToken token)
+    {
+        using var bounded=CancellationTokenSource.CreateLinkedTokenSource(token); bounded.CancelAfter(TimeSpan.FromSeconds(15));
+        while (!condition()) await Task.Delay(25,bounded.Token).ConfigureAwait(false);
+    }
+}

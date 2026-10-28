@@ -1,0 +1,25 @@
+using System.Security.Cryptography;
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Infrastructure.Persistence;
+
+public sealed class SolFileStorage(Func<AtomicWriteStage, CancellationToken, ValueTask>? faultPoint = null) : ISolFileStorage
+{
+    public async ValueTask<SolFileImage> ReadAsync(string path, int maximumBytes, CancellationToken cancellationToken = default)
+    {
+        var image = await AtomicDocumentFile.ReadAsync(path, maximumBytes, cancellationToken).ConfigureAwait(false);
+        return new(image.Bytes ?? ReadOnlyMemory<byte>.Empty, new(image.Revision.Exists, image.Revision.Sha256));
+    }
+    public ValueTask<SolFileRevision> CommitAsync(string path, ReadOnlyMemory<byte> bytes, SolFileRevision expectedRevision,
+        bool createBackup = true, CancellationToken cancellationToken = default) => new(Task.Run(async () =>
+    {
+        ArgumentNullException.ThrowIfNull(expectedRevision);
+        if (bytes.Length > AmfLimits.Default.MaximumFileBytes) throw new InvalidDataException("SOL output exceeds the product file limit.");
+        cancellationToken.ThrowIfCancellationRequested();
+        var revision = new SolFileRevision(true, Convert.ToHexStringLower(SHA256.HashData(bytes.Span)));
+        await AtomicFileWriter.WriteAsync(path, (stream, token) => stream.WriteAsync(bytes, token),
+            new AtomicWriteOptions { ExpectedRevision = new(expectedRevision.Exists, expectedRevision.Sha256),
+                CreateBackup = createBackup, MaximumBytes = AmfLimits.Default.MaximumFileBytes, FaultPoint = faultPoint }, cancellationToken).ConfigureAwait(false);
+        return revision;
+    }, cancellationToken));
+}

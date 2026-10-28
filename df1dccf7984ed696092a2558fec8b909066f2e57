@@ -1,0 +1,189 @@
+using Avalonia.Controls;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+using FlashMacOS.Application.Browser;
+
+namespace FlashMacOS.Desktop.Views;
+
+public sealed partial class PopupWindow : Window, IAsyncDisposable
+{
+    private readonly IBrowserSession _session;
+    private readonly Func<Control> _createBrowserControl;
+    private readonly BrowserRequest _initialRequest;
+    private readonly Action<BrowserPopupRequest> _openPopup;
+    private readonly IBrowserDownloads _downloads;
+    private int _activeDownloads;
+    private bool _downloadOnly;
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _cancellationToken;
+    private readonly TaskCompletionSource _closed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly object _cleanupGate = new();
+    private Task? _cleanupTask;
+    private bool _closing;
+    private bool _closingWaitActive;
+    private bool _closeComplete;
+    private bool _started;
+
+    public Task ClosedTask => _closed.Task;
+
+    public IBrowserSession Session => _session;
+
+    public PopupWindow(IBrowserSession session, IBrowserDownloads downloads, Func<Control> createBrowserControl, BrowserRequest initialRequest,
+        Action<BrowserPopupRequest> openPopup)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        ArgumentNullException.ThrowIfNull(downloads);
+        ArgumentNullException.ThrowIfNull(initialRequest);
+        ArgumentNullException.ThrowIfNull(openPopup);
+        _cancellationToken = _lifetime.Token;
+        _session = session;
+        _createBrowserControl = createBrowserControl ?? throw new ArgumentNullException(nameof(createBrowserControl));
+        _initialRequest = initialRequest;
+        _openPopup = openPopup;
+        _downloads = downloads;
+        InitializeComponent();
+        Title = FlashMacOS.Domain.Identity.ProductIdentity.Name + " — Popup";
+        Opened += OnOpened;
+        Closing += OnClosing;
+        Closed += OnClosed;
+        _session.StateChanged += OnStateChanged;
+        _session.PopupRequested += OnPopupRequested;
+        _session.CloseRequested += OnCloseRequested;
+        _session.Faulted += OnFaulted;
+        _downloads.DownloadRequested += OnDownloadRequested;
+        _downloads.DownloadUpdated += OnDownloadUpdated;
+    }
+
+    private async void OnOpened(object? sender, EventArgs args)
+    {
+        if (_started)
+        {
+            return;
+        }
+
+        _started = true;
+        try
+        {
+            this.FindControl<ContentControl>("BrowserHost")!.Content = _createBrowserControl();
+            await _session.NavigateAsync(_initialRequest, _cancellationToken);
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { OnFaulted(exception); }
+    }
+
+    private async void OnClosed(object? sender, EventArgs args)
+    {
+        Opened -= OnOpened;
+        Closing -= OnClosing;
+        Closed -= OnClosed;
+        _session.StateChanged -= OnStateChanged;
+        _session.PopupRequested -= OnPopupRequested;
+        _session.CloseRequested -= OnCloseRequested;
+        _session.Faulted -= OnFaulted;
+        _downloads.DownloadRequested -= OnDownloadRequested;
+        _downloads.DownloadUpdated -= OnDownloadUpdated;
+        try
+        {
+            await DisposeAsync();
+            _closed.TrySetResult();
+        }
+        catch (Exception exception) { _closed.TrySetException(exception); }
+    }
+
+    private async void OnClosing(object? sender, WindowClosingEventArgs args)
+    {
+        if (_closeComplete) return;
+        args.Cancel = true;
+        if (_closingWaitActive) return;
+        _closingWaitActive = true;
+        _closing = true;
+        try { await DisposeAsync(); }
+        catch (Exception exception) { _closed.TrySetException(exception); }
+        finally { _closeComplete = true; Close(); }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_cleanupGate)
+        {
+            _closing = true;
+            return new ValueTask(_cleanupTask ??= DisposeCoreAsync());
+        }
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        try { await _lifetime.CancelAsync(); await _session.DisposeAsync(); }
+        finally { _lifetime.Dispose(); }
+    }
+
+    private void OnStateChanged(BrowserState state)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_closing) return;
+            this.FindControl<TextBox>("AddressBox")!.Text = state.Address?.AbsoluteUri ?? string.Empty;
+            Title = state.Title;
+        });
+    }
+
+    // A popup's own new-window request opens another popup with the same purpose; it never replaces this page.
+    private void OnPopupRequested(BrowserPopupRequest request)
+        => Dispatcher.UIThread.Post(() => { if (!_closing) _openPopup(request); });
+
+    // window.close() from the popup page closes this window and releases its surface.
+    private void OnCloseRequested() => Dispatcher.UIThread.Post(() => { if (!_closing) Close(); });
+
+    // A popup whose own first response became a download (for example a target=_blank attachment) has no page:
+    // it says so in its title and closes itself after the last terminal update. It is not hidden: closing a
+    // hidden window left its native window behind (W02 run 04), and closing the popup would cancel the download.
+    private void OnDownloadRequested(BrowserDownloadRequest request) => Dispatcher.UIThread.Post(() =>
+    {
+        _activeDownloads++;
+        if (_closing || _session.State.NavigationId is not null || _session.State.IsLoading) return;
+        _downloadOnly = true;
+        Title = $"Downloading {request.SuggestedFileName}…";
+    });
+
+    private void OnDownloadUpdated(BrowserDownloadUpdate update)
+    {
+        if (!update.IsTerminal) return;
+        Dispatcher.UIThread.Post(() =>
+        {
+            _activeDownloads--;
+            if (_downloadOnly && _activeDownloads == 0 && !_closing) Close();
+        });
+    }
+
+    private void OnFaulted(Exception exception)
+    {
+        Dispatcher.UIThread.Post(() => { if (!_closing) Title = exception.Message; });
+    }
+
+    private async void OnBackClick(object? sender, RoutedEventArgs args)
+    {
+        await ExecuteSafelyAsync(() => _session.GoBackAsync());
+    }
+
+    private async void OnForwardClick(object? sender, RoutedEventArgs args)
+    {
+        await ExecuteSafelyAsync(() => _session.GoForwardAsync());
+    }
+
+    private async void OnReloadClick(object? sender, RoutedEventArgs args)
+    {
+        await ExecuteSafelyAsync(() => _session.ReloadAsync());
+    }
+
+    private async Task ExecuteSafelyAsync(Func<ValueTask> operation)
+    {
+        try
+        {
+            await operation();
+        }
+        catch (Exception exception)
+        {
+            OnFaulted(exception);
+        }
+    }
+}

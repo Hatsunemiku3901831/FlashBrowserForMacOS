@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-27T23:51:38.314579+00:00",
+  "baseline": "docs/provenance/A03-before.json",
+  "packagingBaseline": "A02 package-04 Info.plist source bytes; packaging was outside the older input collector",
+  "changes": [
+    {
+      "targetPath": "Directory.Build.props",
+      "beforeSha256": "0f2ba6c004dd07cb2adb0e700d520bcd377f45df81e1ee3abe55ae077252a052",
+      "targetSha256": "a94b7f9f936e63a31fb01e9a1302b9f0b8d934bbd2da775acb63bc9091ad7493",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/Directory.Build.props",
+      "originalSourceSha256": "0f2ba6c004dd07cb2adb0e700d520bcd377f45df81e1ee3abe55ae077252a052",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/Directory.Build.props",
+      "bootstrapSourceSha256": "0f2ba6c004dd07cb2adb0e700d520bcd377f45df81e1ee3abe55ae077252a052"
+    },
+    {
+      "targetPath": "Product.props",
+      "beforeSha256": null,
+      "targetSha256": "bb5082404aacd6847317ccd19327f8913112cf42bb417641b2aa8b51bfd2871c",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "packaging/macos/FlashMacOS.development.entitlements",
+      "beforeSha256": null,
+      "targetSha256": "3726221a606dae99b53f3f561754842b0e18fad422c134479e4a5fa9a5f466a4",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "packaging/macos/Info.plist",
+      "beforeSha256": "0de248d155cd9f1d2ecb96513bb60489fe5c651482e5cfb30e042bce13206fb4",
+      "targetSha256": "835a66afafd464b6b3a6ddc97857a310a6effded5d0b6fcb70d78727ec780611",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/packaging/macos/Info.plist",
+      "originalSourceSha256": "b57bb9aa6951c13e5c38cc267edfaf5977b2eda9810182c01b8dbf283624ce2b",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/packaging/macos/Info.plist",
+      "bootstrapSourceSha256": "c88426e63b060f28c80475a1eda7b9613f5be461d89686427fe1139389e6d8f9"
+    },
+    {
+      "targetPath": "scripts/package-development.py",
+      "beforeSha256": "e99c9dd471f60c333624b68a59ef31b7255c8b625181b427a0e307ccc18f85a5",
+      "targetSha256": "6c1a7da086626b1f5dc10acd4cc3ad24e3c14630b574d0650d7e8efc3a7a8f01",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "scripts/product_identity.py",
+      "beforeSha256": null,
+      "targetSha256": "77005647f9a81e5419f77b51cef0700f85e1ba59880b1f08a4ea0dc0099b000d",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "scripts/run-native.py",
+      "beforeSha256": "ac5181f9485a7ef54d0fe2f7dd7d4eabb2209d961b6f81f53a6b9259952b4ba8",
+      "targetSha256": "be000501516396103a15f071618a70db531abd8f82db761f44a89bde697fd958",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "scripts/verify-formal.py",
+      "beforeSha256": "0b6070d972a2eb0516633af9c56a06758811a91c4cbe43ab6c04ff9d03144888",
+      "targetSha256": "2b7e9570d2a18837ec49a3918bdc39a6dc81f11a261e0d9606d9eb8ea5a28424",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/AvaloniaNativeWebViewSession.cs",
+      "beforeSha256": "7f44109b6e48280abcb8362d1dd356c2f0fb77f42006c92687bd94afdedb82ee",
+      "targetSha256": "84a9469700f0c8bb6b76427ba88cc1f58f2c4e40419eaf592f2cd9b0b440114a",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "bootstrapSourceSha256": "183c7e5b87a881a7ec6dd1ec8ef1bb683df77a00bfb9c16d82f0b35c92d23181"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/App.axaml.cs",
+      "beforeSha256": "1ceeca072314c06fac99642ddf7322e848382aa33e813300521cf1e2923931ca",
+      "targetSha256": "62063ac6bb90867ad537d88977a2c0bd444473801c81f87c964a3c9143988c0b",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "originalSourceSha256": "ce0cff3b8b93de2f677e3df2c0a821fe4b7365bae14847f8195e1065fd236dde",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "bootstrapSourceSha256": "ce0cff3b8b93de2f677e3df2c0a821fe4b7365bae14847f8195e1065fd236dde"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Composition/CompositionRoot.cs",
+      "beforeSha256": "23517691110bc761f49aac1de161cec75afdab13e82daaafc4450e18ae094ed3",
+      "targetSha256": "3730a7815f40bb1da8a433fcb5456bc6cd642f71d2a01327d8ccdc44088b3486",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "bootstrapSourceSha256": "aa583bd1e2c85dbad24f0d4d2a5cd0cfece48099d413954e9d13b6ad616951ac"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/FlashMacOS.Desktop.csproj",
+      "beforeSha256": "50ac2606e5dec46d1bf78185a6858e7e51280722395e8e2374f4d53e8a20a30e",
+      "targetSha256": "a67959992aac4976ea2e522414a93492a3086370a5089ab895ba2c2dc9d1dfd9",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Program.cs",
+      "beforeSha256": "6412c23bd3bfbd8046e013a52735a1d2c96ca3e951dd2d1670fc5d9a5ec6004b",
+      "targetSha256": "3b03e4e94f86141f20365a6d535f9b85d54108be5e3e579abc5c89e87107dfdf",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "originalSourceSha256": "91b677b904d0029b4cc148257c4de0e1434a14818b339c16c665577bf99906c1",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "bootstrapSourceSha256": "cb3d11fbb9027a3a0fe5666ac13b3d032194147e6b9fbc0fd6cbd22696f46e36"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs",
+      "beforeSha256": "9071c6e49aefaeb9cde0d3a053e49c584a70deca73bbe4cc428f1e03a8350794",
+      "targetSha256": "e5d78ba399d4fc0db0bc22e8fd6ad586a450f752e63036f77a04353d3058550d",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "bootstrapSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Views/PopupWindow.axaml",
+      "beforeSha256": "e67d07c2b7649775a5d961c1fdf203f9b65b581bc22cf7d96704c6335c93ba81",
+      "targetSha256": "b1ddcf915a100b50b8ab77827bc15b649ca3e7e52ab56d8e2983b511f55c695d",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml",
+      "originalSourceSha256": "aa42196f266db8e99b41a3e5f19d1b786857021275332ed205ff9a262942c478",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml",
+      "bootstrapSourceSha256": "aa42196f266db8e99b41a3e5f19d1b786857021275332ed205ff9a262942c478"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Views/PopupWindow.axaml.cs",
+      "beforeSha256": "46e926a88a83b7bd6ff52a53d840b132e5d115bc07acd7b65494e15935d3c75d",
+      "targetSha256": "44c354a100e80314fb77e730fff2b8211b402cdb3e6dbb9c20e09ab5e80677ff",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "originalSourceSha256": "d0c7cd111eea2784bdfb67a82ac4b2ee56ad77d304bfe00c5e966be1563e968f",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "bootstrapSourceSha256": "d0c7cd111eea2784bdfb67a82ac4b2ee56ad77d304bfe00c5e966be1563e968f"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Browser/BrowserModels.cs",
+      "beforeSha256": "32a5cc1d7cfb73f65f0b356c1984616e8df33cd0dc023ee25d456a265f0816f1",
+      "targetSha256": "cf8c00c36c61e9912168ff3d370328bf87cb0559fbce41f983792836e024a16c",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs",
+      "originalSourceSha256": "9126c7bbe43c3a6f93c83f72dc491e4f4edfaf7a0594fdc54e415f648635a259",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs",
+      "bootstrapSourceSha256": "9126c7bbe43c3a6f93c83f72dc491e4f4edfaf7a0594fdc54e415f648635a259"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Identity/ContentIdentity.cs",
+      "beforeSha256": null,
+      "targetSha256": "3bfaf9d24b40256cb0d173569cb825fec573a7a895f496314d0797f096eab76a",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Identity/ProductIdentity.cs",
+      "beforeSha256": null,
+      "targetSha256": "0f460b59f0a1ecffe1c866abaab1a62c4cef39f3471362c4c9d30681e3df2b9e",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Hosting/LoopbackContentHost.cs",
+      "beforeSha256": "c3bd35fc1582f894ed8c0f7c5fdd7b4d14b45f887d0d2048edbec2c53badb0a1",
+      "targetSha256": "da7af6771d62782781a1d1cf7a9fa1d1afbee7026879e00793c3a90d7db30b5f",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "originalSourceSha256": "e94a26aa8a8ae810b924d90092b59cdf74349dcd67c7ff1ac384695a53507d6d",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "bootstrapSourceSha256": "7f84f60397bc9832c753a124be6bfd06241f3638f885289f3ec79a4523cd5312"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Diagnostics/GateZeroSessionJournal.cs",
+      "beforeSha256": "a3c30f18be00846e24adda398c109443f8230025e5c4c666a6142087bce80022",
+      "targetSha256": "cf678cfd71177d17c63746ad6a02e29e36f7e50219c325328c0f4aa871d66ebe",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/GateZeroSessionJournal.cs",
+      "originalSourceSha256": "8bb75414fc8abda71e15435953bd34aa04451a25e0696839627204a53801eae1",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/GateZeroSessionJournal.cs",
+      "bootstrapSourceSha256": "8bb75414fc8abda71e15435953bd34aa04451a25e0696839627204a53801eae1"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Paths/AppProfile.cs",
+      "beforeSha256": null,
+      "targetSha256": "995379740116da555f8d0e70daea4688df736a9c08e4467f2896db275fa86e2c",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Persistence/AtomicDocumentFile.cs",
+      "beforeSha256": null,
+      "targetSha256": "6d2f42daedc39ce9613494ebf56d7c518d983e9c9311fd3b641676294c57c251",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Persistence/AtomicFileWriter.cs",
+      "beforeSha256": "2be3aa86118f4b1a020a236b1e45000e32caed3844d21ff8166ac79b7970d35a",
+      "targetSha256": "5541b7981254788fe4254be2806fd4589049aff2e441b2b8abd649d429d7b56f",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Persistence/AtomicFileWriter.cs",
+      "originalSourceSha256": "e3082e0f327d558b426bc44f505b0934c450218fdcb68031dc5a8b476920b99a",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Persistence/AtomicFileWriter.cs",
+      "bootstrapSourceSha256": "e3082e0f327d558b426bc44f505b0934c450218fdcb68031dc5a8b476920b99a"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Persistence/JsonDocumentGuard.cs",
+      "beforeSha256": null,
+      "targetSha256": "56b3f1780d3898d483305fd023045b194879118858981b7711a2d4a74bd52b92",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Persistence/JsonRuffleSaveStore.cs",
+      "beforeSha256": "87dbb37e21cb017ddd8ab0cd84da2a241def52ecab7117fe010275126b58a396",
+      "targetSha256": "a5a4608f3c8bf1a43d9581e9a4221b7da2e0d8c8caef0a2f4afdc230b502d79b",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs",
+      "originalSourceSha256": "13bbae46778d59bf7e5d52cbb96cdc014448f21c953949bce339666b45be0afe",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs",
+      "bootstrapSourceSha256": "13bbae46778d59bf7e5d52cbb96cdc014448f21c953949bce339666b45be0afe"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Persistence/LimitedWriteStream.cs",
+      "beforeSha256": null,
+      "targetSha256": "fb7b62b0b64244f8b287dd72ca9aff0f74349520ce4539b8bbf97fefefdece04",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Domain.Tests/ContentIdentityTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "b0810333fa60ff76cc96257f28e5cae4c8bcde85b5cbbfe4af4528240d5200ed",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/AtomicPersistenceTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "f629fd478d5302c20203d1f32a2671d684797f3c8de1c8bf6235ad135cc268e4",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/JournalLifetimeTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "aae8020835a1a2c72b923911839516bb817e88979115c4edb38531428bdc4220",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/JournalPrivacyTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "a7be5c94afc89f95de699dc242a6b9dd322a2fecb64e6b658f408da9e9403e6b",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/PersistenceTransactionTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "cde30dcfe73b74d08e0ce33f99dd4477650c7e2f5598772de3d2ecf20220276a",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/ProductProfileTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "aab97b76e8ac811069c048afc5e78eb59b257863da524721c8b863f4cdb88fcf",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    },
+    {
+      "targetPath": "tests/tooling/test_product_identity.py",
+      "beforeSha256": null,
+      "targetSha256": "be4cb307099f101e81d46c170ab61ab64b25c27b4670c986125a887b3966f296",
+      "reason": "A03 candidate persistence, atomic backup/revision/fault points, product identity/profile, bounded event summaries and corresponding verification",
+      "origin": "Project authored; no new external source copy"
+    }
+  ]
+}

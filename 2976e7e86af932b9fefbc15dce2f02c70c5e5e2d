@@ -1,0 +1,10 @@
+namespace FlashMacOS.Domain.Sol;
+
+public enum SolEncoding : uint
+{
+    Amf0 = 0,
+    Amf3 = 3,
+}
+
+public sealed record SolFileHeader(string Name, SolEncoding Encoding, int FileLength);
+

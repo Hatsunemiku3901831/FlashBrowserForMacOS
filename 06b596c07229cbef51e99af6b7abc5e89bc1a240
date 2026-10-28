@@ -1,0 +1,14 @@
+from pathlib import Path
+import subprocess
+import unittest
+
+
+class StorageReloadTests(unittest.TestCase):
+    def test_old_flush_cannot_overwrite_replacement(self):
+        root = Path(__file__).resolve().parents[2]
+        result = subprocess.run(['node', 'scripts/tests/storage-reload.cjs'], cwd=root, text=True, capture_output=True)
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+
+if __name__ == '__main__':
+    unittest.main()

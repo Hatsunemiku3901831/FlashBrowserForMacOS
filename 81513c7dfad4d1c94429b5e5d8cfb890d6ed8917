@@ -1,0 +1,20 @@
+using FlashMacOS.Application.Files;
+
+namespace FlashMacOS.Infrastructure.Persistence;
+
+/// <summary>Commits a WebKit staging file by flush plus same-directory rename; nothing else ever writes the final name.</summary>
+public sealed class LocalDownloadFiles : IDownloadFiles
+{
+    public ValueTask CommitAsync(string stagingPath, string destinationPath, CancellationToken cancellationToken = default)
+        => new(Task.Run(() =>
+        {
+            using (var staged = new FileStream(stagingPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                staged.Flush(flushToDisk: true);
+            cancellationToken.ThrowIfCancellationRequested();
+            // rename(2) within one directory: the destination is either the old file or the complete new one.
+            File.Move(stagingPath, destinationPath, overwrite: true);
+        }, cancellationToken));
+
+    public ValueTask DeleteAsync(string path, CancellationToken cancellationToken = default)
+        => new(Task.Run(() => File.Delete(path), cancellationToken));
+}

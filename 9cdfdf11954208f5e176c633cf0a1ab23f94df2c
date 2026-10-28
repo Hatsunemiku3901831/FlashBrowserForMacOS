@@ -1,0 +1,271 @@
+using FlashMacOS.Infrastructure.Persistence;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class AtomicPersistenceTests
+{
+    private static readonly int[] FutureEntryValues = [1, 2, 3];
+    [TestMethod]
+    [DataRow(AtomicWriteStage.TemporaryCreated)]
+    [DataRow(AtomicWriteStage.ContentFlushed)]
+    [DataRow(AtomicWriteStage.BeforeCommit)]
+    public async Task CancellationBeforeCommitPreservesFileAndMemory(AtomicWriteStage cancelAt)
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        var armed = false;
+        using var cancellation = new CancellationTokenSource();
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector(), faultPoint: (stage, _) =>
+        {
+            if (armed && stage == cancelAt) cancellation.Cancel();
+            return ValueTask.CompletedTask;
+        });
+        await store.UpsertAsync("committed", data);
+        var original = await File.ReadAllBytesAsync(path);
+        armed = true;
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await store.UpsertAsync("candidate", data, cancellation.Token));
+        Assert.HasCount(1, await store.GetAllAsync());
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(path));
+        Assert.IsEmpty(Directory.EnumerateFiles(directory.RootPath, "*.tmp"));
+    }
+
+    [TestMethod]
+    [DataRow(AtomicWriteStage.TemporaryCreated)]
+    [DataRow(AtomicWriteStage.ContentFlushed)]
+    [DataRow(AtomicWriteStage.BeforeCommit)]
+    public async Task DiskFailurePreservesFileAndMemory(AtomicWriteStage failAt)
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        var armed = false;
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector(), faultPoint: (stage, _) =>
+            armed && stage == failAt ? ValueTask.FromException(new IOException("Injected disk write failure.")) : ValueTask.CompletedTask);
+        await store.UpsertAsync("committed", data);
+        var original = await File.ReadAllBytesAsync(path);
+        armed = true;
+        await Assert.ThrowsExactlyAsync<IOException>(async () => await store.RemoveAsync("committed"));
+        Assert.HasCount(1, await store.GetAllAsync());
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(path));
+        Assert.IsEmpty(Directory.EnumerateFiles(directory.RootPath, "*.tmp"));
+    }
+
+    [TestMethod]
+    public async Task RealDirectoryPermissionFailureCannotCommit()
+    {
+        if (!OperatingSystem.IsMacOS()) throw new InvalidOperationException("This task requires its macOS filesystem.");
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        await store.UpsertAsync("old", data);
+        var original = await File.ReadAllBytesAsync(path);
+        var mode = File.GetUnixFileMode(directory.RootPath);
+        try
+        {
+            File.SetUnixFileMode(directory.RootPath, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+            await Assert.ThrowsExactlyAsync<UnauthorizedAccessException>(async () => await store.UpsertAsync("new", data));
+            Assert.HasCount(1, await store.GetAllAsync());
+            CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(path));
+        }
+        finally { File.SetUnixFileMode(directory.RootPath, mode); }
+    }
+
+    [TestMethod]
+    public async Task BackupRecoveryValidatesAndPreservesTheDamagedOriginal()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        using (var initial = new JsonRuffleSaveStore(path, new SolHeaderInspector()))
+        {
+            await initial.UpsertAsync("first", data);
+            await initial.UpsertAsync("second", data);
+        }
+        var backup = await File.ReadAllBytesAsync(path + ".bak");
+        var damaged = "{ damaged original: preserve exact bytes"u8.ToArray();
+        await File.WriteAllBytesAsync(path, damaged);
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await store.GetAllAsync());
+        var preserved = await store.RecoverBackupAsync();
+        Assert.IsNotNull(preserved);
+        CollectionAssert.AreEqual(damaged, await File.ReadAllBytesAsync(preserved));
+        CollectionAssert.AreEqual(backup, await File.ReadAllBytesAsync(path));
+        CollectionAssert.AreEqual(backup, await File.ReadAllBytesAsync(path + ".bak"));
+        Assert.HasCount(1, await store.GetAllAsync());
+        Assert.AreEqual("first", (await store.GetAllAsync())[0].Key);
+        using var restarted = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        Assert.HasCount(1, await restarted.GetAllAsync());
+    }
+
+    [TestMethod]
+    public async Task MalformedBackupCannotReplaceCurrentData()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        await File.WriteAllTextAsync(path, "current damaged data");
+        await File.WriteAllTextAsync(path + ".bak", "malformed backup");
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await store.RecoverBackupAsync());
+        Assert.AreEqual("current damaged data", await File.ReadAllTextAsync(path));
+    }
+
+    [TestMethod]
+    public async Task StaleWriterPreservesBothSnapshotsUntilExplicitReload()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        using var first = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        using var stale = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        await first.UpsertAsync("initial", data);
+        await stale.GetAllAsync();
+        await first.UpsertAsync("other-writer", data);
+        var committed = await File.ReadAllBytesAsync(path);
+        await Assert.ThrowsExactlyAsync<PersistenceConflictException>(async () => await stale.UpsertAsync("stale-candidate", data));
+        Assert.HasCount(1, await stale.GetAllAsync());
+        CollectionAssert.AreEqual(committed, await File.ReadAllBytesAsync(path));
+        await stale.ReloadAsync();
+        await stale.UpsertAsync("after-reload", data);
+        Assert.HasCount(3, await stale.GetAllAsync());
+    }
+
+    [TestMethod]
+    public async Task ConcurrentWritersCannotShareTheCommitLease()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("document");
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finish = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var first = AtomicFileWriter.WriteAsync(path, (s, t) => s.WriteAsync("first"u8.ToArray(), t), new AtomicWriteOptions
+        {
+            ExpectedRevision = FileRevision.Missing,
+            FaultPoint = async (stage, token) =>
+            {
+                if (stage == AtomicWriteStage.ContentFlushed) { started.SetResult(); await finish.Task.WaitAsync(token); }
+            },
+        }).AsTask();
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        try
+        {
+            await Assert.ThrowsExactlyAsync<IOException>(async () => await AtomicFileWriter.WriteAsync(path,
+                (s, t) => s.WriteAsync("second"u8.ToArray(), t), new AtomicWriteOptions { ExpectedRevision = FileRevision.Missing }));
+            Assert.IsFalse(File.Exists(path));
+        }
+        finally { finish.TrySetResult(); await first; }
+        Assert.AreEqual("first", await File.ReadAllTextAsync(path));
+    }
+
+    [TestMethod]
+    public async Task ParallelOperationsOnOneStoreAreSerializedWithoutLostEntries()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(i => store.UpsertAsync("item-" + i, data).AsTask()));
+        Assert.HasCount(20, await store.GetAllAsync());
+        using var restarted = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        Assert.HasCount(20, await restarted.GetAllAsync());
+    }
+
+    [TestMethod]
+    public async Task CandidateTotalLimitLeavesCommittedFileAndMemoryIntact()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        using (var initial = new JsonRuffleSaveStore(path, new SolHeaderInspector())) await initial.UpsertAsync("one", data);
+        var bytes = await File.ReadAllBytesAsync(path);
+        using var limited = new JsonRuffleSaveStore(path, new SolHeaderInspector(), limits: new SaveStoreLimits(MaximumStoreBytes: bytes.Length + 10));
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await limited.UpsertAsync("two", data));
+        Assert.HasCount(1, await limited.GetAllAsync());
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(path));
+    }
+
+    [TestMethod]
+    public async Task UnknownMetadataSurvivesAnExistingSaveUpdate()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        var document = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            schemaVersion = 1,
+            futureMetadata = new { keep = "original" },
+            saves = new Dictionary<string, object>
+            {
+                ["one"] = new { base64Data = data, updatedAt = DateTimeOffset.UnixEpoch, futureEntry = FutureEntryValues },
+            },
+        });
+        await File.WriteAllTextAsync(path, document);
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        await store.UpsertAsync("one", data);
+        using var json = System.Text.Json.JsonDocument.Parse(await File.ReadAllBytesAsync(path));
+        Assert.AreEqual("original", json.RootElement.GetProperty("futureMetadata").GetProperty("keep").GetString());
+        Assert.AreEqual(3, json.RootElement.GetProperty("saves").GetProperty("one").GetProperty("futureEntry").GetArrayLength());
+    }
+
+    [TestMethod]
+    public async Task LimitsRejectOversizedSaveKeyAndEntryCountBeforeCommit()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var bytes = await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol"));
+        var data = Convert.ToBase64String(bytes);
+        using (var tiny = new JsonRuffleSaveStore(path, new SolHeaderInspector(), limits: new SaveStoreLimits(MaximumSaveBytes: bytes.Length - 1)))
+            await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await tiny.UpsertAsync("one", data));
+        Assert.IsFalse(File.Exists(path));
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector(), limits: new SaveStoreLimits(MaximumEntries: 1, MaximumKeyCharacters: 8));
+        await store.UpsertAsync("one", data);
+        var original = await File.ReadAllBytesAsync(path);
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await store.UpsertAsync("two", data));
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await store.UpsertAsync("key-too-long", data));
+        Assert.HasCount(1, await store.GetAllAsync());
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(path));
+    }
+
+    [TestMethod]
+    public async Task LastMomentVersionChangeIsRejectedAndUnrelatedTemporaryFileRemains()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("document");
+        var unrelated = directory.GetPath(".unrelated.tmp");
+        await File.WriteAllTextAsync(unrelated, "preserve");
+        await File.WriteAllTextAsync(path, "original");
+        var initial = await AtomicDocumentFile.ReadAsync(path, 1024);
+        await Assert.ThrowsExactlyAsync<PersistenceConflictException>(async () => await AtomicFileWriter.WriteAsync(path,
+            (stream, token) => stream.WriteAsync("candidate"u8.ToArray(), token), new AtomicWriteOptions
+            {
+                MaximumBytes = 1024,
+                ExpectedRevision = initial.Revision,
+                FaultPoint = async (stage, token) =>
+                {
+                    if (stage == AtomicWriteStage.BeforeCommit) await File.WriteAllTextAsync(path, "external change", token);
+                },
+            }));
+        Assert.AreEqual("external change", await File.ReadAllTextAsync(path));
+        Assert.AreEqual("preserve", await File.ReadAllTextAsync(unrelated));
+        Assert.HasCount(1, Directory.GetFiles(directory.RootPath, "*.tmp"));
+    }
+
+    [TestMethod]
+    [DataRow("null")]
+    [DataRow("{\"schemaVersion\":99,\"saves\":{}}")]
+    [DataRow("{\"schemaVersion\":1,\"saves\":null}")]
+    [DataRow("{\"schemaVersion\":1}")]
+    [DataRow("{\"schemaVersion\":1,\"schemaVersion\":1,\"saves\":{}}")]
+    public async Task InvalidDocumentCannotBecomeAnEmptyDefault(string json)
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        await File.WriteAllTextAsync(path, json);
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        for (var attempt = 0; attempt < 2; attempt++)
+            await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await store.GetAllAsync());
+        Assert.AreEqual(json, await File.ReadAllTextAsync(path));
+    }
+}

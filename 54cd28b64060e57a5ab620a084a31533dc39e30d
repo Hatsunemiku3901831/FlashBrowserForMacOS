@@ -1,0 +1,167 @@
+using FlashMacOS.Application.Browser;
+using FlashMacOS.Application.Files;
+using FlashMacOS.Application.Flash;
+using FlashMacOS.Application.Sol;
+using FlashMacOS.Domain.Browser;
+using FlashMacOS.Domain.Flash;
+using FlashMacOS.Domain.Sol;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class CoordinatorLifetimeTests
+{
+    [TestMethod]
+    public async Task NavigationDuringWriteSuppressesOldPageEvents()
+    {
+        var browser = new FakeBrowser();
+        var store = new BlockingStore();
+        await using var coordinator = Create(browser, store);
+        var changes = 0;
+        coordinator.SaveChanged += _ => Interlocked.Increment(ref changes);
+        browser.Publish(new WebBridgeMessage("saveChanged", "old/save", "opaque"));
+        await store.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await browser.NavigateAsync(new Uri("https://new.example/"));
+        store.Release.TrySetResult();
+        await coordinator.DisposeAsync();
+        Assert.AreEqual(1, store.Completed);
+        Assert.AreEqual(0, changes, "Old page completion must not update the new page UI.");
+    }
+
+    [TestMethod]
+    public async Task QueuedOldPageTraceIsDiscardedAfterNavigation()
+    {
+        var browser = new FakeBrowser();
+        var store = new BlockingStore();
+        await using var coordinator = Create(browser, store);
+        var traces = new List<string>();
+        coordinator.TraceReceived += traces.Add;
+        browser.Publish(new WebBridgeMessage("saveChanged", "old/save", "opaque"));
+        await store.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        browser.Publish(new WebBridgeMessage("trace", Message: "old page"));
+        await browser.NavigateAsync(new Uri("https://new.example/"));
+        store.Release.TrySetResult();
+        await coordinator.DisposeAsync();
+        Assert.IsEmpty(traces);
+    }
+
+    [TestMethod]
+    public async Task BridgeFloodIsBoundedAndReportsRejection()
+    {
+        var browser = new FakeBrowser();
+        var store = new BlockingStore();
+        await using var coordinator = Create(browser, store);
+        var faults = 0;
+        coordinator.Faulted += _ => Interlocked.Increment(ref faults);
+        for (var index = 0; index < 80; index++)
+            browser.Publish(new WebBridgeMessage("saveChanged", "save/" + index, "opaque"));
+        await store.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        store.Release.TrySetResult();
+        await coordinator.DisposeAsync();
+        Assert.IsGreaterThan(0, faults);
+        Assert.IsLessThanOrEqualTo(64, store.Completed);
+    }
+
+    private static RufflePlayerCoordinator Create(FakeBrowser browser, BlockingStore store)
+        => new(browser, new FakeHost(), store, new FakeScripts(), new FakeInspector(), new FakeFiles());
+
+    [TestMethod]
+    public async Task SupersededLocalOpenCannotNavigateAfterTheNewerRequest()
+    {
+        var browser = new FakeBrowser(); var host = new ReorderedHost();
+        await using var coordinator = new RufflePlayerCoordinator(browser, host, new BlockingStore(),
+            new FakeScripts(), new FakeInspector(), new FakeFiles());
+        var first = coordinator.OpenSwfAsync("first").AsTask();
+        await host.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await coordinator.OpenSwfAsync("second");
+        host.Release.TrySetResult(); await first;
+        Assert.AreEqual("second", coordinator.CurrentSource?.Id);
+        Assert.HasCount(1, browser.Navigations);
+        Assert.AreEqual("https://player.example/second", browser.Navigations[0].AbsoluteUri);
+    }
+
+    private sealed class FakeBrowser : IBrowserSession
+    {
+        public BrowserState State { get; private set; } = new(new Uri("https://old.example/"), "Old", false, false, false);
+        public Task Ready => Task.CompletedTask;
+        public List<Uri> Navigations { get; } = [];
+        public event Action<BrowserState>? StateChanged;
+        public event Action<WebBridgeMessage>? BridgeMessageReceived;
+        public event Action<BrowserPopupRequest>? PopupRequested { add { } remove { } }
+        public event Action? CloseRequested { add { } remove { } }
+        public event Action<Exception>? Faulted { add { } remove { } }
+        public void Publish(WebBridgeMessage message) => BridgeMessageReceived?.Invoke(message);
+        public ValueTask NavigateAsync(Uri address, CancellationToken cancellationToken = default)
+        {
+            Navigations.Add(address);
+            State = State with { Address = address };
+            StateChanged?.Invoke(State);
+            return ValueTask.CompletedTask;
+        }
+        public ValueTask GoBackAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask GoForwardAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask ReloadAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask StopAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask<string?> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default) => ValueTask.FromResult<string?>("true");
+        public ValueTask NavigateAsync(BrowserRequest request, CancellationToken cancellationToken = default) => NavigateAsync(request.Address, cancellationToken);
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+    private sealed class BlockingStore : IRuffleSaveStore
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public int Completed { get; private set; }
+        public ValueTask<IReadOnlyList<RuffleSaveEntry>> GetAllAsync(CancellationToken cancellationToken = default)
+            => ValueTask.FromResult<IReadOnlyList<RuffleSaveEntry>>([]);
+        public async ValueTask<RuffleSaveEntry> UpsertAsync(string key, string base64Data, CancellationToken cancellationToken = default)
+        {
+            Started.TrySetResult();
+            await Release.Task.WaitAsync(cancellationToken);
+            Completed++;
+            return new RuffleSaveEntry(key, base64Data, "save", SolEncoding.Amf0, 0, DateTimeOffset.UnixEpoch);
+        }
+        public ValueTask<bool> RemoveAsync(string key, CancellationToken cancellationToken = default) => ValueTask.FromResult(true);
+    }
+    private sealed class FakeHost : ILocalContentHost
+    {
+        public string RuntimeVersion => "test";
+        public Uri? BaseUri => null;
+        public Uri? DiagnosticsUri => null;
+        public Uri? RufflePublicPath => null;
+        public ValueTask StartAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public ValueTask<LocalSwfSource> RegisterSwfAsync(string filePath, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+    private sealed class ReorderedHost : ILocalContentHost
+    {
+        public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public string RuntimeVersion => "test";
+        public Uri? BaseUri => null; public Uri? DiagnosticsUri => null; public Uri? RufflePublicPath => null;
+        public ValueTask StartAsync(CancellationToken cancellationToken = default) => ValueTask.CompletedTask;
+        public async ValueTask<LocalSwfSource> RegisterSwfAsync(string filePath, CancellationToken cancellationToken = default)
+        {
+            if (filePath == "first") { Entered.TrySetResult(); await Release.Task.WaitAsync(cancellationToken); }
+            return new LocalSwfSource(filePath, filePath, new Uri("https://player.example/" + filePath),
+                new Uri("https://player.example/content/" + filePath), "prefix/" + filePath);
+        }
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+    private sealed class FakeScripts : IRuffleScriptBuilder
+    {
+        public string CaptureSaves() => "capture";
+        public string ReplaceSave(string key, string base64) => "replace";
+        public string DeleteSave(string key) => "delete";
+        public string Control(PlayerCommand command, double volume = 1, string? commandId = null, string? runId = null) => "control";
+    }
+    private sealed class FakeInspector : ISolHeaderInspector
+    {
+        public SolFileHeader ReadHeader(ReadOnlySpan<byte> source) => throw new NotSupportedException();
+    }
+    private sealed class FakeFiles : IFileAccess
+    {
+        public ValueTask<bool> ExistsAsync(string path, CancellationToken cancellationToken = default) => ValueTask.FromResult(false);
+        public ValueTask<byte[]> ReadBoundedAsync(string path, int maximumBytes, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public ValueTask WriteAtomicAsync(string path, Func<Stream, CancellationToken, ValueTask> write, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    }
+}

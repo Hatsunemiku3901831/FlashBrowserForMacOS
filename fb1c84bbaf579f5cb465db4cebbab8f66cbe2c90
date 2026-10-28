@@ -1,0 +1,51 @@
+{
+  "mode": "dry-run",
+  "sourceRoot": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser",
+  "targetRoot": "/Users/umisonoda/PycharmProjects/flash/flashMacOS",
+  "sourceHead": "7cfbe01596168aca6326db7a68ca1c15d1b55638",
+  "sourceRemote": "https://github.com/Mzying2001/CefFlashBrowser.git",
+  "fileCount": 296,
+  "totalBytes": 30793859,
+  "copyCount": 296,
+  "noOpCount": 0,
+  "baselineDelta": {
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "baselineHeadMatches": true,
+  "baselineWorktreeStatus": " M AGENTS.md\n?? Docs/flashMacOS-task-pack/\n?? Docs/macos-porting-plan.zh-CN.md\n?? spike/\n",
+  "worktreeStatus": " M AGENTS.md\n?? .DS_Store\n?? Docs/.DS_Store\n?? Docs/flashMacOS-task-pack.zip\n?? Docs/flashMacOS-task-pack/\n?? Docs/macos-porting-plan.zh-CN.md\n?? spike/\n",
+  "excluded": [
+    {
+      "path": "spike/macos-host/artifacts",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/bin",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/obj",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/bin",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/obj",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/bin",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/obj",
+      "reason": "generated/cache directory"
+    }
+  ],
+  "conflicts": [],
+  "sourceUnchanged": true
+}

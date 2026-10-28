@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "settings": {
+    "language": "en-US",
+    "userAgentSetting": {
+      "enableCustom": true,
+      "userAgent": "Fixture/2",
+      "futureAgent": [
+        1,
+        2
+      ]
+    },
+    "mainWindowSizeInfo": {
+      "left": 10,
+      "top": 20,
+      "width": 800,
+      "height": 600,
+      "isMaximized": false,
+      "futureWindow": "preserve"
+    },
+    "futureSetting": {
+      "raw": "keep"
+    }
+  },
+  "futureEnvelope": {
+    "keep": true
+  },
+  "legacy": {
+    "windows": {
+      "proxySettings": {
+        "enableProxy": false,
+        "ip": "",
+        "port": "",
+        "userName": "",
+        "password": "",
+        "futureProxy": "keep"
+      }
+    },
+    "futureLegacy": "keep"
+  }
+}

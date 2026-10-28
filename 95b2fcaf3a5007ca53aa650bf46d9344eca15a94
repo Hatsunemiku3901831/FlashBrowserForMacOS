@@ -1,0 +1,72 @@
+namespace FlashMacOS.Domain.Sol;
+
+public static class AmfGraphEquality
+{
+    // IDs may be renumbered on the wire; their one-to-one relationships may not change.
+    public static bool Equivalent(AmfGraph left, AmfGraph right, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(left); ArgumentNullException.ThrowIfNull(right);
+        cancellationToken.ThrowIfCancellationRequested();
+        var forward = new Dictionary<AmfNodeId, AmfNodeId>(); var reverse = new Dictionary<AmfNodeId, AmfNodeId>();
+        var pending = new Stack<(AmfValue Left, AmfValue Right)>();
+        if (!Properties(left.Entries, right.Entries)) return false;
+        while (pending.TryPop(out var pair))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (pair.Left.Kind != pair.Right.Kind) return false;
+            if (pair.Left is AmfAvmPlus avm) { pending.Push((avm.Value, ((AmfAvmPlus)pair.Right).Value)); continue; }
+            if (pair.Left is not AmfReference a) { if (pair.Left != pair.Right) return false; continue; }
+            var b = (AmfReference)pair.Right;
+            if (forward.TryGetValue(a.Target, out var mapped)) { if (mapped != b.Target) return false; continue; }
+            if (reverse.ContainsKey(b.Target)) return false;
+            forward.Add(a.Target, b.Target); reverse.Add(b.Target, a.Target);
+            var x = left.Nodes[a.Target]; var y = right.Nodes[b.Target];
+            if (x.Kind != y.Kind || x.GetType() != y.GetType()) return false;
+            switch (x)
+            {
+                case AmfObjectNode item:
+                    var other = (AmfObjectNode)y;
+                    if (item.ObjectKind != other.ObjectKind || item.Traits.ClassName != other.Traits.ClassName || item.Traits.IsDynamic != other.Traits.IsDynamic ||
+                        item.Traits.IsExternalizable != other.Traits.IsExternalizable || item.ExternalCodecId != other.ExternalCodecId ||
+                        !item.Traits.SealedNames.SequenceEqual(other.Traits.SealedNames, StringComparer.Ordinal) || !Values(item.SealedValues, other.SealedValues) || !Properties(item.Properties, other.Properties)) return false;
+                    if (item.ExternalData is null || other.ExternalData is null) { if (item.ExternalData != other.ExternalData) return false; }
+                    else pending.Push((item.ExternalData, other.ExternalData));
+                    break;
+                case AmfArrayNode array:
+                    var otherArray = (AmfArrayNode)y;
+                    if (array.ArrayKind != otherArray.ArrayKind || !Values(array.Dense, otherArray.Dense) || !Properties(array.Associative, otherArray.Associative)) return false;
+                    if (array.ArrayKind == AmfArrayKind.Amf0Ecma && (array.DeclaredAssociativeCount ?? (uint)array.Associative.Count) !=
+                        (otherArray.DeclaredAssociativeCount ?? (uint)otherArray.Associative.Count)) return false;
+                    break;
+                case AmfDateNode date:
+                    var otherDate = (AmfDateNode)y;
+                    if (date.Milliseconds != otherDate.Milliseconds || date.ReservedAmf0Timezone.GetValueOrDefault() != otherDate.ReservedAmf0Timezone.GetValueOrDefault()) return false;
+                    break;
+                case AmfXmlNode xml: if (xml.Text != ((AmfXmlNode)y).Text) return false; break;
+                case AmfByteArrayNode binary: if (!binary.Bytes.Span.SequenceEqual(((AmfByteArrayNode)y).Bytes.Span)) return false; break;
+                case AmfVectorIntNode vector:
+                    var ints = (AmfVectorIntNode)y; if (vector.IsFixed != ints.IsFixed || !vector.Values.SequenceEqual(ints.Values)) return false; break;
+                case AmfVectorUIntNode vector:
+                    var uints = (AmfVectorUIntNode)y; if (vector.IsFixed != uints.IsFixed || !vector.Values.SequenceEqual(uints.Values)) return false; break;
+                case AmfVectorNumberNode vector:
+                    var numbers = (AmfVectorNumberNode)y; if (vector.IsFixed != numbers.IsFixed || !vector.Values.SequenceEqual(numbers.Values)) return false; break;
+                case AmfVectorObjectNode vector:
+                    var objects = (AmfVectorObjectNode)y; if (vector.IsFixed != objects.IsFixed || vector.TypeName != objects.TypeName || !Values(vector.Values, objects.Values)) return false; break;
+                case AmfDictionaryNode dictionary:
+                    var dict = (AmfDictionaryNode)y; if (dictionary.WeakKeys != dict.WeakKeys || dictionary.Entries.Count != dict.Entries.Count) return false;
+                    for (var i = 0; i < dictionary.Entries.Count; i++) { pending.Push((dictionary.Entries[i].Key, dict.Entries[i].Key)); pending.Push((dictionary.Entries[i].Value, dict.Entries[i].Value)); }
+                    break;
+                default: return false;
+            }
+        }
+        return true;
+        bool Values(IReadOnlyList<AmfValue> a, IReadOnlyList<AmfValue> b)
+        { if (a.Count != b.Count) return false; for (var i = 0; i < a.Count; i++) pending.Push((a[i], b[i])); return true; }
+        bool Properties(IReadOnlyList<AmfProperty> a, IReadOnlyList<AmfProperty> b)
+        {
+            if (a.Count != b.Count) return false;
+            for (var i = 0; i < a.Count; i++) { if (a[i].Name != b[i].Name) return false; pending.Push((a[i].Value, b[i].Value)); }
+            return true;
+        }
+    }
+}

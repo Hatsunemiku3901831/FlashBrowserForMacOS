@@ -1,0 +1,54 @@
+package {
+    import flash.display.Sprite;
+    import flash.events.Event;
+    import flash.events.IOErrorEvent;
+    import flash.external.ExternalInterface;
+    import flash.media.Sound;
+    import flash.media.SoundChannel;
+    import flash.media.SoundTransform;
+    import flash.net.URLRequest;
+
+    [SWF(width="550", height="400", frameRate="30")]
+    public class AudioProbe extends Sprite {
+        private var sound:Sound;
+        private var channel:SoundChannel;
+        private var position:Number = 0;
+        private var volume:Number = 0.25;
+        private var loaded:Boolean = false;
+
+        public function AudioProbe() {
+            if (ExternalInterface.available) ExternalInterface.addCallback("p02AudioCommand", command);
+            sound = new Sound();
+            sound.addEventListener(Event.COMPLETE, function(event:Event):void {
+                loaded = true;
+                report("loaded",{bytesLoaded:sound.bytesLoaded,bytesTotal:sound.bytesTotal,length:sound.length});
+            });
+            sound.addEventListener(IOErrorEvent.IO_ERROR,function(event:IOErrorEvent):void {report("load-error",{text:event.text});});
+            sound.load(new URLRequest("tone.mp3"));
+            var missing:Sound = new Sound();
+            missing.addEventListener(IOErrorEvent.IO_ERROR,function(event:IOErrorEvent):void {report("expected-load-error",{text:event.text});});
+            missing.load(new URLRequest("missing.mp3"));
+            trace("P02_AUDIO_READY");
+        }
+
+        private function command(action:String, value:Number=0.25):String {
+            if (!loaded) return "NOT_READY";
+            if (action == "play" || action == "resume") {
+                if (channel != null) channel.stop();
+                channel = sound.play(action == "play" ? 0 : position, 30, new SoundTransform(volume));
+            } else if (action == "pause") {
+                if (channel != null) {position=channel.position;channel.stop();}
+            } else if (action == "volume" || action == "mute") {
+                volume = action == "mute" ? 0 : Math.max(0,Math.min(1,value));
+                if (channel != null) channel.soundTransform = new SoundTransform(volume);
+            } else if (action != "state") return "UNKNOWN_COMMAND";
+            return JSON.stringify({action:action,channel:channel!=null,position:channel==null?position:channel.position,
+                savedPosition:position,volume:channel==null?volume:channel.soundTransform.volume});
+        }
+
+        private function report(kind:String,payload:Object):void {
+            if (ExternalInterface.available) ExternalInterface.call("P02AudioResult",kind,JSON.stringify(payload));
+            trace("P02_AUDIO_"+kind);
+        }
+    }
+}

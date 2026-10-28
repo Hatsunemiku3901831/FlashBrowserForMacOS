@@ -1,0 +1,116 @@
+/* Project-owned SOL observation lifecycle, shared by all injected frames. */
+(() => {
+  const post = globalThis.__cefFlashBrowserPost;
+              const looksLikeSol = value => {
+                if (typeof value !== "string" || value.length < 24) return false;
+                try {
+                  const bytes = atob(value.slice(0, 24));
+                  return bytes.length >= 2 && bytes.charCodeAt(0) === 0 && bytes.charCodeAt(1) === 191;
+                } catch (_) {
+                  return false;
+                }
+              };
+
+              if (!globalThis.__cefFlashBrowserStoragePatched && typeof Storage !== "undefined") {
+                globalThis.__cefFlashBrowserStoragePatched = true;
+                let nativeLocalStorage = null;
+                try { nativeLocalStorage = globalThis.localStorage; } catch (_) { }
+
+                if (nativeLocalStorage) {
+                  const observedSaves = new Map();
+                  const reportSave = (key, value) => {
+                    const normalizedKey = String(key);
+                    const normalizedValue = String(value);
+                    if (!looksLikeSol(normalizedValue)) return;
+                    if (observedSaves.get(normalizedKey) === normalizedValue) return;
+                    observedSaves.set(normalizedKey, normalizedValue);
+                    post({ type: "saveChanged", key: normalizedKey, data: normalizedValue });
+                  };
+                  const reportDelete = key => {
+                    const normalizedKey = String(key);
+                    if (!observedSaves.delete(normalizedKey)) return;
+                    post({ type: "saveDeleted", key: normalizedKey });
+                  };
+
+                  const originalSetItem = Storage.prototype.setItem;
+                  const originalRemoveItem = Storage.prototype.removeItem;
+                  const originalClear = Storage.prototype.clear;
+                  Storage.prototype.setItem = function(key, value) {
+                    originalSetItem.call(this, key, value);
+                    if (this === nativeLocalStorage) reportSave(key, value);
+                  };
+                  Storage.prototype.removeItem = function(key) {
+                    originalRemoveItem.call(this, key);
+                    if (this === nativeLocalStorage) reportDelete(key);
+                  };
+                  Storage.prototype.clear = function() {
+                    originalClear.call(this);
+                    if (this === nativeLocalStorage) {
+                      for (const key of [...observedSaves.keys()]) reportDelete(key);
+                    }
+                  };
+
+                  try {
+                    const storageProxy = new Proxy(nativeLocalStorage, {
+                      get(target, property) {
+                        if (property === "setItem") {
+                          return (key, value) => {
+                            originalSetItem.call(target, key, value);
+                            reportSave(key, value);
+                          };
+                        }
+                        if (property === "removeItem") {
+                          return key => {
+                            originalRemoveItem.call(target, key);
+                            reportDelete(key);
+                          };
+                        }
+                        if (property === "clear") {
+                          return () => {
+                            originalClear.call(target);
+                            for (const key of [...observedSaves.keys()]) reportDelete(key);
+                          };
+                        }
+                        const value = Reflect.get(target, property, target);
+                        return typeof value === "function" ? value.bind(target) : value;
+                      }
+                    });
+                    Object.defineProperty(globalThis, "localStorage", {
+                      configurable: true,
+                      enumerable: true,
+                      get: () => storageProxy
+                    });
+                  } catch (_) { }
+
+                  let scanTimer;
+                  let scanning = true;
+                  const scanStorage = () => {
+                    if (!scanning) return;
+                    try {
+                      const currentKeys = new Set();
+                      for (let index = 0; index < nativeLocalStorage.length; index++) {
+                        const key = nativeLocalStorage.key(index);
+                        const value = key === null ? null : nativeLocalStorage.getItem(key);
+                        if (key !== null && looksLikeSol(value)) {
+                          currentKeys.add(key);
+                          reportSave(key, value);
+                        }
+                      }
+                      for (const key of [...observedSaves.keys()]) {
+                        if (!currentKeys.has(key)) reportDelete(key);
+                      }
+                    } catch (_) { }
+                    scanTimer = setTimeout(scanStorage, document.hidden ? 5000 : 1000);
+                  };
+                  scanTimer = setTimeout(scanStorage, 0);
+                  const visibilityChanged = () => { clearTimeout(scanTimer); scanStorage(); };
+                  document.addEventListener("visibilitychange", visibilityChanged);
+                  globalThis.addEventListener("pagehide", () => {
+                    scanning = false; clearTimeout(scanTimer);
+                    document.removeEventListener("visibilitychange", visibilityChanged);
+                  }, {once:true});
+                }
+              }
+
+
+})();

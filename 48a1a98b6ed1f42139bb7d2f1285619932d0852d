@@ -1,0 +1,60 @@
+using System.Collections.ObjectModel;
+
+namespace FlashMacOS.Domain.Identity;
+
+public readonly record struct ContentId
+{
+    public ContentId(Guid value)
+    {
+        if (value == Guid.Empty) throw new ArgumentException("A content ID cannot be empty.", nameof(value));
+        Value = value;
+    }
+    public Guid Value { get; }
+    public static ContentId Create() => new(Guid.NewGuid());
+}
+
+public enum ContentLocationKind { LocalPackage, WebOrigin }
+
+public sealed record LocationAlias(Uri Location, DateTimeOffset RecordedAt);
+
+/// <summary>Identity is explicit. Matching bytes or names alone never merge separate games.</summary>
+public sealed class ContentIdentity
+{
+    public ContentIdentity(ContentId contentId, string profileId, ContentLocationKind kind,
+        IEnumerable<LocationAlias> locationAliases, string? contentSha256 = null, string? resourcePackageId = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profileId);
+        ArgumentNullException.ThrowIfNull(locationAliases);
+        if (contentId.Value == Guid.Empty) throw new ArgumentException("A content ID cannot be empty.", nameof(contentId));
+        if (!Enum.IsDefined(kind)) throw new ArgumentOutOfRangeException(nameof(kind));
+        if (profileId.Length > 1024 || resourcePackageId?.Length > 4096) throw new ArgumentException("Content metadata exceeds its limit.");
+        if (contentSha256 is not null && (contentSha256.Length != 64 || !contentSha256.All(Uri.IsHexDigit)))
+            throw new ArgumentException("A content digest must be a SHA-256 hex string.", nameof(contentSha256));
+        var aliases = locationAliases.ToArray();
+        if (aliases.Length is 0 or > 1024) throw new ArgumentException("Content requires 1 to 1024 explicit aliases.", nameof(locationAliases));
+        foreach (var alias in aliases)
+        {
+            if (alias is null || !alias.Location.IsAbsoluteUri || alias.Location.AbsoluteUri.Length > 16 * 1024)
+                throw new ArgumentException("An alias must be a bounded absolute location.", nameof(locationAliases));
+            if (kind == ContentLocationKind.LocalPackage && !alias.Location.IsFile)
+                throw new ArgumentException("A local alias must be a file URI.", nameof(locationAliases));
+            if (kind == ContentLocationKind.WebOrigin &&
+                (alias.Location.Scheme is not ("http" or "https") || !string.IsNullOrEmpty(alias.Location.UserInfo) ||
+                alias.Location.AbsolutePath != "/" || alias.Location.Query.Length != 0 || alias.Location.Fragment.Length != 0 || alias.Location.IsLoopback))
+                throw new ArgumentException("Web identities require a public origin without credentials, paths, queries or loopback ports.", nameof(locationAliases));
+        }
+        ContentId = contentId; ProfileId = profileId; Kind = kind;
+        LocationAliases = new ReadOnlyCollection<LocationAlias>(aliases);
+        ContentSha256 = contentSha256?.ToLowerInvariant(); ResourcePackageId = resourcePackageId;
+    }
+
+    public ContentId ContentId { get; }
+    public string ProfileId { get; }
+    public ContentLocationKind Kind { get; }
+    public IReadOnlyList<LocationAlias> LocationAliases { get; }
+    public string? ContentSha256 { get; }
+    public string? ResourcePackageId { get; }
+
+    public ContentIdentity AddAlias(LocationAlias alias) => new(ContentId, ProfileId, Kind,
+        LocationAliases.Concat([alias]), ContentSha256, ResourcePackageId);
+}

@@ -1,0 +1,87 @@
+using FlashMacOS.Application.Paths;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace FlashMacOS.Infrastructure.Paths;
+
+/// <summary>An explicit, persistent test identity independent of the legacy application's data.</summary>
+public sealed class TestProfile : IAppPaths
+{
+    public const string EnvironmentVariable = "FLASHMACOS_TEST_PROFILE";
+
+    public TestProfile(string rootDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory);
+        if (!Path.IsPathFullyQualified(rootDirectory))
+        {
+            throw new ArgumentException("A test profile requires an absolute dedicated directory.", nameof(rootDirectory));
+        }
+
+        RootDirectory = ResolveLinks(Path.GetFullPath(rootDirectory));
+        var home = ResolveLinks(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        if (RootDirectory == Path.GetPathRoot(RootDirectory) ||
+            IsWithin(home, RootDirectory) ||
+            RootDirectory.Split(Path.DirectorySeparatorChar).Any(p =>
+                p.Equals("CefFlashBrowser", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new ArgumentException("The test profile must be separate from the home root and CefFlashBrowser data/source.", nameof(rootDirectory));
+        }
+
+        var legacyDirectories = new[]
+        {
+            Path.Combine(home, "Library", "Application Support", "CefFlashBrowser"),
+            Path.Combine(home, "Library", "Caches", "CefFlashBrowser"),
+            Path.Combine(home, "Library", "Logs", "CefFlashBrowser"),
+            Path.Combine(home, "Library", "WebKit", "com.mzying2001.cefflashbrowser.next.gate0"),
+        };
+        if (legacyDirectories.Any(p => IsWithin(RootDirectory, ResolveLinks(p)) || IsWithin(ResolveLinks(p), RootDirectory)))
+        {
+            throw new ArgumentException("The test profile overlaps legacy data.", nameof(rootDirectory));
+        }
+
+        ApplicationSupportDirectory = Path.Combine(RootDirectory, "data");
+        CacheDirectory = Path.Combine(RootDirectory, "cache");
+        LogDirectory = Path.Combine(RootDirectory, "logs");
+        RuffleSaveStorePath = Path.Combine(ApplicationSupportDirectory, "ruffle-saves.v1.json");
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes("FlashMacOS.P01.WebKit\0" + RootDirectory));
+        DataStoreIdentifier = new Guid(hash.AsSpan(0, 16));
+    }
+
+    public string RootDirectory { get; }
+    public Guid DataStoreIdentifier { get; }
+    public string ApplicationSupportDirectory { get; }
+    public string CacheDirectory { get; }
+    public string LogDirectory { get; }
+    public string RuffleSaveStorePath { get; }
+
+    public static TestProfile FromEnvironment() => new(
+        Environment.GetEnvironmentVariable(EnvironmentVariable) ??
+        throw new InvalidOperationException($"Set {EnvironmentVariable} to an absolute, dedicated test directory before running the prototype."));
+
+    public void EnsureCreated()
+    {
+        Directory.CreateDirectory(ApplicationSupportDirectory);
+        Directory.CreateDirectory(CacheDirectory);
+        Directory.CreateDirectory(LogDirectory);
+    }
+
+    private static bool IsWithin(string path, string root) =>
+        path.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith(Path.TrimEndingDirectorySeparator(root) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+
+    private static string ResolveLinks(string path)
+    {
+        var current = Path.GetPathRoot(path)!;
+        foreach (var part in path[current.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+        {
+            current = Path.Combine(current, part);
+            var directory = new DirectoryInfo(current);
+            if (directory.LinkTarget is not null)
+            {
+                current = ResolveLinks(directory.ResolveLinkTarget(returnFinalTarget: true)!.FullName);
+            }
+        }
+
+        return Path.TrimEndingDirectorySeparator(current);
+    }
+}

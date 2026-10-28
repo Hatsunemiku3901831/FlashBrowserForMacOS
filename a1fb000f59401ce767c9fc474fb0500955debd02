@@ -1,0 +1,228 @@
+using System.Collections.Concurrent;
+using FlashMacOS.Application.Files;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class DownloadManagerTests
+{
+    [TestMethod]
+    public async Task FinishedDownloadAppearsOnlyThroughCommitAndAtomicallyReplacesTheChosenTarget()
+    {
+        using var directory = new TemporaryDirectory();
+        var target = directory.GetPath("game.sol");
+        await File.WriteAllTextAsync(target, "old target");
+        var source = new FakeDownloads();
+        await using var manager = new DownloadManager(new Destinations((_, _) => ValueTask.FromResult<string?>(target)), new LocalDownloadFiles());
+        using var registration = manager.Attach(source);
+
+        source.Request(1, "game.sol");
+        var staging = await source.Destination(1);
+        Assert.IsNotNull(staging);
+        Assert.AreEqual(directory.RootPath, Path.GetDirectoryName(staging));
+        StringAssert.StartsWith(Path.GetFileName(staging), ".game.sol.");
+        StringAssert.EndsWith(staging, ".flashmacos-download");
+        Assert.IsFalse(File.Exists(staging), "WebKit creates the staging file; the host only names it.");
+        await File.WriteAllTextAsync(staging, "new download");
+        source.Update(new BrowserDownloadUpdate(1, BrowserDownloadEventKind.Progress, 6, 12));
+        Assert.AreEqual("old target", await File.ReadAllTextAsync(target), "No partial content under the final name.");
+        source.Update(new BrowserDownloadUpdate(1, BrowserDownloadEventKind.Finished, 12));
+
+        var item = await Terminal(manager, 1);
+        Assert.AreEqual(DownloadStatus.Completed, item.Status);
+        Assert.AreEqual(target, item.Destination);
+        Assert.AreEqual("new download", await File.ReadAllTextAsync(target));
+        Assert.IsFalse(File.Exists(staging));
+        Assert.AreEqual(12, item.ExpectedBytes);
+    }
+
+    [TestMethod]
+    [DataRow(BrowserDownloadEventKind.Cancelled, DownloadStatus.Cancelled)]
+    [DataRow(BrowserDownloadEventKind.Failed, DownloadStatus.Failed)]
+    public async Task CancelledOrFailedDownloadDeletesPartialStagingAndKeepsTheOldTarget(BrowserDownloadEventKind terminal, DownloadStatus expected)
+    {
+        using var directory = new TemporaryDirectory();
+        var target = directory.GetPath("save.bin");
+        await File.WriteAllTextAsync(target, "old target");
+        var source = new FakeDownloads();
+        await using var manager = new DownloadManager(new Destinations((_, _) => ValueTask.FromResult<string?>(target)), new LocalDownloadFiles());
+        using var registration = manager.Attach(source);
+
+        source.Request(7, "save.bin");
+        var staging = (await source.Destination(7))!;
+        await File.WriteAllTextAsync(staging, "partial");
+        source.Update(new BrowserDownloadUpdate(7, terminal, 7, Error: terminal == BrowserDownloadEventKind.Failed ? "NSURLErrorDomain -1005: lost" : null));
+
+        var item = await Terminal(manager, 1);
+        Assert.AreEqual(expected, item.Status);
+        Assert.AreEqual("old target", await File.ReadAllTextAsync(target));
+        Assert.IsFalse(File.Exists(staging));
+        Assert.AreEqual(terminal == BrowserDownloadEventKind.Failed, item.Error is not null);
+    }
+
+    [TestMethod]
+    public async Task CommitFailureDiscardsTheStagingFileAndReportsFailure()
+    {
+        using var directory = new TemporaryDirectory();
+        var target = directory.GetPath("occupied");
+        Directory.CreateDirectory(target); // rename(2) cannot replace a directory with a file.
+        var source = new FakeDownloads();
+        await using var manager = new DownloadManager(new Destinations((_, _) => ValueTask.FromResult<string?>(target)), new LocalDownloadFiles());
+        using var registration = manager.Attach(source);
+
+        source.Request(1, "occupied");
+        var staging = (await source.Destination(1))!;
+        await File.WriteAllTextAsync(staging, "complete");
+        source.Update(new BrowserDownloadUpdate(1, BrowserDownloadEventKind.Finished, 8));
+
+        var item = await Terminal(manager, 1);
+        Assert.AreEqual(DownloadStatus.Failed, item.Status);
+        StringAssert.Contains(item.Error, "could not be saved");
+        Assert.IsTrue(Directory.Exists(target));
+        Assert.IsFalse(File.Exists(staging));
+    }
+
+    [TestMethod]
+    public async Task DeclinedOrFailedChoiceCancelsTheNativeDownloadWithoutFiles()
+    {
+        using var directory = new TemporaryDirectory();
+        var source = new FakeDownloads();
+        await using var manager = new DownloadManager(new Destinations((request, _) => request.Id == 1
+            ? ValueTask.FromResult<string?>(null) : throw new IOException("panel unavailable")), new LocalDownloadFiles());
+        using var registration = manager.Attach(source);
+
+        source.Request(1); source.Request(2);
+        Assert.IsNull(await source.Destination(1));
+        Assert.IsNull(await source.Destination(2));
+        source.Update(new BrowserDownloadUpdate(1, BrowserDownloadEventKind.Cancelled));
+        source.Update(new BrowserDownloadUpdate(2, BrowserDownloadEventKind.Cancelled));
+
+        Assert.AreEqual(DownloadStatus.Cancelled, (await Terminal(manager, 1)).Status);
+        var failed = await Terminal(manager, 2);
+        Assert.AreEqual(DownloadStatus.Failed, failed.Status);
+        StringAssert.Contains(failed.Error, "panel unavailable");
+        Assert.IsEmpty(Directory.GetFileSystemEntries(directory.RootPath));
+    }
+
+    [TestMethod]
+    public async Task CancelWhileThePanelIsOpenIgnoresTheLateChoice()
+    {
+        using var directory = new TemporaryDirectory();
+        var panel = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var source = new FakeDownloads();
+        await using var manager = new DownloadManager(new Destinations((_, _) => new ValueTask<string?>(panel.Task)), new LocalDownloadFiles());
+        using var registration = manager.Attach(source);
+
+        source.Request(3);
+        await WaitUntil(() => manager.Items.Count == 1);
+        await manager.CancelAsync(manager.Items[0].Sequence);
+        Assert.IsTrue(source.Cancels.Contains(3));
+        source.Update(new BrowserDownloadUpdate(3, BrowserDownloadEventKind.Cancelled));
+        Assert.AreEqual(DownloadStatus.Cancelled, (await Terminal(manager, 1)).Status);
+        panel.SetResult(directory.GetPath("late.bin"));
+        await Task.Delay(100);
+        Assert.IsFalse(source.Destinations[3].Task.IsCompleted, "A cancelled download never receives a staging path.");
+        Assert.IsEmpty(Directory.GetFileSystemEntries(directory.RootPath));
+    }
+
+    [TestMethod]
+    public async Task ClosingASurfaceAbandonsItsDownloadsAndDisposeCancelsTheRest()
+    {
+        using var directory = new TemporaryDirectory();
+        var popup = new FakeDownloads(); var main = new FakeDownloads();
+        var count = 0;
+        var manager = new DownloadManager(new Destinations((_, _) => ValueTask.FromResult<string?>(directory.GetPath($"file-{Interlocked.Increment(ref count)}.bin"))),
+            new LocalDownloadFiles());
+        var popupRegistration = manager.Attach(popup);
+        using var mainRegistration = manager.Attach(main);
+
+        popup.Request(1); main.Request(1);
+        var popupStaging = (await popup.Destination(1))!; var mainStaging = (await main.Destination(1))!;
+        await File.WriteAllTextAsync(popupStaging, "popup partial"); await File.WriteAllTextAsync(mainStaging, "main partial");
+        popupRegistration.Dispose();
+        Assert.AreEqual(0, popup.Subscribers);
+        await WaitUntil(() => manager.Items.Count(i => i.Status == DownloadStatus.Cancelled) == 1);
+        Assert.IsFalse(File.Exists(popupStaging));
+
+        main.CancelResponds = true;
+        await manager.DisposeAsync();
+        Assert.IsTrue(main.Cancels.Contains(1));
+        Assert.IsTrue(manager.Items.All(i => i.Status == DownloadStatus.Cancelled), string.Join(", ", manager.Items));
+        Assert.IsFalse(File.Exists(mainStaging));
+        Assert.AreEqual(0, main.Subscribers);
+        Assert.IsEmpty(Directory.GetFileSystemEntries(directory.RootPath));
+    }
+
+    [TestMethod]
+    public async Task SameNativeIdFromTwoSurfacesStaysTwoIndependentDownloads()
+    {
+        using var directory = new TemporaryDirectory();
+        var first = new FakeDownloads(); var second = new FakeDownloads();
+        await using var manager = new DownloadManager(new Destinations((request, _) =>
+            ValueTask.FromResult<string?>(directory.GetPath(request.SuggestedFileName))), new LocalDownloadFiles());
+        using var a = manager.Attach(first); using var b = manager.Attach(second);
+
+        first.Request(1, "first.bin"); second.Request(1, "second.bin");
+        await File.WriteAllTextAsync((await first.Destination(1))!, "first");
+        await File.WriteAllTextAsync((await second.Destination(1))!, "second");
+        second.Update(new BrowserDownloadUpdate(1, BrowserDownloadEventKind.Redirected, Address: new Uri("https://cdn.example.test/second.bin")));
+        second.Update(new BrowserDownloadUpdate(1, BrowserDownloadEventKind.Finished, 6));
+        first.Update(new BrowserDownloadUpdate(1, BrowserDownloadEventKind.Finished, 5));
+
+        await WaitUntil(() => manager.Items.Count(i => i.Status == DownloadStatus.Completed) == 2);
+        Assert.AreEqual("first", await File.ReadAllTextAsync(directory.GetPath("first.bin")));
+        Assert.AreEqual("second", await File.ReadAllTextAsync(directory.GetPath("second.bin")));
+        Assert.AreEqual("cdn.example.test", manager.Items.Single(i => i.SuggestedFileName == "second.bin").Address!.Host);
+        Assert.AreEqual(2, manager.Items.Select(i => i.Sequence).Distinct().Count());
+    }
+
+    private static async Task<DownloadItem> Terminal(DownloadManager manager, long sequence)
+    {
+        await WaitUntil(() => manager.Items.Any(i => i.Sequence == sequence && i.IsTerminal));
+        return manager.Items.Single(i => i.Sequence == sequence);
+    }
+
+    private static async Task WaitUntil(Func<bool> condition)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (!condition()) await Task.Delay(10, timeout.Token);
+    }
+
+    private sealed class Destinations(Func<BrowserDownloadRequest, CancellationToken, ValueTask<string?>> choose) : IDownloadDestinations
+    {
+        public ValueTask<string?> ChooseAsync(BrowserDownloadRequest request, CancellationToken cancellationToken = default) => choose(request, cancellationToken);
+    }
+
+    private sealed class FakeDownloads : IBrowserDownloads
+    {
+        public ConcurrentDictionary<long, TaskCompletionSource<string?>> Destinations { get; } = new();
+        public ConcurrentQueue<long> Cancels { get; } = new();
+        public bool CancelResponds { get; set; }
+        public int Subscribers => (DownloadRequested?.GetInvocationList().Length ?? 0) + (DownloadUpdated?.GetInvocationList().Length ?? 0);
+        public event Action<BrowserDownloadRequest>? DownloadRequested;
+        public event Action<BrowserDownloadUpdate>? DownloadUpdated;
+
+        public void Request(long id, string name = "file.bin")
+        {
+            Destinations[id] = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            DownloadRequested?.Invoke(new BrowserDownloadRequest(id, new Uri("https://example.test/" + name), name, "GET", "application/octet-stream", null));
+        }
+
+        public Task<string?> Destination(long id) => Destinations[id].Task.WaitAsync(TimeSpan.FromSeconds(10));
+        public void Update(BrowserDownloadUpdate update) => DownloadUpdated?.Invoke(update);
+        public ValueTask<long> StartDownloadAsync(Uri address, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public ValueTask SetDownloadDestinationAsync(long downloadId, string? stagingPath, CancellationToken cancellationToken = default)
+        {
+            Destinations[downloadId].TrySetResult(stagingPath);
+            return ValueTask.CompletedTask;
+        }
+
+        public ValueTask CancelDownloadAsync(long downloadId, CancellationToken cancellationToken = default)
+        {
+            Cancels.Enqueue(downloadId);
+            if (CancelResponds) Update(new BrowserDownloadUpdate(downloadId, BrowserDownloadEventKind.Cancelled));
+            return ValueTask.CompletedTask;
+        }
+    }
+}

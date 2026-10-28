@@ -1,0 +1,38 @@
+using FlashMacOS.Flash.Ruffle.Hosting;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class PathSafetyTests
+{
+    [TestMethod]
+    public void ResolveRegularFileAllowsOnlyRegularFilesInsideRoot()
+    {
+        using var directory = new TemporaryDirectory();
+        var contentRoot = directory.GetPath("content");
+        Directory.CreateDirectory(contentRoot);
+        var inside = Path.Combine(contentRoot, "inside.swf");
+        var outside = directory.GetPath("outside.swf");
+        File.WriteAllBytes(inside, [0x46, 0x57, 0x53]);
+        File.WriteAllBytes(outside, [0x46, 0x57, 0x53]);
+
+        Assert.AreEqual(inside, PathSafety.ResolveRegularFile(contentRoot, "inside.swf"));
+        Assert.IsNull(PathSafety.ResolveRegularFile(contentRoot, "../outside.swf"));
+        Assert.IsNull(PathSafety.ResolveRegularFile(contentRoot, outside));
+        Assert.IsNull(PathSafety.ResolveRegularFile(contentRoot, "missing.swf"));
+    }
+
+    [TestMethod]
+    public void ResolveRegularFileRejectsSymbolicLinkEscape()
+    {
+        using var directory = new TemporaryDirectory();
+        var contentRoot = directory.GetPath("content");
+        Directory.CreateDirectory(contentRoot);
+        var outside = directory.GetPath("outside.swf");
+        var link = Path.Combine(contentRoot, "linked.swf");
+        File.WriteAllBytes(outside, [0x46, 0x57, 0x53]);
+        File.CreateSymbolicLink(link, outside);
+
+        Assert.IsNull(PathSafety.ResolveRegularFile(contentRoot, "linked.swf"));
+    }
+}

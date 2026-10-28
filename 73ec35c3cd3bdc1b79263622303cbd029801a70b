@@ -1,0 +1,185 @@
+using System.Text.Json.Nodes;
+using FlashMacOS.Application.Configuration;
+using FlashMacOS.Domain.Configuration;
+using FlashMacOS.Infrastructure.Configuration;
+using FlashMacOS.Infrastructure.Persistence;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class ConfigurationRepositoryTests
+{
+    private static string Fixture(string name) => Path.Combine(AppContext.BaseDirectory, "ConfigurationFixtures", name);
+
+    [TestMethod]
+    public async Task FullLegacySettingsMatchIndependentGoldenAndUpgradeOnlyOnce()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+        File.Copy(Fixture("legacy-settings-all.json"), path);
+        var original = await File.ReadAllBytesAsync(path);
+        using var repository = new JsonSettingsRepository(path);
+        var loaded = await repository.LoadAsync();
+        Assert.IsTrue(loaded.NeedsUpgrade);
+        Assert.AreEqual("ja-JP", loaded.Value.Language);
+        Assert.AreEqual(Theme.Dark, loaded.Value.Theme);
+        Assert.AreEqual(SearchEngine.DuckDuckGo, loaded.Value.SearchEngine);
+        Assert.AreEqual("synthetic-not-a-secret", loaded.Value.ProxySettings.Password);
+        Assert.AreEqual(-1440d, loaded.Value.MainWindowSizeInfo!.Left);
+        Assert.IsTrue(loaded.Value.DisableGpuAccelerationWPF);
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(path), "Read-only load must not migrate in place.");
+        var upgraded = await repository.UpgradeAsync();
+        var expected = JsonNode.Parse(await File.ReadAllTextAsync(Fixture("expected-settings-v2.json")));
+        var actual = JsonNode.Parse(await File.ReadAllTextAsync(path));
+        Assert.IsTrue(JsonNode.DeepEquals(expected, actual), "Migrated v2 must match the independently authored field mapping.");
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(path + ".bak"));
+        var first = await File.ReadAllBytesAsync(path);
+        var second = await repository.UpgradeAsync();
+        Assert.AreEqual(upgraded.Revision, second.Revision);
+        CollectionAssert.AreEqual(first, await File.ReadAllBytesAsync(path));
+        using var restarted = new JsonSettingsRepository(path);
+        Assert.AreEqual(loaded.Value, (await restarted.LoadAsync()).Value);
+    }
+
+    [TestMethod]
+    public async Task LegacyNullAndMissingReferencesUseFrozenDefaultsWithoutLosingRawNulls()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+        File.Copy(Fixture("legacy-settings-nulls.json"), path);
+        using var repository = new JsonSettingsRepository(path);
+        Assert.AreEqual(AppSettings.Default, (await repository.LoadAsync()).Value);
+        await repository.UpgradeAsync();
+        var json = JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+        Assert.IsTrue(json["legacy"]!["sourceSettings"]!.AsObject().ContainsKey("futureNull"));
+        Assert.IsNull(json["legacy"]!["sourceSettings"]!["futureNull"]);
+    }
+
+    [TestMethod]
+    public async Task V2UnknownFieldsSurviveNestedUpdatesAndWindowClearing()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+        File.Copy(Fixture("settings-v2-unknown.json"), path);
+        using var repository = new JsonSettingsRepository(path);
+        var old = await repository.LoadAsync();
+        var changed = await repository.SaveAsync(old.Value with { Theme = Theme.Dark, MainWindowSizeInfo = null }, old.Revision);
+        var json = JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+        Assert.IsTrue(json["futureEnvelope"]!["keep"]!.GetValue<bool>());
+        Assert.AreEqual(2, json["settings"]!["userAgentSetting"]!["futureAgent"]!.AsArray().Count);
+        Assert.AreEqual("preserve", json["legacy"]!["preserved"]!["/settings/mainWindowSizeInfo"]!["futureWindow"]!.GetValue<string>());
+        Assert.AreEqual("keep", json["legacy"]!["windows"]!["proxySettings"]!["futureProxy"]!.GetValue<string>());
+        await repository.SaveAsync(changed.Value with { MainWindowSizeInfo = new(1, 2, 800, 600) }, changed.Revision);
+        json = JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+        Assert.AreEqual("preserve", json["settings"]!["mainWindowSizeInfo"]!["futureWindow"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public async Task LegacyFavoriteOrderDuplicatesNullsAndUnknownFieldsMatchIndependentGolden()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("favorites.json");
+        File.Copy(Fixture("legacy-favorites.json"), path);
+        using var repository = new JsonFavoritesRepository(path);
+        var loaded = await repository.LoadAsync();
+        Assert.HasCount(5, loaded.Value);
+        Assert.AreEqual(loaded.Value[0].Url, loaded.Value[1].Url);
+        Assert.AreNotEqual(loaded.Value[0].Id, loaded.Value[1].Id);
+        Assert.IsNull(loaded.Value[2].Name);
+        Assert.IsNull(loaded.Value[3].Url);
+        await repository.UpgradeAsync();
+        Assert.IsTrue(JsonNode.DeepEquals(JsonNode.Parse(await File.ReadAllTextAsync(Fixture("expected-favorites-v2.json"))),
+            JsonNode.Parse(await File.ReadAllTextAsync(path))));
+        var first = await File.ReadAllBytesAsync(path);
+        await repository.UpgradeAsync();
+        CollectionAssert.AreEqual(first, await File.ReadAllBytesAsync(path));
+        using var restarted = new JsonFavoritesRepository(path);
+        CollectionAssert.AreEqual(loaded.Value.ToArray(), (await restarted.LoadAsync()).Value.ToArray());
+    }
+
+    [TestMethod]
+    [DataRow("null")]
+    [DataRow("{")]
+    [DataRow("{\"schemaVersion\":8,\"settings\":{}}")]
+    [DataRow("{\"schemaVersion\":2,\"settings\":null}")]
+    [DataRow("{\"Language\":\"en-US\",\"language\":\"zh-CN\"}")]
+    public async Task DamagedSettingsCannotBeLoadedOrOverwrittenAsDefaults(string text)
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+        await File.WriteAllTextAsync(path, text);
+        using var repository = new JsonSettingsRepository(path);
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await repository.LoadAsync());
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await repository.SaveAsync(AppSettings.Default, "missing"));
+        Assert.AreEqual(text, await File.ReadAllTextAsync(path));
+    }
+
+    [TestMethod]
+    [DataRow("null")]
+    [DataRow("{}")]
+    [DataRow("{\"Favorites\":null}")]
+    [DataRow("{\"Favorites\":[1]}")]
+    [DataRow("{\"schemaVersion\":2,\"favorites\":[{\"name\":\"missing id\"}]}")]
+    public async Task DamagedFavoritesNeverResetTheFile(string text)
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("favorites.json");
+        await File.WriteAllTextAsync(path, text);
+        using var repository = new JsonFavoritesRepository(path);
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await repository.LoadAsync());
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await repository.UpgradeAsync());
+        Assert.AreEqual(text, await File.ReadAllTextAsync(path));
+    }
+
+    [TestMethod]
+    public async Task SettingsSaveFailureRetainsRepositoryAndServiceStateThenCanRetry()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+        var fail = false;
+        using var repository = new JsonSettingsRepository(path, (stage, _) => fail && stage == AtomicWriteStage.BeforeCommit
+            ? ValueTask.FromException(new IOException("Injected configuration disk failure.")) : ValueTask.CompletedTask);
+        using var service = new SettingsService(repository);
+        var loaded = await service.LoadAsync();
+        var first = await service.UpdateAsync(loaded.Value, loaded.Revision);
+        var bytes = await File.ReadAllBytesAsync(path);
+        fail = true;
+        await Assert.ThrowsExactlyAsync<IOException>(async () => await service.UpdateAsync(first.Value with { Language = "en-US" }, first.Revision));
+        Assert.AreSame(first, service.Current);
+        Assert.AreEqual(first, await repository.LoadAsync());
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(path));
+        fail = false;
+        Assert.AreEqual("en-US", (await service.UpdateAsync(first.Value with { Language = "en-US" }, first.Revision)).Value.Language);
+    }
+
+    [TestMethod]
+    public async Task StaleConfigurationCannotOverwriteAnExternalChange()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+        using var one = new JsonSettingsRepository(path);
+        using var two = new JsonSettingsRepository(path);
+        var first = await one.LoadAsync();
+        await two.LoadAsync();
+        await one.SaveAsync(first.Value with { Language = "ja-JP" }, first.Revision);
+        await Assert.ThrowsExactlyAsync<PersistenceConflictException>(async () => await two.SaveAsync(first.Value with { Language = "en-US" }, first.Revision));
+        Assert.AreEqual("ja-JP", (await two.ReloadAsync()).Value.Language);
+    }
+
+    [TestMethod]
+    public async Task BomAndPascalCasedV2KnownFieldsNormalizeWithoutDroppingUnknownData()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+        await File.WriteAllTextAsync(path, "\uFEFF{\"SchemaVersion\":2,\"Settings\":{\"Language\":\"en-US\",\"futureSetting\":7},\"Legacy\":{\"Windows\":{\"ProxySettings\":{\"IP\":\"fixture-host\",\"futureProxy\":true}}}}");
+        using var repository = new JsonSettingsRepository(path);
+        var loaded = await repository.LoadAsync();
+        Assert.AreEqual("fixture-host", loaded.Value.ProxySettings.IP);
+        await repository.SaveAsync(loaded.Value with { Theme = Theme.Dark }, loaded.Revision);
+        var restarted = await repository.ReloadAsync();
+        Assert.AreEqual(Theme.Dark, restarted.Value.Theme);
+        var json = JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+        Assert.IsTrue(json["legacy"]!["windows"]!["proxySettings"]!["futureProxy"]!.GetValue<bool>());
+        Assert.AreEqual(7, json["settings"]!["futureSetting"]!.GetValue<int>());
+    }
+}

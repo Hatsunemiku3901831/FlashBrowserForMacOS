@@ -1,0 +1,95 @@
+using System.Collections.ObjectModel;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json.Nodes;
+using FlashMacOS.Application.Configuration;
+using FlashMacOS.Domain.Configuration;
+using FlashMacOS.Infrastructure.Persistence;
+
+namespace FlashMacOS.Infrastructure.Configuration;
+
+public sealed class JsonFavoritesRepository(string path,
+    Func<AtomicWriteStage, CancellationToken, ValueTask>? faultPoint = null)
+    : JsonConfigurationRepository<IReadOnlyList<FavoriteEntry>>(path, 16 * 1024 * 1024, faultPoint), IFavoritesRepository
+{
+    protected override IReadOnlyList<FavoriteEntry> Defaults => Array.Empty<FavoriteEntry>();
+    protected override IReadOnlyList<FavoriteEntry> PrepareCandidate(IReadOnlyList<FavoriteEntry> value)
+    {
+        if (value.Count > 10_000) throw new ArgumentException("Favorites exceed 10000 entries.");
+        var copy = value.ToArray();
+        var ids = new HashSet<Guid>();
+        foreach (var entry in copy)
+        {
+            if (entry is null) throw new ArgumentException("A favorite entry cannot be null.");
+            entry.Validate();
+            if (!ids.Add(entry.Id)) throw new ArgumentException("Favorite IDs must be unique; URLs may repeat.");
+        }
+        return new ReadOnlyCollection<FavoriteEntry>(copy);
+    }
+
+    protected override (IReadOnlyList<FavoriteEntry> Value, JsonObject Document, bool NeedsUpgrade) Decode(JsonObject document)
+    {
+        var version = ConfigurationJson.Schema(document);
+        if (ConfigurationJson.Get(document, "favorites") is not JsonArray array) throw new InvalidDataException("Favorites array is missing or null.");
+        if (array.Count > 10_000) throw new InvalidDataException("Favorites exceed 10000 entries.");
+        var entries = new List<FavoriteEntry>();
+        var nodes = new JsonArray();
+        for (var index = 0; index < array.Count; index++)
+        {
+            var node = array[index];
+            if (node is not null && node is not JsonObject) throw new InvalidDataException("A favorite must be an object or a legacy null slot.");
+            var item = node as JsonObject ?? new JsonObject();
+            Guid id;
+            if (version == 2)
+            {
+                if (node is null || ConfigurationJson.Get(item, "id") is not JsonValue value || !value.TryGetValue<string>(out var text) || !Guid.TryParse(text, out id))
+                    throw new InvalidDataException("A v2 favorite requires a valid explicit ID.");
+            }
+            else
+            {
+                var bytes = SHA256.HashData(Encoding.UTF8.GetBytes("FlashMacOS.Favorite.v1\0" + index + "\0" + (node?.ToJsonString() ?? "null")));
+                id = new Guid(bytes.AsSpan(0, 16));
+            }
+            static string? Text(JsonObject item, string name)
+            {
+                var property = ConfigurationJson.Get(item, name);
+                if (property is null) return null;
+                if (property is JsonValue value && value.TryGetValue<string>(out var text)) return text;
+                throw new InvalidDataException("Favorite text has the wrong type: " + name);
+            }
+            entries.Add(new FavoriteEntry(id, Text(item, "name"), Text(item, "url")));
+            var preserved = (JsonObject)item.DeepClone();
+            foreach (var key in preserved.Select(x => x.Key).Where(key =>
+                key.Equals("id", StringComparison.OrdinalIgnoreCase) || key.Equals("name", StringComparison.OrdinalIgnoreCase) || key.Equals("url", StringComparison.OrdinalIgnoreCase)).ToArray())
+                preserved.Remove(key);
+            preserved["id"] = id.ToString("D"); preserved["name"] = entries[^1].Name; preserved["url"] = entries[^1].Url;
+            if (node is null) preserved["legacyNullSlot"] = true;
+            nodes.Add(preserved);
+        }
+        IReadOnlyList<FavoriteEntry> result;
+        try { result = PrepareCandidate(entries); }
+        catch (ArgumentException exception) { throw new InvalidDataException("Favorites validation failed.", exception); }
+        var target = version == 1 ? new JsonObject { ["schemaVersion"] = 2,
+            ["legacy"] = new JsonObject { ["sourceFavorites"] = document.DeepClone() } } : (JsonObject)document.DeepClone();
+        foreach (var key in target.Select(x => x.Key).Where(key => key.Equals("favorites", StringComparison.OrdinalIgnoreCase) || key.Equals("schemaVersion", StringComparison.OrdinalIgnoreCase)).ToArray())
+            target.Remove(key);
+        target["schemaVersion"] = 2; target["favorites"] = nodes;
+        return (result, target, version == 1);
+    }
+
+    protected override JsonObject Encode(IReadOnlyList<FavoriteEntry> value, JsonObject document)
+    {
+        var old = document["favorites"] as JsonArray;
+        var byId = old?.OfType<JsonObject>().Where(x => x["id"] is not null).ToDictionary(x => x["id"]!.GetValue<string>(), StringComparer.OrdinalIgnoreCase)
+            ?? new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
+        var array = new JsonArray();
+        foreach (var entry in value)
+        {
+            var id = entry.Id.ToString("D");
+            var node = byId.TryGetValue(id, out var existing) ? (JsonObject)existing.DeepClone() : new JsonObject();
+            node["id"] = id; node["name"] = entry.Name; node["url"] = entry.Url; array.Add(node);
+        }
+        document["schemaVersion"] = 2; document["favorites"] = array;
+        return document;
+    }
+}

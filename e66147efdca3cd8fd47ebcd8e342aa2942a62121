@@ -1,0 +1,142 @@
+namespace FlashMacOS.Domain.Sol;
+
+public abstract class AmfNode(AmfNodeId id)
+{
+    public AmfNodeId Id { get; } = id;
+    public abstract AmfNodeKind Kind { get; }
+    public abstract IEnumerable<AmfValue> Children { get; }
+}
+
+public sealed class AmfTraits
+{
+    public AmfTraits(string className, bool isDynamic, IEnumerable<string>? sealedNames = null, bool isExternalizable = false)
+    {
+        ClassName = className ?? throw new ArgumentNullException(nameof(className));
+        IsDynamic = isDynamic; IsExternalizable = isExternalizable;
+        SealedNames = AmfCollections.Freeze(sealedNames ?? []);
+        // Freeze rejects null members before publishing the immutable collection.
+        if (isExternalizable && (isDynamic || SealedNames.Count != 0)) throw new ArgumentException("Externalizable traits have no sealed or dynamic members.");
+    }
+    public string ClassName { get; }
+    public bool IsDynamic { get; }
+    public bool IsExternalizable { get; }
+    public IReadOnlyList<string> SealedNames { get; }
+}
+
+public sealed class AmfObjectNode : AmfNode
+{
+    public AmfObjectNode(AmfNodeId id, AmfTraits traits, IEnumerable<AmfValue>? sealedValues = null,
+        IEnumerable<AmfProperty>? properties = null, AmfValue? externalData = null,
+        AmfObjectKind objectKind = AmfObjectKind.Amf3Object, string? externalCodecId = null) : base(id)
+    {
+        Traits = traits ?? throw new ArgumentNullException(nameof(traits));
+        SealedValues = AmfCollections.Freeze(sealedValues ?? []);
+        Properties = AmfCollections.Freeze(properties ?? []);
+        ExternalData = externalData;
+        ExternalCodecId = externalCodecId;
+        if (!Enum.IsDefined(objectKind)) throw new ArgumentOutOfRangeException(nameof(objectKind));
+        ObjectKind = objectKind;
+        if (SealedValues.Count != traits.SealedNames.Count) throw new ArgumentException("Sealed values must match trait order and count.", nameof(sealedValues));
+        if (!traits.IsDynamic && Properties.Count != 0) throw new ArgumentException("Sealed objects cannot have dynamic properties.", nameof(properties));
+        if (!traits.IsExternalizable && externalData is not null) throw new ArgumentException("Only externalizable objects have custom data.", nameof(externalData));
+        if (!traits.IsExternalizable && externalCodecId is not null) throw new ArgumentException("Only externalizable objects have a class codec.", nameof(externalCodecId));
+    }
+    public AmfTraits Traits { get; }
+    public AmfObjectKind ObjectKind { get; }
+    public IReadOnlyList<AmfValue> SealedValues { get; }
+    public IReadOnlyList<AmfProperty> Properties { get; }
+    public AmfValue? ExternalData { get; }
+    public string? ExternalCodecId { get; }
+    public override AmfNodeKind Kind => AmfNodeKind.Object;
+    public override IEnumerable<AmfValue> Children => SealedValues.Concat(Properties.Select(x => x.Value))
+        .Concat(ExternalData is null ? [] : [ExternalData]);
+}
+
+public sealed class AmfArrayNode : AmfNode
+{
+    public AmfArrayNode(AmfNodeId id, AmfArrayKind arrayKind, IEnumerable<AmfValue>? dense = null,
+        IEnumerable<AmfProperty>? associative = null, uint? declaredAssociativeCount = null) : base(id)
+    {
+        if (!Enum.IsDefined(arrayKind)) throw new ArgumentOutOfRangeException(nameof(arrayKind));
+        ArrayKind = arrayKind; Dense = AmfCollections.Freeze(dense ?? []); Associative = AmfCollections.Freeze(associative ?? []);
+        DeclaredAssociativeCount = declaredAssociativeCount;
+        if (arrayKind == AmfArrayKind.Amf0Strict && Associative.Count != 0) throw new ArgumentException("A strict array has no associative portion.");
+        if (arrayKind == AmfArrayKind.Amf0Ecma && Dense.Count != 0) throw new ArgumentException("AMF0 ECMA indices are ordered string keys.");
+    }
+    public AmfArrayKind ArrayKind { get; }
+    public IReadOnlyList<AmfValue> Dense { get; }
+    public IReadOnlyList<AmfProperty> Associative { get; }
+    public uint? DeclaredAssociativeCount { get; }
+    public override AmfNodeKind Kind => AmfNodeKind.Array;
+    public override IEnumerable<AmfValue> Children => Associative.Select(x => x.Value).Concat(Dense);
+}
+
+public sealed class AmfDateNode(AmfNodeId id, AmfNumber milliseconds, short? reservedAmf0Timezone = null) : AmfNode(id)
+{
+    public AmfNumber Milliseconds { get; } = milliseconds ?? throw new ArgumentNullException(nameof(milliseconds));
+    public short? ReservedAmf0Timezone { get; } = reservedAmf0Timezone;
+    public override AmfNodeKind Kind => AmfNodeKind.Date;
+    public override IEnumerable<AmfValue> Children => [];
+}
+
+public sealed class AmfXmlNode : AmfNode
+{
+    public AmfXmlNode(AmfNodeId id, string text, bool isDocument) : base(id)
+    { Text = text ?? throw new ArgumentNullException(nameof(text)); IsDocument = isDocument; }
+    public string Text { get; }
+    public bool IsDocument { get; }
+    public override AmfNodeKind Kind => IsDocument ? AmfNodeKind.XmlDocument : AmfNodeKind.Xml;
+    public override IEnumerable<AmfValue> Children => [];
+}
+
+public sealed class AmfByteArrayNode : AmfNode
+{
+    private readonly byte[] _bytes;
+    public AmfByteArrayNode(AmfNodeId id, ReadOnlySpan<byte> bytes) : base(id)
+    {
+        if (bytes.Length > AmfLimits.Default.MaximumFileBytes) throw new ArgumentException("ByteArray exceeds its model bound.", nameof(bytes));
+        _bytes = bytes.ToArray();
+    }
+    public ReadOnlyMemory<byte> Bytes => _bytes;
+    public override AmfNodeKind Kind => AmfNodeKind.ByteArray;
+    public override IEnumerable<AmfValue> Children => [];
+}
+
+public sealed class AmfVectorIntNode(AmfNodeId id, IEnumerable<int> values, bool isFixed) : AmfNode(id)
+{
+    public IReadOnlyList<int> Values { get; } = AmfCollections.Freeze(values);
+    public bool IsFixed { get; } = isFixed;
+    public override AmfNodeKind Kind => AmfNodeKind.VectorInt;
+    public override IEnumerable<AmfValue> Children => [];
+}
+public sealed class AmfVectorUIntNode(AmfNodeId id, IEnumerable<uint> values, bool isFixed) : AmfNode(id)
+{
+    public IReadOnlyList<uint> Values { get; } = AmfCollections.Freeze(values);
+    public bool IsFixed { get; } = isFixed;
+    public override AmfNodeKind Kind => AmfNodeKind.VectorUInt;
+    public override IEnumerable<AmfValue> Children => [];
+}
+public sealed class AmfVectorNumberNode(AmfNodeId id, IEnumerable<AmfNumber> values, bool isFixed) : AmfNode(id)
+{
+    public IReadOnlyList<AmfNumber> Values { get; } = AmfCollections.Freeze(values);
+    public bool IsFixed { get; } = isFixed;
+    public override AmfNodeKind Kind => AmfNodeKind.VectorNumber;
+    public override IEnumerable<AmfValue> Children => [];
+}
+public sealed class AmfVectorObjectNode : AmfNode
+{
+    public AmfVectorObjectNode(AmfNodeId id, IEnumerable<AmfValue> values, bool isFixed, string typeName = "*") : base(id)
+    { Values = AmfCollections.Freeze(values); IsFixed = isFixed; TypeName = typeName ?? throw new ArgumentNullException(nameof(typeName)); }
+    public IReadOnlyList<AmfValue> Values { get; }
+    public bool IsFixed { get; }
+    public string TypeName { get; }
+    public override AmfNodeKind Kind => AmfNodeKind.VectorObject;
+    public override IEnumerable<AmfValue> Children => Values;
+}
+public sealed class AmfDictionaryNode(AmfNodeId id, IEnumerable<AmfDictionaryEntry> entries, bool weakKeys) : AmfNode(id)
+{
+    public IReadOnlyList<AmfDictionaryEntry> Entries { get; } = AmfCollections.Freeze(entries);
+    public bool WeakKeys { get; } = weakKeys;
+    public override AmfNodeKind Kind => AmfNodeKind.Dictionary;
+    public override IEnumerable<AmfValue> Children => Entries.SelectMany(entry => new[] { entry.Key, entry.Value });
+}

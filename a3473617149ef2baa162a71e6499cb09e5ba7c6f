@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AllowUnsafeBlocks>true</AllowUnsafeBlocks></PropertyGroup>
+  <PropertyGroup>
+    <WebKitNativeLibrary>$(MSBuildProjectDirectory)/obj/native/$(Configuration)/$(RuntimeIdentifier)/libFlashMacOSWebKit.dylib</WebKitNativeLibrary>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(WebKitNativeLibrary)" Link="libFlashMacOSWebKit.dylib" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <Target Name="BuildFlashMacOSWebKit" BeforeTargets="PrepareForBuild;GetCopyToOutputDirectoryItems" Inputs="$(MSBuildProjectDirectory)/Native/FlashMacOSWebKit.m;$(MSBuildProjectFullPath);$(MSBuildProjectDirectory)/../../Product.props" Outputs="$(WebKitNativeLibrary)">
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(WebKitNativeLibrary)'))" />
+    <Exec Command="/usr/bin/xcrun clang -arch arm64 -mmacosx-version-min=$(ProductMinimumMacOS) -fobjc-arc -fblocks -dynamiclib -framework AppKit -framework WebKit -Wall -Wextra -Werror -Wno-unused-parameter -Wl,-install_name,@rpath/libFlashMacOSWebKit.dylib &quot;$(MSBuildProjectDirectory)/Native/FlashMacOSWebKit.m&quot; -o &quot;$(WebKitNativeLibrary)&quot;" />
+  </Target>
+  <ItemGroup>
+    <ProjectReference Include="../FlashMacOS.Domain/FlashMacOS.Domain.csproj" />
+    <ProjectReference Include="../FlashMacOS.Application/FlashMacOS.Application.csproj" />
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Controls.WebView" />
+  </ItemGroup>
+</Project>

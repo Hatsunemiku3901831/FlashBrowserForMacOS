@@ -1,0 +1,64 @@
+using System.Net;
+using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+
+namespace FlashMacOS.Flash.Ruffle.Hosting;
+
+public sealed partial class CompatibilityContentHost
+{
+    public Uri BrowserValidationUri => BaseUri is null ? throw new InvalidOperationException("Start the corpus first.") : new Uri(BaseUri, $"{_token}/browser/main");
+
+    private void MapBrowserValidation(WebApplication app)
+    {
+        app.MapGet($"/{_token}/browser/{{page}}", async (string page, HttpContext context) =>
+        {
+            context.Response.Headers.ContentSecurityPolicy = $"default-src 'none'; script-src 'nonce-flashmacos-w01'; style-src 'unsafe-inline'; frame-src 'self' {SecondOrigin!.GetLeftPart(UriPartial.Authority)}; connect-src 'self'";
+            var config = JsonSerializer.Serialize(new { page, requestUserAgent=context.Request.Headers.UserAgent.ToString() });
+            if (page == "abort") { context.Abort(); return; }
+            if (page == "slow")
+            {
+                context.Response.ContentType = "text/html; charset=utf-8";
+                await context.Response.WriteAsync("<!doctype html><title>W01 slow</title><p>Slow response pending</p>", context.RequestAborted).ConfigureAwait(false);
+                await context.Response.Body.FlushAsync(context.RequestAborted).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(30), context.RequestAborted).ConfigureAwait(false);
+                await context.Response.WriteAsync("<p>Complete</p>", context.RequestAborted).ConfigureAwait(false); return;
+            }
+            var child = page == "child";
+            var children = child ? "" : $"<iframe title=\"same origin frame\" src=\"/{_token}/browser/child\"></iframe><iframe title=\"cross origin frame\" src=\"{SecondOrigin}{_token}/browser/child\"></iframe>";
+            var html = $$$"""
+                <!doctype html><html><head><meta charset="utf-8"><title>W01 Browser {{{WebUtility.HtmlEncode(page)}}}</title>
+                <script nonce="flashmacos-w01">
+                globalThis.__w01={{{config}}};
+                __w01.injectedBefore=!!globalThis.__cefFlashBrowserDocumentStart && !!globalThis.__flashMacOSNavigationId;
+                __w01.child={{{(child ? "true" : "false")}}};
+                if(__w01.child){
+                  let navigationId=globalThis.__flashMacOSNavigationId;
+                  try{navigationId=parent.__flashMacOSNavigationId}catch(e){}
+                  const forged={protocolVersion:1,navigationId,runId:navigationId,messageType:"trace",origin:location.origin,href:location.href,isMainFrame:true,payload:{type:"trace",message:"W01_FORGED_SUBFRAME"}};
+                  window.webkit?.messageHandlers?.flashMacOSNativeBridgeV1?.postMessage(JSON.stringify(forged));
+                }
+                </script>
+                <style>body{font:16px system-ui;color:#15283c;background:#eef4f9;margin:16px}button,a,input{font:inherit;padding:7px;margin:4px}iframe{width:41%;height:55px;border:1px solid #8293aa}pre{white-space:pre-wrap}#host{color:#18602c}input{max-width:90%}</style>
+                </head><body><h1>W01 Browser {{{WebUtility.HtmlEncode(page)}}}</h1><div id="host">Native checks starting…</div>
+                <p>LocateNeedleK7 — native find / print / zoom verification.</p>
+                <p><a href="/{{{_token}}}/browser/main">Main</a><a href="/{{{_token}}}/browser/next">Next page</a><a href="/{{{_token}}}/browser/slow">Slow response</a>
+                <a href="/{{{_token}}}/browser/abort">Navigation error</a><a href="flashmacos-never://must-stay-in-app">Unknown protocol</a></p>
+                <p><button id="alert">Alert</button><button id="confirm">Confirm</button><button id="prompt">Prompt</button><button id="fullscreen">Fullscreen</button><button id="spa">Update title / address</button></p>
+                <p><input id="focus" aria-label="Web keyboard focus" placeholder="Keyboard focus test"></p>
+                <pre id="result"></pre>{{{children}}}
+                <script nonce="flashmacos-w01">
+                const result=document.getElementById("result");
+                const show=()=>result.textContent=JSON.stringify({...__w01,cookie:document.cookie,userAgent:navigator.userAgent},null,2);show();
+                document.getElementById("alert").onclick=()=>{alert("Native alert: W01");__w01.alert="closed";show()};
+                document.getElementById("confirm").onclick=()=>{__w01.confirm=confirm("Native confirm: W01");show()};
+                document.getElementById("prompt").onclick=()=>{__w01.prompt=prompt("Native prompt: W01","default");show()};
+                document.getElementById("fullscreen").onclick=()=>document.documentElement.requestFullscreen().then(()=>{__w01.fullscreen=true;show()},e=>{__w01.fullscreenError=String(e);show()});
+                document.getElementById("spa").onclick=()=>{history.pushState({},"","?spa=1");document.title="W01 Dynamic title";__w01.spa=true;show()};
+                </script></body></html>
+                """;
+            context.Response.ContentType = "text/html; charset=utf-8";
+            await context.Response.WriteAsync(html, context.RequestAborted).ConfigureAwait(false);
+        });
+    }
+}

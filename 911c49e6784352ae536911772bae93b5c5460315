@@ -1,0 +1,26 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+
+namespace FlashMacOS.Flash.Ruffle.Hosting;
+
+public sealed partial class CompatibilityContentHost
+{
+    public Uri RuffleValidationUri => new(BaseUri!, $"{_token}/w03/embeds");
+
+    private void MapRuffleValidation(WebApplication app)
+    {
+        app.MapGet($"/{_token}/w03/{{mode}}", (string mode, HttpContext context) =>
+        {
+            if (mode is not ("embeds" or "frame")) return Results.NotFound();
+            var origin = _rufflePublicPath!.GetLeftPart(UriPartial.Authority);
+            context.Response.Headers.ContentSecurityPolicy = $"default-src 'none'; script-src 'self' 'nonce-{_token}' 'wasm-unsafe-eval' {origin}; connect-src 'self' {origin}; frame-src 'self'; style-src 'unsafe-inline'; img-src data:";
+            var swf = $"/{_token}/assets/hello-world/test.swf";
+            var content = mode == "frame" ? $"<object id='frame-movie' type='application/x-shockwave-flash' data='{swf}' width='300' height='200'></object>"
+                : $"<h1>Ruffle static, dynamic and frame validation</h1><p>Fixed runtime, explicit nonce CSP, offline assets.</p>" +
+                  $"<object id='static-movie' type='application/x-shockwave-flash' data='{swf}' width='300' height='200'></object><div id='dynamic'></div>" +
+                  $"<iframe id='child' src='/{_token}/w03/frame' width='320' height='240'></iframe>" +
+                  $"<script nonce='{_token}'>setTimeout(()=>{{const e=document.createElement('embed');e.id='dynamic-movie';e.type='application/x-shockwave-flash';e.src='{swf}';e.width=300;e.height=200;document.getElementById('dynamic').appendChild(e);}},100);</script>";
+            return Results.Content("<!doctype html><meta charset='utf-8'><title>Ruffle product verification</title><style>body{font:16px system-ui}ruffle-object,ruffle-embed{display:inline-block}</style>" + content, "text/html; charset=utf-8");
+        });
+    }
+}

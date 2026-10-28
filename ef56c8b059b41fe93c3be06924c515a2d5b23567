@@ -1,0 +1,63 @@
+using System.Text.Json;
+using FlashMacOS.Domain.Browser;
+using FlashMacOS.Infrastructure.Paths;
+using FlashMacOS.Application.Browser;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class BrowserNativeBoundaryTests
+{
+    [TestMethod]
+    public void NativeFrameAndOriginAreRequiredEvenWhenEnvelopeClaimsMainFrame()
+    {
+        var body = JsonSerializer.Serialize(new { protocolVersion=1, navigationId=Guid.NewGuid().ToString("N"),
+            runId=Guid.NewGuid().ToString("N"), messageType="trace", origin="https://example.test",
+            href="https://example.test/game", isMainFrame=true, payload=new { type="trace", message="test" } });
+        Assert.ThrowsExactly<InvalidDataException>(() => WebBridgeProtocol.ParseNative(body, "https://example.test", false));
+        Assert.ThrowsExactly<InvalidDataException>(() => WebBridgeProtocol.ParseNative(body, "https://iframe.test", true));
+        var accepted = WebBridgeProtocol.ParseNative(body, "https://example.test", true);
+        Assert.AreEqual("test", accepted.Message);
+        Assert.ThrowsExactly<InvalidDataException>(() => WebBridgeProtocol.ParseNative("{\"type\":\"trace\",\"message\":\"old\"}", "https://example.test", true));
+    }
+
+    [TestMethod]
+    public void PurposeStoreIdentifiersRetainWebV1AndSeparateAllProfiles()
+    {
+        using var directory = new TemporaryDirectory();
+        var profiles = new[] { AppProfile.Resolve(directory.GetPath("home"), ProfileKind.Product),
+            AppProfile.Resolve(directory.GetPath("home"), ProfileKind.Development),
+            AppProfile.Resolve(directory.GetPath("home"), ProfileKind.Product, directory.GetPath("test")) };
+        var ids = new HashSet<Guid>();
+        foreach (var p in profiles)
+        {
+            Assert.AreEqual(p.DataStoreIdentifier, p.GetWebKitDataStoreIdentifier(BrowserPurpose.Web));
+            foreach (var purpose in Enum.GetValues<BrowserPurpose>()) Assert.IsTrue(ids.Add(p.GetWebKitDataStoreIdentifier(purpose)));
+        }
+        Assert.AreEqual(profiles[0].GetWebKitDataStoreIdentifier(BrowserPurpose.LocalPlayer),
+            AppProfile.Resolve(directory.GetPath("otherHome"), ProfileKind.Product).GetWebKitDataStoreIdentifier(BrowserPurpose.LocalPlayer));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => profiles[0].GetWebKitDataStoreIdentifier((BrowserPurpose)99));
+    }
+
+    [TestMethod]
+    [DataRow("https://example.test", true)]
+    [DataRow("http://localhost:1234/game", true)]
+    [DataRow("about:blank", true)]
+    [DataRow("file:///tmp/a.html", false)]
+    [DataRow("javascript:alert(1)", false)]
+    [DataRow("flashmacos-unknown://open", false)]
+    [DataRow("mailto:somebody@example.test", false)]
+    [DataRow("data:text/html,test", false)]
+    [DataRow("blob:https://example.test/id", false)]
+    public void HostNavigationRequiresExplicitWebAddress(string address, bool expected)
+        => Assert.AreEqual(expected, BrowserNavigationPolicy.CanNavigate(new Uri(address)));
+
+    [TestMethod]
+    public void UserAgentRejectsHeaderControlsAndExcessLength()
+    {
+        BrowserNavigationPolicy.ValidateUserAgent(null); BrowserNavigationPolicy.ValidateUserAgent("");
+        BrowserNavigationPolicy.ValidateUserAgent("FlashMacOS.Test/1.0");
+        Assert.ThrowsExactly<ArgumentException>(() => BrowserNavigationPolicy.ValidateUserAgent("a\r\nb"));
+        Assert.ThrowsExactly<ArgumentException>(() => BrowserNavigationPolicy.ValidateUserAgent(new string('a', 2049)));
+    }
+}

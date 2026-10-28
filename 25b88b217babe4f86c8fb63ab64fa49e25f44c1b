@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <Content Include="../../test-assets/sol-golden/**" Link="SolGolden/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="../../src/FlashMacOS.Sol.Managed/FlashMacOS.Sol.Managed.csproj" />
+    <ProjectReference Include="../../src/FlashMacOS.Domain/FlashMacOS.Domain.csproj" />
+    <ProjectReference Include="../../src/FlashMacOS.Application/FlashMacOS.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/TestSupport.cs" Link="TestSupport.cs" />
+    <Content Include="../../test-assets/legacy-sol/*.sol" Link="TestData/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/FlashMacOS.Flash.Ruffle/Assets/Fixtures/**" Link="TestData/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/FlashMacOS.Flash.Ruffle/Assets/Ruffle/**" Link="Assets/Ruffle/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../test-assets/flash/ruffle-v0.4.1/**" Link="CompatibilityFixtures/ruffle-v0.4.1/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../test-assets/flash/p02-project/**" Link="CompatibilityFixtures/p02-project/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

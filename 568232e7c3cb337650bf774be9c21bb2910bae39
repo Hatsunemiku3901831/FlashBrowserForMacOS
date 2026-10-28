@@ -1,0 +1,44 @@
+import importlib.util
+from pathlib import Path
+import shutil
+import tempfile
+import unittest
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location('product_identity', ROOT / 'scripts/product_identity.py')
+identity = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(identity)
+
+
+class ProductIdentityTests(unittest.TestCase):
+    def test_bundle_identity_is_rendered_from_one_source(self):
+        values = identity.read_identity(ROOT)
+        bundle = identity.render_bundle_info(ROOT)
+        for key, source in [('CFBundleName', 'ProductName'), ('CFBundleIdentifier', 'ProductBundleId'),
+                            ('CFBundleShortVersionString', 'ProductVersion'), ('CFBundleVersion', 'ProductBuild'),
+                            ('LSMinimumSystemVersion', 'ProductMinimumMacOS')]:
+            self.assertEqual(values[source], bundle[key])
+
+    def test_managed_build_imports_the_same_identity(self):
+        self.assertIn('Product.props', (ROOT / 'Directory.Build.props').read_text())
+        desktop = (ROOT / 'src/FlashMacOS.Desktop/FlashMacOS.Desktop.csproj').read_text()
+        self.assertNotIn('<Version>', desktop)
+        self.assertNotIn('<ApplicationId>', desktop)
+
+    def test_invalid_identity_is_rejected_before_packaging(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            shutil.copyfile(ROOT / 'Product.props', root / 'Product.props')
+            original = (root / 'Product.props').read_text()
+            for field, invalid in [('ProductBuild', '0'), ('ProductVersion', 'invalid')]:
+                with self.subTest(field=field):
+                    tree = ET.fromstring(original)
+                    tree.find('PropertyGroup/' + field).text = invalid
+                    ET.ElementTree(tree).write(root / 'Product.props')
+                    with self.assertRaises(ValueError): identity.read_identity(root)
+
+    def test_template_does_not_weaken_the_transport_policy(self):
+        ats = identity.render_bundle_info(ROOT)['NSAppTransportSecurity']
+        self.assertNotIn('NSAllowsArbitraryLoads', ats)
+        self.assertEqual({'mole.61.com', 'webres.61.com', 'game-res.61.com'}, set(ats['NSExceptionDomains']))

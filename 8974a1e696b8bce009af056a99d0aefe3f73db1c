@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reason": "A01 eight-module/five-test ProjectReference graph; initial unlocked lock generation only for new project graphs",
+  "versionsChanged": false,
+  "newThirdPartyPackages": [],
+  "sourceLocks": {
+    "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/packages.lock.json": "eb1beb60ba159ebcb90e675b66b758e47e0bde073dcec195a77557b0e4336327",
+    "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/packages.lock.json": "1b64525e9aa1c26798bfe96c368f249ceea552273532510939fa822ad1ed0262",
+    "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/packages.lock.json": "4ea9907cf78609dff878a51199b6c307614d57332a9d18eda78f526561048f70"
+  },
+  "formalLocks": {
+    "src/FlashMacOS.Application/packages.lock.json": "cb1c489ab5e97aafde76d4f3b42fc525d6d1c21c7de3a4f9c516da8cf3207e76",
+    "src/FlashMacOS.Browser.WebKit/packages.lock.json": "67e3f2c3a7f56366313d434fe7fa541e37ecd53c853190086e6cbb0482d33f80",
+    "src/FlashMacOS.Desktop/packages.lock.json": "6eb7f071cb35b3de30ec5440146622bdf13158bdbb2cab777d8a8c85faaa6f5e",
+    "src/FlashMacOS.Domain/packages.lock.json": "eb1beb60ba159ebcb90e675b66b758e47e0bde073dcec195a77557b0e4336327",
+    "src/FlashMacOS.Flash.Ruffle/packages.lock.json": "1f5238b0a398429a5e7782b1e96fd700dc04f83df4eb719932aef0113b9c3034",
+    "src/FlashMacOS.Infrastructure/packages.lock.json": "1f5238b0a398429a5e7782b1e96fd700dc04f83df4eb719932aef0113b9c3034",
+    "src/FlashMacOS.Platform.MacOS/packages.lock.json": "5ae27ad323747b71ca908dbc391f7030be5aafd5a20c12c42feb7639b8d34551",
+    "src/FlashMacOS.Sol.Managed/packages.lock.json": "1f5238b0a398429a5e7782b1e96fd700dc04f83df4eb719932aef0113b9c3034",
+    "tests/FlashMacOS.Application.Tests/packages.lock.json": "d73dbb9827e314a183e0dd20a5fbf236f688c6b27ab30f07ded5a8cd912d8e4c",
+    "tests/FlashMacOS.Desktop.Tests/packages.lock.json": "621b0ffab2e22dc0757cc679f1d38b267371d584f939bbe3e2c1f6453d82515e",
+    "tests/FlashMacOS.Domain.Tests/packages.lock.json": "8867e4a806efde03d87a5d613b5b4d986e08ebc9babc176d8e9785b0335480d6",
+    "tests/FlashMacOS.IntegrationTests/packages.lock.json": "138a39717fbad25087e1f58e41c787b6bd0d6e5eb0bf6192320db7ec72f63aca",
+    "tests/FlashMacOS.Sol.Managed.Tests/packages.lock.json": "63160f54da3e1e72b02195339351518e0c37c7af5ac0bc73aec8589617821add"
+  },
+  "formalProjectCount": 13
+}

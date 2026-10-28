@@ -1,0 +1,357 @@
+﻿using CefFlashBrowser.Data;
+using CefFlashBrowser.Models;
+using CefFlashBrowser.Utils;
+using SimpleMvvm;
+using SimpleMvvm.Command;
+using SimpleMvvm.Messaging;
+using System;
+using System.Collections.Generic;
+
+namespace CefFlashBrowser.ViewModels
+{
+    public class SettingsWindowViewModel : ViewModelBase
+    {
+        public DelegateCommand SetNavigationTypeCommand { get; set; }
+        public DelegateCommand SetSearchEngineCommand { get; set; }
+        public DelegateCommand DeleteCacheCommand { get; set; }
+        public DelegateCommand PopupAboutCefCommand { get; set; }
+        public DelegateCommand SetNewPageBehaviorCommand { get; set; }
+        public DelegateCommand AskRestartAppCommand { get; set; }
+        public DelegateCommand SetThemeCommand { get; set; }
+
+        public List<ItemViewModel<NavigationType>> NavigationTypes { get; } = new List<ItemViewModel<NavigationType>>
+        {
+            new ItemViewModel<NavigationType>(NavigationType.Automatic, "navigationType_auto"),
+            new ItemViewModel<NavigationType>(NavigationType.SearchOnly, "navigationType_searchOnly"),
+            new ItemViewModel<NavigationType>(NavigationType.NavigateOnly, "navigationType_navigateOnly")
+        };
+
+        public int CurrentNavigationTypeIndex
+        {
+            get => ItemViewModel.GetIndex(NavigationTypes, GlobalData.Settings.NavigationType);
+        }
+
+        public List<ItemViewModel<SearchEngine>> SearchEngines { get; } = new List<ItemViewModel<SearchEngine>>
+        {
+            new ItemViewModel<SearchEngine>(SearchEngine.Baidu, "searchEngine_baidu"),
+            new ItemViewModel<SearchEngine>(SearchEngine.DuckDuckGo, "searchEngine_duckDuckGo"),
+            new ItemViewModel<SearchEngine>(SearchEngine.Google, "searchEngine_google"),
+            new ItemViewModel<SearchEngine>(SearchEngine.Bing, "searchEngine_bing"),
+            //new ItemViewModel<SearchEngine>(SearchEngine.Sogou, "searchEngine_sogou"),
+            //new ItemViewModel<SearchEngine>(SearchEngine.So360, "searchEngine_so360"),
+            new ItemViewModel<SearchEngine>(SearchEngine.Yandex, "searchEngine_yandex"),
+            new ItemViewModel<SearchEngine>(SearchEngine.Bilibili, "searchEngine_bilibili"),
+            new ItemViewModel<SearchEngine>(SearchEngine.Game4399, "searchEngine_game4399")
+        };
+
+        public int CurrentSearchEngineIndex
+        {
+            get => ItemViewModel.GetIndex(SearchEngines, GlobalData.Settings.SearchEngine);
+        }
+
+        public List<ItemViewModel<NewPageBehavior>> NewPageBehaviors { get; } = new List<ItemViewModel<NewPageBehavior>>
+        {
+            new ItemViewModel<NewPageBehavior>(NewPageBehavior.OriginalWindow, "newPageBehavior_originalWindow"),
+            new ItemViewModel<NewPageBehavior>(NewPageBehavior.NewWindow, "newPageBehavior_newWindow")
+        };
+
+        public int CurrentNewPageBehaviorIndex
+        {
+            get => ItemViewModel.GetIndex(NewPageBehaviors, GlobalData.Settings.NewPageBehavior);
+        }
+
+        public List<ItemViewModel<Theme>> Themes { get; } = new List<ItemViewModel<Theme>>
+        {
+            new ItemViewModel<Theme>(Theme.Light, "theme_light"),
+            new ItemViewModel<Theme>(Theme.Dark, "theme_dark")
+        };
+
+        public int CurrentThemeIndex
+        {
+            get => ItemViewModel.GetIndex(Themes, GlobalData.Settings.Theme);
+        }
+
+        public bool EnableFakeFlashVersion
+        {
+            get => GlobalData.Settings.FakeFlashVersionSetting.Enable;
+            set
+            {
+                GlobalData.Settings.FakeFlashVersionSetting.Enable = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public string FakeFlashVersion
+        {
+            get => GlobalData.Settings.FakeFlashVersionSetting.FlashVersion;
+            set
+            {
+                GlobalData.Settings.FakeFlashVersionSetting.FlashVersion = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private static string ChromeArch
+        {
+            get => Environment.Is64BitProcess ? "; Win64; x64"
+                 : Environment.Is64BitOperatingSystem ? "; WOW64" : "";
+        }
+
+        public List<UserAgentPreset> UserAgentPresets { get; } = new List<UserAgentPreset>
+        {
+            // Internet Explorer
+            new UserAgentPreset("Internet Explorer 9",  "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Trident/5.0)"),
+            new UserAgentPreset("Internet Explorer 10", "Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; Trident/6.0)"),
+            new UserAgentPreset("Internet Explorer 11", "Mozilla/5.0 (Windows NT 10.0; Trident/7.0; rv:11.0) like Gecko"),
+            // Chrome
+            new UserAgentPreset("Chrome 69",  $"Mozilla/5.0 (Windows NT 10.0{ChromeArch}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36"),
+            new UserAgentPreset("Chrome 87",  $"Mozilla/5.0 (Windows NT 10.0{ChromeArch}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36"),
+            new UserAgentPreset("Chrome 109", $"Mozilla/5.0 (Windows NT 10.0{ChromeArch}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"),
+            // Firefox
+            new UserAgentPreset("Firefox 52",  "Mozilla/5.0 (Windows NT 10.0; rv:52.0) Gecko/20100101 Firefox/52.0"),
+            new UserAgentPreset("Firefox 78",  "Mozilla/5.0 (Windows NT 10.0; rv:78.0) Gecko/20100101 Firefox/78.0"),
+            new UserAgentPreset("Firefox 115", "Mozilla/5.0 (Windows NT 10.0; rv:115.0) Gecko/20100101 Firefox/115.0"),
+        };
+
+        public bool EnableCustomUserAgent
+        {
+            get => GlobalData.Settings.UserAgentSetting.EnableCustom;
+            set
+            {
+                GlobalData.Settings.UserAgentSetting.EnableCustom = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public string UserAgent
+        {
+            get => GlobalData.Settings.UserAgentSetting.UserAgent;
+            set
+            {
+                GlobalData.Settings.UserAgentSetting.UserAgent = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool EnableProxy
+        {
+            get => GlobalData.Settings.ProxySettings.EnableProxy;
+            set
+            {
+                GlobalData.Settings.ProxySettings.EnableProxy = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public string ProxyIP
+        {
+            get => GlobalData.Settings.ProxySettings.IP;
+            set
+            {
+                GlobalData.Settings.ProxySettings.IP = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public string ProxyPort
+        {
+            get => GlobalData.Settings.ProxySettings.Port;
+            set
+            {
+                GlobalData.Settings.ProxySettings.Port = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public string ProxyUserName
+        {
+            get => GlobalData.Settings.ProxySettings.UserName;
+            set
+            {
+                GlobalData.Settings.ProxySettings.UserName = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public string ProxyPassword
+        {
+            get => GlobalData.Settings.ProxySettings.Password;
+            set
+            {
+                GlobalData.Settings.ProxySettings.Password = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool DisableOnBeforeUnloadDialog
+        {
+            get => GlobalData.Settings.DisableOnBeforeUnloadDialog;
+            set
+            {
+                GlobalData.Settings.DisableOnBeforeUnloadDialog = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool DisableFullscreen
+        {
+            get => GlobalData.Settings.DisableFullscreen;
+            set
+            {
+                GlobalData.Settings.DisableFullscreen = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool HideMainWindowOnBrowsing
+        {
+            get => GlobalData.Settings.HideMainWindowOnBrowsing;
+            set
+            {
+                GlobalData.Settings.HideMainWindowOnBrowsing = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool FollowSystemTheme
+        {
+            get => GlobalData.Settings.FollowSystemTheme;
+            set
+            {
+                GlobalData.Settings.FollowSystemTheme = value;
+                RaisePropertyChanged();
+                ThemeManager.ChangeTheme(value ? ThemeManager.GetSystemTheme() : GlobalData.Settings.Theme);
+                Messenger.Global.Send(MessageTokens.REDRAW_ALL_FRAMES, null);
+            }
+        }
+
+        public bool EnableIntegratedDevTools
+        {
+            get => GlobalData.Settings.EnableIntegratedDevTools;
+            set
+            {
+                GlobalData.Settings.EnableIntegratedDevTools = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool SaveZoomLevel
+        {
+            get => GlobalData.Settings.SaveZoomLevel;
+            set
+            {
+                GlobalData.Settings.SaveZoomLevel = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool DisableGpuAcceleration
+        {
+            get => GlobalData.Settings.DisableGpuAcceleration;
+            set
+            {
+                GlobalData.Settings.DisableGpuAcceleration = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool DisableBrowserContextMenu
+        {
+            get => GlobalData.Settings.DisableBrowserContextMenu;
+            set
+            {
+                GlobalData.Settings.DisableBrowserContextMenu = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        private void SetNavigationType(NavigationType type)
+        {
+            GlobalData.Settings.NavigationType = type;
+        }
+
+        private void SetSearchEngine(SearchEngine engine)
+        {
+            GlobalData.Settings.SearchEngine = engine;
+        }
+
+        private void DeleteDirectory(string path)
+        {
+            new PathInfo(PathInfo.PathType.Directory, path).Delete();
+        }
+
+        private void DeleteCache()
+        {
+            WindowManager.Confirm(LanguageManager.GetString("message_deleteCache"), callback: result =>
+            {
+                if (result == true)
+                {
+                    while (true)
+                    {
+                        try
+                        {
+                            Messenger.Global.Send(MessageTokens.CLOSE_ALL_BROWSERS, null);
+                            CefSharp.Cef.Shutdown();
+                            DeleteDirectory(GlobalData.CachesPath);
+                            break;
+                        }
+                        catch (Exception e)
+                        {
+                            LogHelper.LogError("Delete cache failed", e);
+
+                            string msg = string.Format("{0}\n\n{1}:\n{2}",
+                                LanguageManager.GetString("error_deleteCachesRetry"), LanguageManager.GetString("error_message"), e.Message);
+
+                            bool retry = false;
+                            WindowManager.Confirm(msg, LanguageManager.GetString("dialog_error"), tmp => retry = tmp ?? false);
+
+                            if (!retry) { break; }
+                        }
+                    }
+
+                    Program.Restart();
+                }
+            });
+        }
+
+        private void PopupAboutCef()
+        {
+            WindowManager.ShowPopupWebPage("chrome://version/");
+        }
+
+        private void SetNewPageBehavior(NewPageBehavior newPageBehavior)
+        {
+            GlobalData.Settings.NewPageBehavior = newPageBehavior;
+        }
+
+        private void AskRestartApp()
+        {
+            WindowManager.Confirm(LanguageManager.GetString("message_restart"), callback: result =>
+            {
+                if (result == true)
+                {
+                    Messenger.Global.Send(MessageTokens.CLOSE_ALL_BROWSERS, null);
+                    Program.Restart();
+                }
+            });
+        }
+
+        private void SetTheme(Theme theme)
+        {
+            GlobalData.Settings.Theme = theme;
+            ThemeManager.ChangeTheme(theme);
+            Messenger.Global.Send(MessageTokens.REDRAW_ALL_FRAMES, null);
+        }
+
+        public SettingsWindowViewModel()
+        {
+            SetNavigationTypeCommand = new DelegateCommand<NavigationType>(SetNavigationType);
+            SetSearchEngineCommand = new DelegateCommand<SearchEngine>(SetSearchEngine);
+            DeleteCacheCommand = new DelegateCommand(DeleteCache);
+            PopupAboutCefCommand = new DelegateCommand(PopupAboutCef);
+            SetNewPageBehaviorCommand = new DelegateCommand<NewPageBehavior>(SetNewPageBehavior);
+            AskRestartAppCommand = new DelegateCommand(AskRestartApp);
+            SetThemeCommand = new DelegateCommand<Theme>(SetTheme);
+        }
+    }
+}

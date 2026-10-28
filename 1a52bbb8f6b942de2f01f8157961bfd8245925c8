@@ -1,0 +1,24 @@
+using System.Reflection;
+using FlashMacOS.Desktop.ViewModels;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class DesktopArchitectureTests
+{
+    [TestMethod]
+    public void ViewModelsDoNotHoldWindowsNativeControlsHandlesOrDialogs()
+    {
+        var failures = typeof(MainWindowViewModel).Assembly.GetTypes()
+            .Where(type => type.Namespace == "FlashMacOS.Desktop.ViewModels")
+            .SelectMany(type => type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            .Where(field => field.FieldType == typeof(nint) || field.FieldType == typeof(nuint)
+                || field.FieldType.FullName!.Contains("NativeWebView", StringComparison.Ordinal)
+                || field.FieldType.FullName.Contains("WKWebView", StringComparison.Ordinal)
+                || field.FieldType.FullName.Contains("FileDialog", StringComparison.Ordinal)
+                || field.FieldType.FullName.Contains("StorageProvider", StringComparison.Ordinal)
+                || field.FieldType.FullName.StartsWith("Avalonia.Controls.", StringComparison.Ordinal))
+            .Select(field => field.DeclaringType!.Name + "." + field.Name).ToArray();
+        Assert.IsEmpty(failures, string.Join(", ", failures));
+    }
+}

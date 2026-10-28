@@ -1,0 +1,55 @@
+using FlashMacOS.Infrastructure.Paths;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class TestProfileTests
+{
+    [TestMethod]
+    public void ProfilesSeparateDataLogsAndPersistentWebKitIdentity()
+    {
+        using var temporary = new TemporaryDirectory();
+        var one = new TestProfile(temporary.GetPath("one"));
+        var two = new TestProfile(temporary.GetPath("two"));
+        Assert.AreNotEqual(one.DataStoreIdentifier, two.DataStoreIdentifier);
+        Assert.AreNotEqual(new Guid("852984bf-5e1e-4859-9fc3-cbf5f1a71a63"), one.DataStoreIdentifier);
+        Assert.AreEqual(one.DataStoreIdentifier, new TestProfile(one.RootDirectory).DataStoreIdentifier);
+        one.EnsureCreated();
+        File.WriteAllText(one.RuffleSaveStorePath, "profile-one");
+        Assert.IsTrue(Directory.Exists(one.LogDirectory));
+        Assert.IsTrue(Directory.Exists(one.CacheDirectory));
+        Assert.IsFalse(File.Exists(two.RuffleSaveStorePath));
+    }
+
+    [TestMethod]
+    [DataRow("relative/profile")]
+    [DataRow("/")]
+    public void RejectsImplicitOrSharedRoots(string root)
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => new TestProfile(root));
+    }
+
+    [TestMethod]
+    public void RejectsLegacyDataAndHomeAncestorsWithoutCreatingFiles()
+    {
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        Assert.ThrowsExactly<ArgumentException>(() => new TestProfile(home));
+        Assert.ThrowsExactly<ArgumentException>(() => new TestProfile(Path.Combine(home, "Library")));
+        Assert.ThrowsExactly<ArgumentException>(() => new TestProfile(Path.Combine(home, "Library", "Application Support", "CefFlashBrowser", "smoke")));
+        Assert.ThrowsExactly<ArgumentException>(() => new TestProfile(Path.Combine(home, "Library", "WebKit", "com.mzying2001.cefflashbrowser.next.gate0")));
+    }
+
+    [TestMethod]
+    public void SymlinkAliasesShareProfileAndCannotEnterLegacyData()
+    {
+        using var temporary = new TemporaryDirectory();
+        var real = temporary.GetPath("real");
+        Directory.CreateDirectory(real);
+        var alias = temporary.GetPath("alias");
+        Directory.CreateSymbolicLink(alias, real);
+        Assert.AreEqual(new TestProfile(real).DataStoreIdentifier, new TestProfile(alias).DataStoreIdentifier);
+        var homeAlias = temporary.GetPath("home-alias");
+        Directory.CreateSymbolicLink(homeAlias, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+        Assert.ThrowsExactly<ArgumentException>(() => new TestProfile(Path.Combine(homeAlias, "Library", "Application Support", "CefFlashBrowser")));
+    }
+}

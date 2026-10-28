@@ -1,0 +1,11 @@
+namespace FlashMacOS.Application.Flash;
+
+public enum PlayerCommand { Pause, Resume, Reload, Fullscreen, Volume }
+
+public interface IRuffleScriptBuilder
+{
+    string CaptureSaves();
+    string ReplaceSave(string key, string base64);
+    string DeleteSave(string key);
+    string Control(PlayerCommand command, double volume = 1);
+}

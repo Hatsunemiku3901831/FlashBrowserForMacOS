@@ -1,0 +1,277 @@
+﻿<Window x:Class="CefFlashBrowser.Views.SolSaveManager"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:CefFlashBrowser.Views"
+        xmlns:m="clr-namespace:CefFlashBrowser.Models"
+        xmlns:vm="clr-namespace:CefFlashBrowser.ViewModels"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
+        xmlns:svgc="http://sharpvectors.codeplex.com/svgc/"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:behaviors="clr-namespace:CefFlashBrowser.Utils.Behaviors"
+        mc:Ignorable="d"
+        Width="800"
+        Height="500"
+        Title="{DynamicResource solSaveManager_title}"
+        DataContext="{Binding Source={StaticResource Locator}, Path=SolSaveManagerViewModel}">
+
+    <Window.InputBindings>
+        <KeyBinding Gesture="Ctrl+W"
+                    Command="{Binding ElementName=windowBehavior, Path=CloseWindowCommand}"/>
+        <KeyBinding Gesture="Ctrl+R"
+                    Command="{Binding ReloadWorkspacesCommand}"/>
+        <KeyBinding Gesture="F5"
+                    Command="{Binding CurrentWorkspace.ReloadSolFilesCommand}"/>
+    </Window.InputBindings>
+
+    <i:Interaction.Behaviors>
+        <behaviors:WindowBehavior x:Name="windowBehavior"/>
+    </i:Interaction.Behaviors>
+
+    <Window.Resources>
+        <svgc:SvgIcon x:Key="ExportIcon"
+                      Width="13.5"
+                      Height="13.5"
+                      UriSource="/Assets/Svgs/export.svg"/>
+
+        <svgc:SvgIcon x:Key="ImportIcon"
+                      Width="14"
+                      Height="14"
+                      UriSource="/Assets/Svgs/import.svg"/>
+
+        <svgc:SvgIcon x:Key="EditIcon"
+                      Width="13"
+                      Height="13"
+                      UriSource="/Assets/Svgs/edit.svg"/>
+
+        <svgc:SvgIcon x:Key="TrashIcon"
+                      Width="14"
+                      Height="14"
+                      UriSource="/Assets/Svgs/trash.svg"/>
+
+        <!--Icon shape via OpacityMask (shared SvgIcon); fill color from
+            ContentPresenter.Tag (DynamicResource), falls back to PrimaryTextBrush.-->
+        <DataTemplate x:Key="SharedSvgIconTemplate"
+                      DataType="{x:Type svgc:SvgIcon}">
+            <Rectangle Width="{Binding Width}"
+                       Height="{Binding Height}">
+                <Rectangle.OpacityMask>
+                    <VisualBrush Stretch="Uniform"
+                                 Visual="{Binding}"/>
+                </Rectangle.OpacityMask>
+                <Rectangle.Style>
+                    <Style TargetType="Rectangle">
+                        <Setter Property="Tag"
+                                Value="{Binding RelativeSource={RelativeSource Mode=TemplatedParent}, Path=Tag}"/>
+                        <Setter Property="Fill"
+                                Value="{Binding RelativeSource={RelativeSource Mode=Self}, Path=Tag}"/>
+                        <Style.Triggers>
+                            <Trigger Property="Tag" Value="{x:Null}">
+                                <Setter Property="Fill"
+                                        Value="{DynamicResource PrimaryTextBrush}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Rectangle.Style>
+            </Rectangle>
+        </DataTemplate>
+
+        <DataTemplate x:Key="WorkspaceTemplate"
+                      DataType="{x:Type vm:SaveMgrWorkspaceViewModel}">
+            <ListView VirtualizingStackPanel.IsVirtualizing="True"
+                      VirtualizingPanel.IsVirtualizingWhenGrouping="True"  
+                      VirtualizingPanel.VirtualizationMode="Recycling"
+                      ScrollViewer.CanContentScroll="True">
+                <ListView.Resources>
+                    <CollectionViewSource x:Key="SolFilesView"
+                                          Source="{Binding SolFiles}">
+                        <CollectionViewSource.GroupDescriptions>
+                            <PropertyGroupDescription PropertyName="WebsiteFolderName"/>
+                        </CollectionViewSource.GroupDescriptions>
+                        <i:Interaction.Triggers>
+                            <i:EventTrigger EventName="Filter">
+                                <i:InvokeCommandAction PassEventArgsToCommand="True"
+                                                       Command="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=DataContext.FilterCommand}"/>
+                            </i:EventTrigger>
+                        </i:Interaction.Triggers>
+                    </CollectionViewSource>
+                </ListView.Resources>
+
+                <ListView.ItemsSource>
+                    <Binding Source="{StaticResource SolFilesView}"/>
+                </ListView.ItemsSource>
+
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel/>
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem"
+                           BasedOn="{StaticResource ListViewItemBaseStyle}">
+                        <Setter Property="AllowDrop" Value="True"/>
+                        <EventSetter Event="MouseDoubleClick"
+                                     Handler="ListViewItemMouseDoubleClick"/>
+                        <EventSetter Event="PreviewMouseLeftButtonDown"
+                                     Handler="ListViewItemPreviewMouseLeftButtonDown"/>
+                        <EventSetter Event="MouseMove"
+                                     Handler="ListViewItemMouseMove"/>
+                        <EventSetter Event="PreviewDragOver"
+                                     Handler="ListViewItemPreviewDragOver"/>
+                        <EventSetter Event="Drop"
+                                     Handler="ListViewItemDrop"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
+
+                <ListView.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.ContainerStyle>
+                            <Style TargetType="GroupItem">
+                                <Setter Property="Margin" Value="0,0,0,5"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="GroupItem">
+                                            <Expander IsExpanded="True">
+                                                <Expander.Header>
+                                                    <TextBlock FontWeight="Bold"
+                                                               Text="{Binding Name}"/>
+                                                </Expander.Header>
+                                                <Expander.Content>
+                                                    <ItemsPresenter Margin="0,3,0,0"/>
+                                                </Expander.Content>
+                                            </Expander>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </GroupStyle.ContainerStyle>
+                    </GroupStyle>
+                </ListView.GroupStyle>
+
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Width="150"
+                                        Header="{DynamicResource solSaveManager_headerFileName}"
+                                        DisplayMemberBinding="{Binding FileName}"/>
+
+                        <GridViewColumn Width="400"
+                                        Header="{DynamicResource solSaveManager_headerFileDir}">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate DataType="{x:Type m:SolFileInfo}">
+                                    <TextBlock TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding FilePath}">
+                                        <Hyperlink Command="{Binding RelativeSource={RelativeSource AncestorType=ListView}, Path=DataContext.ShowInExplorerCommand}"
+                                                   CommandParameter="{Binding}"
+                                                   Foreground="{Binding RelativeSource={RelativeSource AncestorType=ListViewItem}, Path=Foreground}">
+                                            <Run Text="{Binding PathInWebsiteFolder}"/>
+                                        </Hyperlink>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="{DynamicResource solSaveManager_headerOperations}">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate DataType="{x:Type m:SolFileInfo}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <StackPanel.Resources>
+                                            <Style TargetType="Button"
+                                                   BasedOn="{StaticResource {x:Type Button}}">
+                                                <Setter Property="Width" Value="30"/>
+                                                <Setter Property="Height" Value="30"/>
+                                                <Setter Property="Padding" Value="0"/>
+                                            </Style>
+                                        </StackPanel.Resources>
+                                        <Button ToolTip="{DynamicResource common_export}"
+                                                Command="{Binding RelativeSource={RelativeSource AncestorType=ListView}, Path=DataContext.ExportSolCommand}"
+                                                CommandParameter="{Binding}">
+                                            <ContentPresenter Content="{StaticResource ExportIcon}"
+                                                              ContentTemplate="{StaticResource SharedSvgIconTemplate}"/>
+                                        </Button>
+                                        <Button Margin="5,0,0,0"
+                                                ToolTip="{DynamicResource common_import}"
+                                                Command="{Binding RelativeSource={RelativeSource AncestorType=ListView}, Path=DataContext.ImportSolCommand}"
+                                                CommandParameter="{Binding}">
+                                            <ContentPresenter Content="{StaticResource ImportIcon}"
+                                                              ContentTemplate="{StaticResource SharedSvgIconTemplate}"/>
+                                        </Button>
+                                        <Button Margin="5,0,0,0"
+                                                ToolTip="{DynamicResource solSaveManager_toolTipEdit}"
+                                                Command="{Binding RelativeSource={RelativeSource AncestorType=ListView}, Path=DataContext.EditSolCommand}"
+                                                CommandParameter="{Binding}">
+                                            <ContentPresenter Content="{StaticResource EditIcon}"
+                                                              ContentTemplate="{StaticResource SharedSvgIconTemplate}"/>
+                                        </Button>
+                                        <Button Margin="5,0,0,0"
+                                                ToolTip="{DynamicResource solSaveManager_toolTipDelete}"
+                                                Command="{Binding RelativeSource={RelativeSource AncestorType=ListView}, Path=DataContext.DeleteSolCommand}"
+                                                CommandParameter="{Binding}">
+                                            <ContentPresenter Tag="{DynamicResource DangerBrush}"
+                                                              Content="{StaticResource TrashIcon}"
+                                                              ContentTemplate="{StaticResource SharedSvgIconTemplate}"/>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </DataTemplate>
+    </Window.Resources>
+
+    <DockPanel>
+        <DockPanel Margin="10"
+                   DockPanel.Dock="Top">
+            <DockPanel.Resources>
+                <Style TargetType="Button"
+                       BasedOn="{StaticResource {x:Type Button}}">
+                    <Setter Property="Width" Value="30"/>
+                    <Setter Property="Height" Value="30"/>
+                    <Setter Property="Padding" Value="0"/>
+                </Style>
+            </DockPanel.Resources>
+
+            <Button Margin="0,0,10,0"
+                    Command="{Binding CurrentWorkspace.ReloadSolFilesCommand}"
+                    ToolTip="{DynamicResource solSaveManager_toolTipReload}">
+                <svgc:SvgIcon Width="14"
+                              Height="14"
+                              UriSource="/Assets/Svgs/reload.svg"/>
+            </Button>
+
+            <Grid DockPanel.Dock="Right"
+                  Margin="10,0,0,0"
+                  Width="200">
+                <hc:TextBox Padding="28,0,8,0"
+                            MaxLength="100"
+                            Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+                            hc:InfoElement.Placeholder="{DynamicResource solSaveManager_filterPlaceholder}">
+                    <i:Interaction.Behaviors>
+                        <behaviors:TextBoxSelectAllOnFocus/>
+                    </i:Interaction.Behaviors>
+                </hc:TextBox>
+
+                <Grid Margin="8,0,0,0"
+                      Width="13"
+                      Height="13"
+                      VerticalAlignment="Center"
+                      HorizontalAlignment="Left"
+                      IsHitTestVisible="False">
+                    <svgc:SvgIcon UriSource="/Assets/Svgs/search.svg"/>
+                </Grid>
+            </Grid>
+
+            <ComboBox ItemsSource="{Binding Workspaces}"
+                      SelectedValue="{Binding CurrentWorkspace}"
+                      DisplayMemberPath="WorkspaceDir"/>
+        </DockPanel>
+
+        <Grid Margin="10,0,10,10">
+            <ContentControl Content="{Binding CurrentWorkspace}"
+                            ContentTemplate="{StaticResource WorkspaceTemplate}"/>
+        </Grid>
+    </DockPanel>
+</Window>

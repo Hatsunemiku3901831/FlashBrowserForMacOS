@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "taskId": "P03",
+  "scope": "Development support plan, not a release certification",
+  "architecture": "osx-arm64",
+  "backend": "Avalonia 12.1.0 / NativeWebView 12.0.1 / WKWebView",
+  "runtime": {
+    "sdk": "10.0.301",
+    "framework": ".NET 10",
+    "packagedRuntime": "10.0.9",
+    "selfContained": true,
+    "releasePatchCheckRequired": "Q03; dependency changes remain separate"
+  },
+  "dependencyFloor": {
+    "macOS": "15.0",
+    "reason": ".NET 10 current supported OS list includes 15, 26, 27; its macOS 14 support ended 2026-09-14. Persistent WK dataStoreForIdentifier API requires macOS 14.0, so current vendor support policy is the stronger floor.",
+    "vendorSource": "https://github.com/dotnet/core/blob/main/release-notes/10.0/supported-os.md",
+    "frozenEvidence": "docs/evidence/P03/2026-10-28/support-source.json"
+  },
+  "candidateSystems": [
+    {
+      "version": "15.x",
+      "architecture": "arm64",
+      "validation": "BLOCKED",
+      "reason": "No physical macOS 15 test session available on this host",
+      "unblock": "Actual Apple Silicon device running macOS 15; install/upgrade/offline smoke in Q05"
+    },
+    {
+      "version": "26.5.1",
+      "architecture": "arm64",
+      "validation": "PASS",
+      "coverage": "M1 Pro prototype and fixed corpus only",
+      "evidence": "docs/compatibility-matrix.json"
+    },
+    {
+      "version": "27.x",
+      "architecture": "arm64",
+      "validation": "BLOCKED",
+      "reason": "No physical macOS 27 test session available on this host",
+      "unblock": "Actual Apple Silicon device running macOS 27; Q05 matrix"
+    }
+  ],
+  "deviceCoverage": [
+    {
+      "chip": "Apple M1 Pro",
+      "validation": "PASS",
+      "coverage": "Current prototype only"
+    },
+    {
+      "chip": "A second Apple Silicon generation",
+      "validation": "BLOCKED",
+      "unblock": "Physical independent generation for Q05; no virtual machine substitutes"
+    }
+  ],
+  "requiredContent": [
+    {
+      "name": "摩尔庄园",
+      "url": "http://mole.61.com/",
+      "goal": "Official game entry to visible game account/password/login UI",
+      "validation": "PASS",
+      "evidence": "docs/evidence/P02/2026-10-28/mole-login-result.json",
+      "limits": "No credential login or later gameplay claim"
+    }
+  ],
+  "knownLimitations": [
+    "Pinned Security.loadPolicyFile is a stub; CORS transport is measured separately",
+    "Synchronous reentrant ExternalInterface unsupported",
+    "Additional composition/IME duplication is FAIL pending W01/U04",
+    "Download GET smoke does not certify POST/blob/authentication W02",
+    "Full editor, transactions, migration, accessibility and distribution are planned work, not prototype support"
+  ]
+}

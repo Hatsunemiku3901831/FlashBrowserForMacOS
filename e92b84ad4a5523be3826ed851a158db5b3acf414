@@ -1,0 +1,16 @@
+using FlashMacOS.Domain.Configuration;
+
+namespace FlashMacOS.Application.Configuration;
+
+public sealed record ConfigurationSnapshot<T>(T Value, string Revision, bool NeedsUpgrade);
+
+public interface IConfigurationRepository<T>
+{
+    ValueTask<ConfigurationSnapshot<T>> LoadAsync(CancellationToken cancellationToken = default);
+    ValueTask<ConfigurationSnapshot<T>> ReloadAsync(CancellationToken cancellationToken = default);
+    ValueTask<ConfigurationSnapshot<T>> SaveAsync(T candidate, string expectedRevision, CancellationToken cancellationToken = default);
+    ValueTask<ConfigurationSnapshot<T>> UpgradeAsync(CancellationToken cancellationToken = default);
+}
+
+public interface ISettingsRepository : IConfigurationRepository<AppSettings>;
+public interface IFavoritesRepository : IConfigurationRepository<IReadOnlyList<FavoriteEntry>>;

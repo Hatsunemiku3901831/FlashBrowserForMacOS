@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Locked formal managed verification. Native/product/release acceptance is separate."""
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import shutil
+import subprocess
+import sys
+import tempfile
+import xml.etree.ElementTree as ET
+import uuid
+
+ROOT = Path(__file__).resolve().parents[1]
+def now(): return datetime.now(timezone.utc).isoformat()
+def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+def inputs():
+    paths = [ROOT / n for n in ('global.json', 'Product.props', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'FlashMacOS.slnx')]
+    for base in ('src', 'tests', 'test-assets', 'scripts', 'packaging'):
+        paths += [p for p in (ROOT / base).rglob('*') if p.is_file()
+                  and not {'bin', 'obj', 'TestResults', '__pycache__'}.intersection(p.relative_to(ROOT / base).parts)]
+    return {str(p.relative_to(ROOT)): sha(p) for p in sorted(paths)}
+
+def read_trx(directory):
+    ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+    cases = []
+    for path in sorted(directory.glob('*.trx')):
+        tree = ET.parse(path)
+        definitions = {e.attrib['id']: e.find('t:TestMethod', ns).attrib for e in tree.findall('.//t:UnitTest', ns)}
+        for e in tree.findall('.//t:UnitTestResult', ns):
+            method = definitions[e.attrib['testId']]
+            cases.append({'testName': e.attrib['testName'], 'className': method['className'],
+                          'methodName': method['name'], 'outcome': e.attrib['outcome'], 'trx': str(path.relative_to(ROOT))})
+    return cases
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--configuration', choices=['Debug', 'Release'], default='Debug')
+    parser.add_argument('--run-id', default='formal-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
+    parser.add_argument('--task', default='A01')
+    parser.add_argument('--deny-read', type=Path, action='append', default=[])
+    args = parser.parse_args()
+    if any(not value or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in value)
+           for value in (args.run_id, args.task)):
+        parser.error('task and run-id must be simple names')
+    output = ROOT / 'artifacts/evidence' / args.task / args.run_id
+    output.mkdir(parents=True, exist_ok=False)
+    start = now()
+    before = inputs()
+    locks = {p: h for p, h in before.items() if p.endswith('packages.lock.json')}
+    deny = [ROOT / 'reference', ROOT / 'bootstrap', *[p.resolve() for p in args.deny_read]]
+    for p in deny:
+        if p == ROOT or p in ROOT.parents:
+            parser.error('cannot deny the formal repository or its parent')
+    prefix = []
+    if platform.system() == 'Darwin':
+        sandbox = '(version 1) (allow default) ' + ' '.join('(deny file-read* (subpath ' + json.dumps(str(p)) + '))' for p in deny)
+        (output / 'denied-reads.sb').write_text(sandbox + '\n')
+        prefix = ['sandbox-exec', '-p', sandbox]
+    elif args.deny_read:
+        print('BLOCKED: source-denied check requires the current macOS sandbox driver', file=sys.stderr)
+        return 3
+    phases = [
+        ('boundaries', [sys.executable, str(ROOT / 'scripts/check-build-boundaries.py'), '--output', str(output / 'boundaries.json')]),
+        ('restore', ['dotnet', 'restore', str(ROOT / 'FlashMacOS.slnx'), '--locked-mode', '--disable-build-servers']),
+        ('build', ['dotnet', 'build', str(ROOT / 'FlashMacOS.slnx'), '--configuration', args.configuration, '--no-restore', '--disable-build-servers', '-m:1']),
+    ]
+    for p in sorted((ROOT / 'tests').glob('FlashMacOS.*/*.csproj')):
+        phases.append(('test-' + p.parent.name, ['dotnet', 'test', str(p), '--configuration', args.configuration,
+            '--no-build', '--disable-build-servers', '-m:1', '--logger', 'trx;LogFileName=' + p.stem + '.trx',
+            '--results-directory', str(output / 'TestResults')]))
+    phases.append(('tooling', [sys.executable, '-m', 'unittest', 'discover', '-s', str(ROOT / 'tests/tooling'), '-v']))
+    results = []
+    exit_code = 0
+    isolation = {'DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER': '1', 'MSBUILDDISABLENODEREUSE': '1',
+                 'MSBUILDNODEHANDSHAKESALT': 'FlashMacOS-' + str(uuid.uuid4())}
+    environment = {**os.environ, **isolation, 'FLASHMACOS_TEST_EVIDENCE_DIRECTORY': str(output / 'measurements')}
+    # A different working directory also detects accidental cwd-relative resources.
+    with tempfile.TemporaryDirectory(prefix='FlashMacOS-formal-verification-') as cwd:
+        for name, command in phases:
+            print(name + ': starting', flush=True)
+            with (output / (name + '.log')).open('wb') as log:
+                process = subprocess.run(prefix + command, cwd=cwd, env=environment, stdout=log, stderr=subprocess.STDOUT)
+            unchanged = all(sha(ROOT / p) == h for p, h in locks.items())
+            results.append({'phase': name, 'command': prefix + command, 'exitCode': process.returncode, 'locksUnchanged': unchanged})
+            print(name + f': exit {process.returncode}; locks unchanged={unchanged}', flush=True)
+            if process.returncode or not unchanged:
+                exit_code = process.returncode or 1
+                break
+    cases = read_trx(output / 'TestResults')
+    # Freeze a separate name migration map after a successful run; never count absent/ignored rows.
+    after = inputs()
+    if len(cases) < 110 or any(c['outcome'] != 'Passed' for c in cases) or before != after:
+        exit_code = exit_code or 1
+    (output / 'inputs.json').write_text(json.dumps({'before': before, 'unchanged': before == after,
+        'changes': {p: {'before': before.get(p), 'after': after.get(p)} for p in sorted(before.keys() | after.keys()) if before.get(p) != after.get(p)}}, ensure_ascii=False, indent=2) + '\n')
+    revision = subprocess.run(['git', 'rev-parse', '--verify', 'HEAD'], cwd=ROOT, text=True, capture_output=True)
+    result = {'taskId': args.task, 'caseId': 'formal-locked-managed-verification', 'runId': args.run_id,
+        'profileId': 'managed-tests-only', 'status': 'PASS' if not exit_code else 'FAIL',
+        'expected': 'formal boundaries, locked restore/build/tests, no source/bootstrap/reference reads, immutable inputs and locks',
+        'actual': {'phases': results, 'testCount': len(cases), 'tests': cases, 'inputsUnchanged': before == after,
+                   'sourceReadDenialApplied': bool(prefix), 'deniedPaths': list(map(str, deny)), 'buildIsolation': isolation},
+        'startedAt': start, 'finishedAt': now(), 'environment': {'architecture': platform.machine(), 'macOS': platform.mac_ver()[0],
+            'sdk': subprocess.check_output(['dotnet', '--version'], cwd=ROOT, text=True).strip(), 'configuration': args.configuration,
+            'targetHead': revision.stdout.strip() if revision.returncode == 0 else 'UNBORN; all changes uncommitted'},
+        'artifactHashes': {str(p.relative_to(ROOT)): sha(p) for p in sorted(output.rglob('*')) if p.is_file()},
+        'evidencePaths': [str(output.relative_to(ROOT))]}
+    (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+    print(json.dumps({'status': result['status'], 'testCount': len(cases), 'output': str(output.relative_to(ROOT))}))
+    return exit_code
+
+if __name__ == '__main__': sys.exit(main())

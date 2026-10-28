@@ -1,0 +1,14 @@
+namespace FlashMacOS.Application.Browser;
+
+public static class BridgeLimits
+{
+    public const int MaximumBodyCharacters = 96 * 1024 * 1024;
+    public const int MaximumPendingMessages = 64;
+    public const long MaximumQueuedCharacters = 128L * 1024 * 1024;
+    public const int MaximumSnapshotEntries = 1024;
+    public const int MaximumContextCharacters = 16 * 1024;
+
+    public static long EstimateCharacters(WebBridgeMessage message)
+        => (long)(message.Data?.Length ?? 0) + (message.Message?.Length ?? 0)
+           + (message.Key?.Length ?? 0) + (message.Url?.Length ?? 0) + 1024;
+}

@@ -1,0 +1,53 @@
+using System.Buffers.Binary;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class SolFileInspectorTests
+{
+    [TestMethod]
+    [DataRow("settings.sol", "settings", (int)SolEncoding.Amf0)]
+    [DataRow("mao.sol", "mao", (int)SolEncoding.Amf3)]
+    [DataRow("pvz.sol", "pvz", (int)SolEncoding.Amf3)]
+    [DataRow("FBCookie.sol", "FBCookie", (int)SolEncoding.Amf3)]
+    [DataRow("RuffleTest.sol", "RuffleTest", (int)SolEncoding.Amf0)]
+    public void ReadHeaderReusesLegacyFixtures(string fileName, string expectedName, int expectedEncoding)
+    {
+        var bytes = File.ReadAllBytes(TestAssets.Sol(fileName));
+
+        var header = SolFileInspector.ReadHeader(bytes);
+
+        Assert.AreEqual(expectedName, header.Name);
+        Assert.AreEqual((SolEncoding)expectedEncoding, header.Encoding);
+        Assert.AreEqual(bytes.Length, header.FileLength);
+    }
+
+    [TestMethod]
+    public void ReadHeaderRejectsInvalidMagic()
+    {
+        var bytes = File.ReadAllBytes(TestAssets.Sol("settings.sol"));
+        bytes[0] ^= 0xff;
+
+        Assert.ThrowsExactly<InvalidDataException>(() => SolFileInspector.ReadHeader(bytes));
+    }
+
+    [TestMethod]
+    public void ReadHeaderRejectsMismatchedChunkLength()
+    {
+        var bytes = File.ReadAllBytes(TestAssets.Sol("settings.sol"));
+        BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(2, 4), (uint)bytes.Length);
+
+        Assert.ThrowsExactly<InvalidDataException>(() => SolFileInspector.ReadHeader(bytes));
+    }
+
+    [TestMethod]
+    public void ReadHeaderRejectsUnsupportedEncoding()
+    {
+        var bytes = File.ReadAllBytes(TestAssets.Sol("settings.sol"));
+        var nameLength = BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(16, 2));
+        BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(18 + nameLength, 4), 2);
+
+        Assert.ThrowsExactly<InvalidDataException>(() => SolFileInspector.ReadHeader(bytes));
+    }
+}

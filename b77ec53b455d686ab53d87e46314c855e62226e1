@@ -1,0 +1,106 @@
+# FlashMacOS 接手地图
+
+这是项目结构与接手入口。任务状态只维护在 [docs/task-status.zh-CN.md](docs/task-status.zh-CN.md)，验收规则只由[实施方案](docs/implementation-plan.zh-CN.md)定义。
+
+最终运行与构建边界：只依赖 flashMacOS。本机来源配置、legacy-source remote、冻结 reference 和临时 bootstrap 不得进入正式应用依赖链。最终 app 自带运行时和资源；原项目可不存在。
+
+## 已有目录
+
+```text
+flashMacOS/
+  AGENTS.md                         开发约束与来源边界
+  START-HERE.zh-CN.md                启动顺序
+  README.md                         当前能力与执行入口
+  HRNESS.md                         本结构地图
+  HANDOFF.md                        本轮暂停交接、已知问题、避坑和恢复动作
+  FlashMacOS.slnx                   正式 solution：八个模块、五个测试工程
+  Directory.Build.props/targets     net10.0、警告策略和 ARM64 限制
+  Directory.Packages.props          集中固定依赖版本
+  Product.props                    产品名称、bundle、版本、build 和最低系统唯一来源
+  src/
+    FlashMacOS.Domain/              纯浏览器、内容及 SOL 显式类型/引用图
+    FlashMacOS.Application/         应用用例及浏览器/文件/存档/脚本等端口
+    FlashMacOS.Infrastructure/      路径、原子文件、JSON store、诊断日志
+    FlashMacOS.Sol.Managed/         完整 SOL/AMF codec、有界分段输出和取消
+    FlashMacOS.Browser.WebKit/      NativeWebView、WK 注入、原生截图与 bridge 解码
+      Native/FlashMacOSWebKit.m     项目自有 ARC 代理、frame 来源、查找/缩放/弹窗/焦点退出
+    FlashMacOS.Flash.Ruffle/        固定运行时、脚本、本地资源与兼容服务
+    FlashMacOS.Platform.MacOS/      原生文件面板适配
+    FlashMacOS.Desktop/             界面与 composition root
+  docs/
+    implementation-plan.zh-CN.md     任务、架构、契约与发布门禁
+    task-status.zh-CN.md             唯一执行状态与断点
+    source-baseline.json             原任务包的输入清单，保留原字节
+    provenance/                     实际快照 manifest、dry-run、重复导入结果
+    evidence/P00、P01、P02、P03、A01—A04、S01—S05、W01/ 逐任务报告及 hash 索引
+    contracts/                      端口、资源所有权、存储与兼容边界
+    compatibility-matrix.json        固定语料的实际结果与未支持边界
+  reference/legacy/                  296 份原文件冻结快照，仅阅读
+    spike/macos-host/               未提交原型、Ruffle、测试、打包脚本
+    CefFlashBrowser.Tests/TestData/  四份原始 SOL
+    CefFlashBrowser.Sol/             C++/CLI 格式算法参考
+    CefFlashBrowser/                 Windows 行为、模型、界面和五语言参考
+  test-assets/flash/                 固定 Ruffle 语料及独立 AS3 网络/音频样例
+  test-assets/web/mole/              摩尔庄园官方嵌入脚本原件、来源和 hash
+  scripts/import-source.py          幂等导入、白名单、hash、冲突保护
+  scripts/verify.sh                 正式 locked 构建、测试、边界与固定资产检查
+  scripts/check-build-boundaries.py 正式依赖方向与来源隔离检查
+  scripts/package-development.py    正式 ARM64 self-contained 开发包与严格开发签名
+  scripts/run-native.py             正式应用整包核对、独立 profile 和实际退出记录
+  scripts/verify-bootstrap.py       locked restore/build/test 与输入 hash
+  scripts/package-bootstrap.py      ARM64 开发包检查和冻结归档
+  scripts/run-native-prototype.py   原生隔离会话、整包核对、来源读取拒绝和退出码
+  scripts/compare-native-golden.py  WK 原生截图与官方像素预期比较
+  scripts/index-p02-evidence.py     从原始结果冻结兼容矩阵
+  scripts/regenerate-p02-fixtures.py 可选资产编译，普通构建无需此工具链
+  tests/FlashMacOS.*                五个正式测试工程；迁入原型断言及边界检查
+  tests/tooling/                    导入、边界负例、限定 transport 与网站规则回归
+  test-assets/legacy-sol/           四份 Legacy SOL 原字节，不依赖来源副本
+  packaging/macos/                  正式开发身份和限定 HTTP 策略
+  .github/workflows/                ARM64 self-hosted 托管验证；尚未远程运行
+  config/local-source.json          本机来源位置，忽略，不参与构建
+```
+
+## 原型入口与正式结构
+
+`bootstrap/legacy/spike/macos-host/` 已建立，保留 fixture 相对层级，在副本上复现基线和隔离 profile。它的命名与依赖暂时沿用原型；没有旧 AGENTS 或任务调度文档。`docs/provenance/bootstrap-import.json` 记录初始字节，`prototype-test-map.json` 按名称关联 97 项原始测试与当前结果。
+
+`scripts/verify-bootstrap.py` 是当前可执行的原型验证入口。GUI 必须设置 `FLASHMACOS_TEST_PROFILE`，实际运行记录在 `artifacts/profiles/<profile>/logs/`。路径、WebKit store 身份及启动失败语义见 [profile 契约](docs/contracts/prototype-profile.zh-CN.md)。
+
+`FlashMacOS.slnx`、`src/`、五个 `tests/` 工程和正式资产已建立。正式分层为 Domain → Application ← 各适配器，Desktop 只在 composition root 组装。正式构建禁止读取 reference、bootstrap 和原仓库。`scripts/seed-formal-*-a01.py` 仅记录一次性迁移，构建和运行不会调用它们；后续代码以 src 为唯一实现。
+
+`artifacts/` 保存构建、TRX、截图、音频和大日志，受 Git 忽略；各任务报告记录可定位路径与 SHA-256。保留原始失败证据，不用历史报告替代当前验收。
+
+## 操作原则
+
+1. 先核查工作目录、Git 根与状态，保留未提交内容。
+2. 从状态表选择依赖满足的首个任务，先置 IN_PROGRESS。
+3. 阅读对应定义、实现、调用方和测试，再修改。
+4. 完成专属验收、落盘证据、同步状态后才置 DONE。
+5. 缺少硬件、内容或凭据时记录具体 BLOCKED 条件，继续独立任务。
+
+当前目标 Git 为新建 `main`，无提交；`legacy-source` 仅用于历史读取，push URL 已禁用。没有新远程仓库，也没有对外发布。
+
+当前 W01 已验收，按用户要求暂停，W02 尚未开始。恢复时先看 HANDOFF.md 和唯一状态表；不要自动启动下一个任务，也不要重复 P00—S05。当前测试为 420 托管+21 工具；真实原生验收与这些计数分别记录。
+
+当前兼容入口支持 `--case suite`、`--case keyboard-input`、`--case mouse-click`、`--case hello-world`、`--case external-interface` 和 W01 的 `--case browser`；`--url http://mole.61.com/` 对应指定目标。`--inspect-page` 才启用完整诊断采集，数据写入本项目 artifacts/profiles。语料和证据语义见 docs/contracts/compatibility-corpus.zh-CN.md；不要用开发诊断页充当最终产品 UI。
+
+正式端口和资源所有权见 [interfaces.zh-CN.md](docs/contracts/interfaces.zh-CN.md)。启动与退出入口位于 Desktop/Composition/CompositionRoot.cs；共享生命周期在 Application/Lifecycle，导航和消息边界在 Application/Browser，native parser 与控件释放在 Browser.WebKit。`run-native.py --capture-count` 将诊断截图限制为 1—120 张，默认 6 张、间隔 10 秒；这是开发证据选项。
+
+W01 的路由入口为 Application/Browser/BrowserWorkspace.cs，长期保留两会话；用途 store ID 在 Infrastructure/Paths/AppProfile.cs。原生 API 边界在 Browser.WebKit/MacBrowserBridge.cs 与 Native/FlashMacOSWebKit.m，必须先停止消息/KVO/键盘 monitor 和回调再释放。其独立消息名为 flashMacOSNativeBridgeV1，不得替换 Avalonia 库持有的旧注册。构建由 csproj 使用当前 Apple SDK 编译自有 ARM64 动态库，并传递复制/签名；普通运行无需开发工具。
+
+浏览器能力端口为 Application/Browser/IBrowserTools.cs；确定性站点位于 Flash.Ruffle/Hosting/BrowserValidationSite.cs；实机自动验证在 Browser.WebKit/Diagnostics/BrowserNativeVerification.cs。原始失败和最终 gate 在 artifacts/evidence/W01，闭合 profile 的完整副本在 final-native-20261028-01/profiles。当前 CompatibilityEvidenceRecorder 同时有 nativeEvent 与旧 P02 行，解析时先按行类型分流；完整播放器迁移在 W03，不能假定全部历史 Flash 行已在新包重过。
+
+A03 路径入口为 Infrastructure/Paths/AppProfile.cs；持久化入口为 Persistence/AtomicFileWriter.cs、AtomicDocumentFile.cs 和 JsonRuffleSaveStore.cs。普通摘要日志使用有界 GateZeroSessionJournal；完整原始诊断只有显式测试采集开启。设置与收藏 v2 仓储已在 A04 实施；界面接入由 U02 实施。
+
+设置/收藏入口为 Domain/Configuration、Application/Configuration 和 Infrastructure/Configuration；SettingsService/FavoritesService 只在提交成功后发布快照。测试 golden 位于 test-assets/configuration，来源与字段映射见 docs/provenance/A04-*.json、docs/contracts/settings-field-map.json。
+
+SOL 图位于 Domain/Sol/AmfValues.cs、AmfNodes.cs、AmfGraph.cs；手工格式样例、原样本完整内容预期位于 test-assets/sol-golden，支持矩阵为 docs/codec-support-matrix.json。原生 C++ oracle 只在隔离 evidence 目录生成参考，不参与正式构建或运行。
+
+AMF0 入口为 Sol.Managed/AmfCodec.cs，共享有界上下文为 AmfReadContext.cs/AmfWriteContext.cs。Application/Sol/IAmfCodec.cs 是外层端口；原始单值 API 不等于多条 SOL 文件会话，调用约定见 amf-codec.zh-CN.md。
+
+AMF3 表与 reader/writer 位于 Amf3ReadContext.cs/Amf3WriteContext.cs；Amf3ValueCodec 持有不可变类注册元数据，公开扩展端口在 Application/Sol/IAmfExternalizableCodec.cs。默认注册表为空，未知外部类直接保留诊断而非猜测。
+
+完整文件入口为 Sol.Managed/SolCodec.cs；编辑/转换用例在 Application/Sol/SolEditorSession.cs、SolEdits.cs、SolEncodingConversion.cs。实际文件适配器在 Infrastructure/Persistence/SolFileStorage.cs，复用 A03 原子替换与版本检查；Domain/Sol/AmfGraphEquality.cs 比较完整图身份。契约 sol-editor.zh-CN.md；界面挂接由 U03 实施。六项旧 CLR 类型目录/default UI 断言明确待 U03，Legacy 12 类型不是新目录数量上限。
+
+S05 质量入口为 scripts/check-sol-quality.py，固定开发工具和原始覆盖率/fuzz/性能报告位于 artifacts/evidence/S05。tests/FlashMacOS.Sol.Managed.Tests/SolFuzzTests.cs、SolCancellationTests.cs 与 IntegrationTests/SolPerformanceTests.cs 保留可复现输入和逐次记录；共享 TestEvidence 的输出可由 FLASHMACOS_TEST_EVIDENCE_DIRECTORY 指定。全量规范预期仍是 test-assets/sol-golden，生成性质样本不能替代它。质量范围及计时边界见 sol-quality.zh-CN.md；G2 通过不等于桌面编辑器或发行通过。

@@ -1,0 +1,149 @@
+# FlashMacOS 详细交接：W02 / W03 已完成
+
+更新日期：2026-10-29，Australia/Sydney（AEDT，UTC+11）。用户要求“完成 W02 和 W03，然后交接”；本轮范围已经完成，**W04/U01 未开始，不自动继续**。简略入口为 [HANDOFF.md](HANDOFF.md)，任务状态唯一维护在 [docs/task-status.zh-CN.md](docs/task-status.zh-CN.md)，实施方案仍是定义/验收的权威。
+
+## 1. 当前状态与边界
+
+P00—P03、A01—A04、S01—S05、W01—W03 共 **16 项 DONE**，Project.md 已同步勾选。完整产品、全部 Flash 兼容和 Q01—Q05 发行门禁没有完成。
+
+工作目录与 Git 根均为 `/Users/umisonoda/PycharmProjects/flash/flashMacOS`。只读来源为 `/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser`，来源 HEAD `7cfbe01596168aca6326db7a68ca1c15d1b55638`；332 个业务文件/HEAD/dirty 和四个旧数据根已再次保持验证。导入白名单是 296 文件，两个口径不同。
+
+目标现在是 `main`，现场 HEAD **05c89d2726c4fbcdeb914bf659e99f0433679d3a**（提交标题 `1`），有既有提交及本轮 dirty。不要沿用旧交接“unborn HEAD/全部未跟踪”的描述。交接前完整 Git 状态在 [handoff-audit.json](docs/evidence/W03/2026-10-29/handoff-audit.json)，正式源码以 392 文件输入清单/归档为准。本轮没有执行 commit、push、远程仓库创建、公证或发布；所有原有内容保留。
+
+真实本机为 Apple M1 Pro、ARM64、macOS 26.5.1，固定 SDK 10.0.301、.NET 10.0.9、Python 3.14.5，Node/Apple 开发工具可用。当前 shell 可以在真实 Mac 上构建和运行，不是旧 HANDOFF2 所述 Linux VM，不需要用户代跑普通命令。不要硬编码本机 Homebrew SDK 位置进产品。
+
+只发布 `osx-arm64`；不建其他架构矩阵。固定 Ruffle 0.4.1、104 资产、13 锁未改，不手改第三方 JS/WASM/golden/二进制，不借此升级依赖。正式构建/运行禁读 source/reference/bootstrap；来源审计可只读。Domain/Application/适配层边界、候选磁盘提交、取消/所有权和不把真实会话作为 fixture 的要求继续有效。
+
+指定游戏目标仍是**摩尔庄园官方入口至可见空账号/密码登录 UI**；本轮新进程重新验证并点击账号框后原生 Quit，未输入/提交凭据，未验收登录后的玩法。赛尔号不是当前目标。
+
+## 2. 历史交接压缩摘要
+
+P00 冻结了来源未提交原型，P01/P02 建立 107 测试与兼容语料，P03 关闭 G0；A01—A04 完成八模块、生命周期、持久身份/原子事务、设置收藏模型；S01—S05 完成 AMF0/AMF3 全图/引用/循环、SOL 事务与受限 fuzz/性能，G2 只指核心；W01 完成原生浏览器、两个稳定用途 store、导航/查找/缩放/打印/全屏/消息信任与 Flash 焦点 Quit。各任务报告均在 docs/evidence/<ID>/2026-10-28。
+
+旧 W01 最终 420+21、package04、两进程各 12 项检查及摩尔庄园登录通过。旧较长驻留不算 Q02，IME、完整 U 系列 UI 和发行未完成。旧 W02 package05/24 项只是当时的候选；下面的 package13/25 项才是最终验收。
+
+旧两份原文已先完整备份到 [docs/handoffs/2026-10-29-w02-w03](docs/handoffs/2026-10-29-w02-w03/)。其中 HANDOFF.md.gz 是旧 HANDOFF.md 的无损压缩，解压 hash 与原文一致；HANDOFF-condensed.md 保存压缩后的历史摘要。它们保留旧事实及失败，不作为当前执行状态。
+
+## 3. W02 最终结果与未决窗口问题的结论
+
+先读 [W02 报告](docs/evidence/W02/2026-10-28/report.md)、[浏览器契约](docs/contracts/browser.zh-CN.md) W02 部分和 [ADR 0003](docs/adr/0003-native-downloads-and-popups.zh-CN.md)。
+
+下载使用原生 WKDownload，保持原请求/响应，不再复制 Cookie 后 HttpClient 重新 GET。覆盖 attachment、download 属性、blob/data、POST、HttpOnly Cookie、认证、跨源跳转、一次性链接及并发。文件先写同目录隐藏暂存，flush 后原子替换；取消/失败保留旧目标。popup 保持 GET/POST body/Content-Type、继承 opener 用途/data store，支持嵌套、页面关闭、下载页关闭与主窗退出排空。
+
+| 验收 | 最终位置（前缀 artifacts/evidence/W02） |
+|---|---|
+| Debug 454+21 | w02-managed-20261028-13 |
+| Release 454+21 | w02-managed-release-20261028-13 |
+| 同输入、19 ARM64 Mach-O、严格开发签名包 | w02-package-20261028-13 |
+| 25/25 原生检查，含 50 popup 循环、下载中 Quit | w02-native-20261028-13 |
+| 原生保存/Replace/取消/Basic sheet/长下载中红关主窗 | w02-manual-20261028-02 |
+| 最终汇总及完整闭合 profile 副本 | final-native-20261028-02 |
+
+最终真实自动进程 60 adapter 全部销毁、58 popup ownership 全释放；人工进程也 exit 0、failures=0，保存文件 hash 和无暂存/伪完成通过。attachment 为 262144 bytes，SHA `866122246c09788ed5c19dcdd8179d66b4bdfc6c147fecdaa5df099dbb6b4ba0`；Basic 4116 bytes，SHA `68b8a95bbaa6b700ccb7c1cf2fe7fe0be5864ff19eaaa738003bb818c38fb3b6`。只用 loopback 固定 w02-user/w02-pass。
+
+旧交接未定论的 NSWindow 壳已经查明：托管 PopupWindow 弱引用全部回收，surface/adapter 所有权释放；完整系统内存图定位 NSApplication previous-key-window/currentEvent 缓存，连续 50 次真实开关只保留最近最多两个不可见已关窗口，不累积。记录精确 ID/每次数量；不宣称瞬时零原生对象，不用私有 API 清空 AppKit 状态。最初诊断函数自身缺 autoreleasepool 的暂留已修复；清焦点无效尝试已撤回。原始 run01—12、内存图和失败原件保留。
+
+W02 输入 tar、provenance、来源/旧数据核验和 **5506 项**冻结证据见 [W02 acceptance-index.json](docs/evidence/W02/2026-10-28/acceptance-index.json)。该索引已在 W03 收尾时复核，零不匹配。后续修改活文档不会改变其 reviewed-documents 副本。
+
+W02 继续保留的边界：window.opener 不支持；下载随所属窗口关闭取消，应用级下载列表归 U02；Basic/Digest 仅 WebKit 会话内存，不写 Keychain。不是 W02 遗留失败。
+
+## 4. W03 最终结果
+
+先读 [W03 报告与逐项清单](docs/evidence/W03/2026-10-29/report.md)、[播放器契约](docs/contracts/ruffle-player.zh-CN.md) 和 [ADR 0004](docs/adr/0004-ruffle-completion-and-product-resources.zh-CN.md)。
+
+- 配置和状态类型：id、quality、scale、volume；逐站精确 host profile；Empty/Loading/Ready/Paused/Reloading/Faulted/Closed，携带 runId/错误。Reload 保留当前音量；完整配置 UI/持久化归 U02。
+- 可靠控制：串行 commandId + runId，dispatch ack 和实际完成/失败分开。Pause/Resume/Volume 检验实际 API 状态；Reload 等 metadata；Fullscreen 等真实事件/5 秒错误；宿主最大 30 秒。旧 run、导航、取消和关闭不冒充成功。
+- 固定公开 `load()` Promise 只表示开始流式载入；等待 metadata/loadedmetadata 最长 15 秒。trace 在 load 前、启动后及 metadata 时及时安装；每次 Hello 恰一条。坏电影明确错误/Faulted。
+- pagehide 清理 observer、trace、metadata/控制 waiter 和 timer；存档扫描前台 1 秒、后台 5 秒，visibilitychange 立即扫描且只留一个 timer。实际页面取消与 JS VM 生命周期回归均通过。
+- 产品 host 不读测试 SOL/SWF/兼容资源；home 显示打开方式和兼容说明。只有显式 Test + case/inspect 才创建诊断路由/host。纯产品包物理无测试资源；缺失/坏 hash 在浏览器/loopback 前明确失败，不下载替代版本。
+
+最终 Debug 和 Release 各 **462 托管 + 22 工具**，原型 107 名称保留，392 正式文件输入与以下两包逐文件相等。26 个 W03 正式文件变化，104 固定资产/13 锁不变。来源代码没有复制新增上游算法；固定 API 原文另存研究证据。
+
+| 内容 | 最终位置（前缀 artifacts/evidence/W03） |
+|---|---|
+| Debug / Release | w03-final-managed-20261029-07 / w03-final-release-20261029-07 |
+| 诊断包：19 纯 ARM64 Mach-O | w03-package-20261029-05 |
+| 纯产品资源包：19 纯 ARM64 Mach-O | w03-product-package-20261029-01 |
+| 播放器 10/10，全屏/缩放 | w03-player-20261029-05 |
+| P02 核心 23/23，真实手势与音频 PCM | w03-suite-20261029-01 |
+| 精确 ASCII / 七鼠标事件 | w03-keyboard-20261029-01 / w03-mouse-20261029-01 |
+| 精确非重入 ExternalInterface | w03-external-20261029-01 |
+| 原生 compositor / 零容差 0 差异、1200 非白像素 | w03-renderer-20261029-01/golden |
+| 新官方摩尔庄园登录 | w03-mole-20261029-01 |
+| 无诊断资源启动 / 原生文件面板用户 SWF | w03-product-20261029-01 |
+| 仅允许 localhost 的断外网播放 | w03-offline-product-20261029-01 |
+| 全外网拒绝 / 缺失、损坏 ruffle.js 明确启动错误 | w03-missing-runtime-20261029-02 / w03-corrupt-runtime-20261029-02 |
+| 最终 gate / 11 个完整闭合 profile 副本 / 文档副本 | final-native-20261029-01 |
+
+诊断 zip SHA **39616c739316cb2e91fa7a2d4c236e1e46e5ded2b1b8f938a2f7e2957202ec10**；纯产品 zip SHA **5bbb6357d3fc168b1b9d53fc1a70a40fe277ad9e65376f90102f2c19a361a2af**。两种 app 在 `artifacts/dev-packages/<包 run>/FlashMacOS.app`；运行后全部 bundle 文件仍等于归档，严格开发签名再次通过。错误注入只动隔离复制品的 ruffle.js，不是最终包。
+
+音频实际 destination 输入 PCM：440.00997755 Hz，mute RMS 0，音量比 0.3995784014，完整采样留存；不声称测量过硬件扬声器。ExternalInterface 精确 available=true、jsToAs=123.4、asToJs=true、structured=true；同步重入仍不支持。新的 [29 组矩阵](docs/evidence/W03/2026-10-29/compatibility-matrix.json) 含 23 核心 + ASCII/鼠标/四模式 Hello/ExternalInterface/renderer/摩尔庄园；根 docs/compatibility-matrix.json 保留 P02 历史原字节。
+
+九个已接受成功会话均 exit 0、composition.stopped failures=0、2/2 adapter 实际销毁；两个错误副本关闭 exit 1 为预期，零 adapter。missing 明确 “Required Ruffle 0.4.1 asset is missing”，corrupt 显示 hash mismatch 和两 SHA；全部外连拒绝，无静默联网 fallback。离线会话只允许 localhost，实际本地 Hello 可见。
+
+输入/来源/prototype 映射和源码 tar 在 docs/provenance/W03-*、docs/evidence/W03/2026-10-29；最终 [acceptance-index.json](docs/evidence/W03/2026-10-29/acceptance-index.json) 索引全部新/失败原件及完整 profile。artifacts 被 Git 忽略，搬机/备份必须一起保存，不能只复制可跟踪文件。
+
+## 5. 实现地图与所有权
+
+| 位置（均在 src 下） | 职责 |
+|---|---|
+| Domain/Flash/RuffleGameConfiguration.cs | 游戏配置、站点 profile、运行阶段/状态 |
+| Application/Flash/RufflePlayerCoordinator.cs | 控制串行化、run/command waiter、bridge 结果、导航/取消/排空 |
+| Application/Flash/IFlashPlayer.cs、ILocalContentHost.cs | 应用端口与产品 home/config 注册 |
+| Flash.Ruffle/Runtime/RuffleControls.js | 实际控制、完成/失败、pagehide/abort 清理 |
+| Flash.Ruffle/Runtime/RuffleMetadata.js | metadata 等待、超时/取消/离页清理 |
+| Flash.Ruffle/Runtime/RuffleStorageObserver.js | SOL 观察/扫描 timer、前后台节奏；身份隔离重构仍待 W04 |
+| Flash.Ruffle/Runtime/RuffleGameProfiles.cs | built-in mole-login/default 精确 host 配置 |
+| Flash.Ruffle/Hosting/LoopbackContentHost.cs | 无 fixture 产品构造；本地源/config/相对资源与 trace 时序 |
+| Flash.Ruffle/Hosting/RuffleValidationSite.cs | 显式 nonce CSP 的静态/动态/frame 测试页 |
+| Browser.WebKit/Diagnostics/RuffleNativeVerification.cs | 十项真正 app 内播放器验收 |
+| Application/Browser/DownloadManager.cs、Infrastructure/Persistence/LocalDownloadFiles.cs | W02 下载用例与候选文件提交 |
+| Browser.WebKit/Native/FlashMacOSWebKit.m、MacBrowserBridge.cs | 项目自有公开 WKDownload/导航/工具薄层，原生回调/GCHandle 所有权 |
+| Browser.WebKit/Diagnostics/NativeWindowDiagnostics.cs、DownloadPopupNativeVerification.cs | W02 直接 NSWindow 观测、弱引用/循环与 25 项验收 |
+| Desktop/Composition/CompositionRoot.cs | 两个主 surface、popup、产品/诊断选择、初始化/退出唯一组装点 |
+| Desktop/ViewModels/MainWindowViewModel.cs | home、兼容说明和应用端口调用；不持原生窗口/控件 |
+
+上表简写项目目录为 FlashMacOS.<名称>。真实路径可先 `rg --files src` 确认。Application 的 BrowserWorkspace 路由 Web/LocalPlayer，稳定 data store ID 在 Infrastructure/Paths/AppProfile.cs；旧 Web 区不自动复制给 LocalPlayer。独立 handler 为 flashMacOSNativeBridgeV1，不能替换第三方旧注册。
+
+`tests/tooling` 调用 scripts/tests/ruffle-lifecycle.cjs 验证真实脚本 timer/监听器/metadata/控制清理。产品打包开关为 `scripts/package-development.py --product-resources`；验收助手 `docs/evidence/W03/run-resource-fault.py`，冻结器 finalize-w03.py。工具均拒绝覆盖既有运行目录，新增验证用新 run ID。
+
+## 6. 失败原件和仍待后续的问题
+
+W02 run01—12 保留 bool 载荷、慢下载、空闲超时、观测自身持有引用与窗口缓存排查。W03 保留 red-01、native01 8/10、02/03 的 metadata/trace 时序失败与中断；04 是通过的前候选，**05** 才是最终全套复验包。坏 SWF 原来 Ready 的错误截图也保留，没有降低功能/跳过测试/修改 golden 求通过。
+
+missing/corrupt01 的实际错误正确，但证据助手在 privacy journal 的 null detail 查短语导致 TypeError。助手已改成先写进程结果，错误文本由实际 CUA 窗口观察单独确认；fresh run02 通过。原件/helper-failure.json 保留。
+
+CUA 在红色关闭后再请求 AX 状态可能重启已退出 app；曾额外启动错误副本 PID 8138、8301，未创建 adapter，现均原生关闭。完整日志保存在 artifacts/evidence/W03/cua-post-close-observation-relaunch-20261029-01，不计入正式隔离验收。**退出后读取 process-result/日志和进程清单，不再调用已关闭 app 的 getApp/getAXState。** 当前无本任务 app 或验证 runner 运行。
+
+| 后续事项 | 当前事实 |
+|---|---|
+| W04 | 新 profile/origin/contentId/SOL name 身份、分区注入、实时编辑写回/冲突/迁移没有完成。W03 只完成播放器，不宣称新存档隔离已实现。 |
+| U01—U03 | 设计系统/菜单、完整设置收藏、编辑器/存档管理器 UI 未完成；旧 CLR 目录/default 六断言仍待 U03。 |
+| U04 | 本轮中文 IME 初始运行仍有重复事件 FAIL；普通 ASCII exact PASS。两条独立 runId/原始行/截图都保留。 |
+| 已知能力 | 同步 ExternalInterface 重入、Flash 策略解释器、window.opener 不支持；不要把浏览器 CORS 测例推断成策略解释器支持。 |
+| W01/U 系列 | Safari Inspector 独立窗口流程未验收；旧 didFinish/title 元数据竞态没有在本轮扩大修复。 |
+| M01/M02 | 文件激活/迁移向导和旧数据显式迁移尚待实施，不自动使用旧用户数据试验。 |
+| Q01—Q05 | 干净用户/路径独立回归、长期负载预算、候选包、正式签名/公证、安装升级与系统设备矩阵待做；开发签名不代表发行验收。 |
+
+## 7. 恢复后的精确下一步（本轮未执行）
+
+1. 先核查 cwd/Git 根/status，保留既有提交和所有 dirty/未跟踪；读 START、实施方案与唯一状态表，复核 W02/W03 acceptance-index 的冻结 artifactHashes。不要因历史源码 hash 不同而修改旧归档；codeInputs 用于定位当时源码。
+2. 以 W04 为首个可执行任务，读实施方案第 6.3 节/W04、存储与播放器契约，以及 JsonRuffleSaveStore、内容身份/注册、RuffleStorageObserver、bridge ingress、SOL 编辑事务和调用方/测试。W04-before.json 是当前 392 文件基线；核验后才置 IN_PROGRESS。
+3. 先为跨 profile/origin/content 的注入隔离、同名 SOL、旧 v1 key/Base64 无损导入、候选写回、磁盘失败/冲突与重载确认建立失败用例；范围仍以 W04 专属验收为准，不提前做完整 U03。
+4. 在隔离 Test profile 做真实捕获→编辑→写回→游戏重读/重启；不可用旧报告替代。没有硬件/内容/凭据的项目按计划 BLOCKED 并明确解除条件，不虚报 DONE。
+5. 完成相应验收后同步状态、Project 与证据；U01 也可执行，但本轮没有开启。没有用户新授权不要提交/推送/发布。
+
+常规验证入口：
+
+```sh
+sh scripts/verify.sh --task W04 --run-id <新名> --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+# Release 验证另外使用新 run ID 并加 --configuration Release
+python3 scripts/package-development.py --task W04 --run-id <新包名> --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+python3 scripts/run-native.py --task W04 --package-task W04 --package-run <新包名> --run-id <新原生名> --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+```
+
+这些仍是开发工具，具体新任务实机 case 随 W04 实现；不要直接复用旧 W03 输出名。原生鼠标/键盘/面板用 CUA，页面浏览器自动化不能替代 WKWebView。
+
+## 8. 本次交接顺序与审计
+
+先逐字节备份两份原文；再 gzip 无损压缩旧 HANDOFF 并生成历史压缩摘要；随后覆盖本详细 HANDOFF2；最后写简短 HANDOFF 导航。步骤时间、前后 SHA、gzip 解压核验与备份目录由 [handoff-audit.json](docs/evidence/W03/2026-10-29/handoff-audit.json) 记录。详细交接留在本文件，简略入口不重复长篇内容。最终索引另外保存活文档的冻结副本，后续接手更新根文档不会改写本轮证据。

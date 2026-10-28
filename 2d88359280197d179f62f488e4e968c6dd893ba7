@@ -1,0 +1,213 @@
+{
+  "schemaVersion": 1,
+  "stage": "tests",
+  "files": [
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/Directory.Build.props",
+      "targetSha256": "63fa9fe1aeaddefa5f5146f7ee01cbdc6bfb6d715baa1bcaa4c794398edb2709",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.Domain.Tests/FlashMacOS.Domain.Tests.csproj",
+      "targetSha256": "91e6744d47b4e258bebca8154bf4568df947a78d11a73e15c1923255faf482b0",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.Application.Tests/FlashMacOS.Application.Tests.csproj",
+      "targetSha256": "9c9396f073b9dc39cd5414fca49105e5ac968d81cf52d0046a70e76fb2521391",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.Sol.Managed.Tests/FlashMacOS.Sol.Managed.Tests.csproj",
+      "targetSha256": "713015be9c83117882cd1fc54435f7562e44a8c77a000396c21945abb6afcba9",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.IntegrationTests/FlashMacOS.IntegrationTests.csproj",
+      "targetSha256": "bfcdfe7b1599b019f025cfab0269b21119ac7b363d38d163020b7d377d4c4921",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.Desktop.Tests/FlashMacOS.Desktop.Tests.csproj",
+      "targetSha256": "0998f1f0ac3c2013a7b6319392274cef8f36b73d0c43c2d44448caf065141ef1",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CompatibilityContentHostTests.cs",
+      "bootstrapSourceSha256": "374f4975c7de13345f701001a7a96f2a8e24b680038579f7f5473539731ef3e8",
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.IntegrationTests/CompatibilityContentHostTests.cs",
+      "targetSha256": "9e2f2852cfb732f093e7774cbec6a86945416378c210d279901a709165967c4e",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/GateZeroFixtureTests.cs",
+      "bootstrapSourceSha256": "acb62afdd6d28a4093e67c02b04236990abe513a2f46f5eae9e3e6dae00cacf2",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/GateZeroFixtureTests.cs",
+      "originalSourceSha256": "acb62afdd6d28a4093e67c02b04236990abe513a2f46f5eae9e3e6dae00cacf2",
+      "targetPath": "tests/FlashMacOS.IntegrationTests/GateZeroFixtureTests.cs",
+      "targetSha256": "8492171941b55bab6086855e0807e3c8c79a1148e35daf31a06b056cadc39de0",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/LoopbackContentHostTests.cs",
+      "bootstrapSourceSha256": "e52e5a1cb4acfd3981302bc4641c7c3624d1e307cba4bdb38e16cbefb6ad0243",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/LoopbackContentHostTests.cs",
+      "originalSourceSha256": "b95834e006a88ed0ae8a8b012d15a530955ee835a279fc3e157a7e28b19ce185",
+      "targetPath": "tests/FlashMacOS.IntegrationTests/LoopbackContentHostTests.cs",
+      "targetSha256": "cd151ca8a77fa2d35aaf251c8a741833d17608b8f560612610c1e2115e6e8569",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/NavigationResolverTests.cs",
+      "bootstrapSourceSha256": "06b457bcecc11d86b5630ee851530c4cd319a1413b0cb43a46e77c6a6e2b0b55",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/NavigationResolverTests.cs",
+      "originalSourceSha256": "06b457bcecc11d86b5630ee851530c4cd319a1413b0cb43a46e77c6a6e2b0b55",
+      "targetPath": "tests/FlashMacOS.IntegrationTests/NavigationResolverTests.cs",
+      "targetSha256": "0cff77cc022e6c84a4d7b67af01cb4165e55dc9637cdff435856ea50d5c8b26c",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/PathSafetyTests.cs",
+      "bootstrapSourceSha256": "beb824e0b535ccd82f6f00fbacd9c9b5e0f981eb8e2056c0033cfd54deb8b226",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/PathSafetyTests.cs",
+      "originalSourceSha256": "beb824e0b535ccd82f6f00fbacd9c9b5e0f981eb8e2056c0033cfd54deb8b226",
+      "targetPath": "tests/FlashMacOS.IntegrationTests/PathSafetyTests.cs",
+      "targetSha256": "bf04396d611fdba679843c741167da21b506e313d06685f52334a719c2853d3e",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleDocumentStartScriptBuilderTests.cs",
+      "bootstrapSourceSha256": "6e8eee6d2f90dbdf3226f4e918708e72dceb56f766325d2893d5f54a4d432482",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleDocumentStartScriptBuilderTests.cs",
+      "originalSourceSha256": "6e8eee6d2f90dbdf3226f4e918708e72dceb56f766325d2893d5f54a4d432482",
+      "targetPath": "tests/FlashMacOS.IntegrationTests/RuffleDocumentStartScriptBuilderTests.cs",
+      "targetSha256": "3c405e2711773ae8006dac4ee169ef6b75628c434903746867de57434cf2b644",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RufflePlayerCoordinatorTests.cs",
+      "bootstrapSourceSha256": "39ea7cf902974c5a81997f436d7de0b0de3e6ad804427086b5eeda35f1f2619e",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RufflePlayerCoordinatorTests.cs",
+      "originalSourceSha256": "7aa036f20f66a154de37483746603049c681d224a3de026bdac442cf1cc63c46",
+      "targetPath": "tests/FlashMacOS.IntegrationTests/RufflePlayerCoordinatorTests.cs",
+      "targetSha256": "676d7526d0e9b51c58a2436ae44a6cfacaaf36dd981eb953c78459da8f8fe364",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleSaveStoreTests.cs",
+      "bootstrapSourceSha256": "1e5a948a714daa52029e5395533d3204bd22ba413b7288505f9f9e1c842fc9e7",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleSaveStoreTests.cs",
+      "originalSourceSha256": "1e5a948a714daa52029e5395533d3204bd22ba413b7288505f9f9e1c842fc9e7",
+      "targetPath": "tests/FlashMacOS.IntegrationTests/RuffleSaveStoreTests.cs",
+      "targetSha256": "365cf8053c207bd6c07791298bb16007ee0864c25ec29d8499f7e75650f1a0f0",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/SolFileInspectorTests.cs",
+      "bootstrapSourceSha256": "79fb7459090ab4042788dc5ec61bcacac0f6be95a22be28bf74900d1f1c29dee",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/SolFileInspectorTests.cs",
+      "originalSourceSha256": "79fb7459090ab4042788dc5ec61bcacac0f6be95a22be28bf74900d1f1c29dee",
+      "targetPath": "tests/FlashMacOS.Sol.Managed.Tests/SolFileInspectorTests.cs",
+      "targetSha256": "1f6b92854c6f1c3541306d4f717b1a0bfb64bbf84de8874b6f41300c730120c8",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/TestProfileTests.cs",
+      "bootstrapSourceSha256": "ab5d6b94b37efe22a491a39b230f1aa1dec0f7a06def995845ac025e329ec0e7",
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.IntegrationTests/TestProfileTests.cs",
+      "targetSha256": "805e9d7df95ba09f1f96eca76d8311619bbfa534ea0ba481c80e593d3c7c1947",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/TestSupport.cs",
+      "bootstrapSourceSha256": "cca1d1f90ac21b7ffced937d7abd3e5ebf468b0cefcbdc1095683f6e9e286136",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/TestSupport.cs",
+      "originalSourceSha256": "cca1d1f90ac21b7ffced937d7abd3e5ebf468b0cefcbdc1095683f6e9e286136",
+      "targetPath": "tests/Shared/TestSupport.cs",
+      "targetSha256": "7d9f74dff29e0492247bfbbc9908c1533c5d60a293e3c33e0020ade3fb4000cb",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/WebBridgeProtocolTests.cs",
+      "bootstrapSourceSha256": "f4b9ef3734b86a6ac55887f03138165639c9310863c6093ae6d34533afddec75",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/WebBridgeProtocolTests.cs",
+      "originalSourceSha256": "f4b9ef3734b86a6ac55887f03138165639c9310863c6093ae6d34533afddec75",
+      "targetPath": "tests/FlashMacOS.IntegrationTests/WebBridgeProtocolTests.cs",
+      "targetSha256": "42e1361650566faa3a6b776156f2326bdd90ea74345c93c5f4acf6c49b91d87d",
+      "reason": "A01 preserve original test names, data rows and assertions; adapt namespace/port constructors only"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.IntegrationTests/GlobalUsings.cs",
+      "targetSha256": "ee9031d89b77096093f364886d7d6510db64dbfc3726be65b4e537709918d5b8",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.Sol.Managed.Tests/GlobalUsings.cs",
+      "targetSha256": "2292e60251c17b0768235c2e64f32eb440b0d9a3eff1b619eb4598bd9acfffc5",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.Domain.Tests/ArchitectureTests.cs",
+      "targetSha256": "e5486235e0d553e31ceb9bef40916a6564469b177547089b877477602b8f3f58",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.Application.Tests/ArchitectureTests.cs",
+      "targetSha256": "917754aa7900572b0e2d27d45c07d2154dd923945e785d6c05344edd0d65142d",
+      "reason": "A01 architecture regression"
+    },
+    {
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null,
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "targetPath": "tests/FlashMacOS.Desktop.Tests/ArchitectureTests.cs",
+      "targetSha256": "cf5c85c260582257ed3378ce49906ae00284aef1460b247740664bc1b892963c",
+      "reason": "A01 architecture regression"
+    }
+  ]
+}

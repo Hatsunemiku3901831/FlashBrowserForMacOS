@@ -1,0 +1,591 @@
+{
+  "schemaVersion": 1,
+  "sourceManifestSha256": "1b535474f00b5cb7189c9320d744f8ee38e3faa6df94d1a76e15f96ee7827c8b",
+  "excludedFromWorkingCopy": [
+    "spike/macos-host/AGENTS.md",
+    "spike/macos-host/docs (historical task scheduling and reports remain in reference)"
+  ],
+  "files": [
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/TestData/FBCookie.sol",
+      "sourceSha256": "5189e30cf485f3f6427ff275c942877cbdd29637907342ac8c8433aacf6df4a4",
+      "targetRelativePath": "bootstrap/legacy/CefFlashBrowser.Tests/TestData/FBCookie.sol",
+      "initialSha256": "5189e30cf485f3f6427ff275c942877cbdd29637907342ac8c8433aacf6df4a4",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/TestData/mao.sol",
+      "sourceSha256": "efd9d1d647fa1542e63e2aa57d824e9b3b82eac1f25f36ee64abf5f16a94fa0b",
+      "targetRelativePath": "bootstrap/legacy/CefFlashBrowser.Tests/TestData/mao.sol",
+      "initialSha256": "efd9d1d647fa1542e63e2aa57d824e9b3b82eac1f25f36ee64abf5f16a94fa0b",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/TestData/pvz.sol",
+      "sourceSha256": "f87829c3be383331cd9c2895d42e4da57ded6cb7132ce03f8cad3dbbe4bd9ad7",
+      "targetRelativePath": "bootstrap/legacy/CefFlashBrowser.Tests/TestData/pvz.sol",
+      "initialSha256": "f87829c3be383331cd9c2895d42e4da57ded6cb7132ce03f8cad3dbbe4bd9ad7",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/TestData/settings.sol",
+      "sourceSha256": "c1f9c4c1700f440596daee7f9d2725093c7539ddc6503a3ca2450d9b8a7df226",
+      "targetRelativePath": "bootstrap/legacy/CefFlashBrowser.Tests/TestData/settings.sol",
+      "initialSha256": "c1f9c4c1700f440596daee7f9d2725093c7539ddc6503a3ca2450d9b8a7df226",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/.gitignore",
+      "sourceSha256": "f162171ded7ff8c1d6032f7cb50317bc19cc4d1bbd4757be9f8ea75cdec540f1",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/.gitignore",
+      "initialSha256": "f162171ded7ff8c1d6032f7cb50317bc19cc4d1bbd4757be9f8ea75cdec540f1",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/CefFlashBrowser.MacOS.Spike.slnx",
+      "sourceSha256": "4e02927efda996cf67305548a5720215c6cf778436d5aea330d236d53f61dc71",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/CefFlashBrowser.MacOS.Spike.slnx",
+      "initialSha256": "4e02927efda996cf67305548a5720215c6cf778436d5aea330d236d53f61dc71",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/Directory.Build.props",
+      "sourceSha256": "0f2ba6c004dd07cb2adb0e700d520bcd377f45df81e1ee3abe55ae077252a052",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/Directory.Build.props",
+      "initialSha256": "0f2ba6c004dd07cb2adb0e700d520bcd377f45df81e1ee3abe55ae077252a052",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/Directory.Packages.props",
+      "sourceSha256": "d3272ebb487297e82ac8bee64be68cad81b57ba98c8fbc0d5d7ef4681f709dca",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/Directory.Packages.props",
+      "initialSha256": "d3272ebb487297e82ac8bee64be68cad81b57ba98c8fbc0d5d7ef4681f709dca",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/README.md",
+      "sourceSha256": "5e7a376e6e2cb8b0a660fc37d032b4a1e68326d513269945d7d11c9289c0cb8c",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/README.md",
+      "initialSha256": "5e7a376e6e2cb8b0a660fc37d032b4a1e68326d513269945d7d11c9289c0cb8c",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/global.json",
+      "sourceSha256": "1497bda77ac26a91600f9eaa9d733be95a970961816c63738a4aafe1dc9c14e3",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/global.json",
+      "initialSha256": "1497bda77ac26a91600f9eaa9d733be95a970961816c63738a4aafe1dc9c14e3",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/packaging/macos/CefFlashBrowser.development.entitlements",
+      "sourceSha256": "3726221a606dae99b53f3f561754842b0e18fad422c134479e4a5fa9a5f466a4",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/packaging/macos/CefFlashBrowser.development.entitlements",
+      "initialSha256": "3726221a606dae99b53f3f561754842b0e18fad422c134479e4a5fa9a5f466a4",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/packaging/macos/CefFlashBrowser.entitlements",
+      "sourceSha256": "a2f94dda68da5a6d994132cfc3ee49f07b83bccc5c1b9d5653e2e5fdb228ff41",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/packaging/macos/CefFlashBrowser.entitlements",
+      "initialSha256": "a2f94dda68da5a6d994132cfc3ee49f07b83bccc5c1b9d5653e2e5fdb228ff41",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/packaging/macos/Info.plist",
+      "sourceSha256": "b57bb9aa6951c13e5c38cc267edfaf5977b2eda9810182c01b8dbf283624ce2b",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/packaging/macos/Info.plist",
+      "initialSha256": "b57bb9aa6951c13e5c38cc267edfaf5977b2eda9810182c01b8dbf283624ce2b",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/scripts/package-macos.sh",
+      "sourceSha256": "e6dc82e3d760b9693faa084c43477de019242d3cebfb644fd87ca2ebb17251e8",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/scripts/package-macos.sh",
+      "initialSha256": "e6dc82e3d760b9693faa084c43477de019242d3cebfb644fd87ca2ebb17251e8",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/scripts/verify-arm64-baseline.sh",
+      "sourceSha256": "6e7677bcf7bf3f57adc66e1f1c4bbdcfbed8f4f451aa7b21bf744f707e4bff37",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/scripts/verify-arm64-baseline.sh",
+      "initialSha256": "6e7677bcf7bf3f57adc66e1f1c4bbdcfbed8f4f451aa7b21bf744f707e4bff37",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs",
+      "sourceSha256": "9126c7bbe43c3a6f93c83f72dc491e4f4edfaf7a0594fdc54e415f648635a259",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs",
+      "initialSha256": "9126c7bbe43c3a6f93c83f72dc491e4f4edfaf7a0594fdc54e415f648635a259",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/WebBridgeProtocol.cs",
+      "sourceSha256": "3bb286dbde457915b52d6405a3920a0110e64e75517b9096f601f881b7b62f90",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/WebBridgeProtocol.cs",
+      "initialSha256": "3bb286dbde457915b52d6405a3920a0110e64e75517b9096f601f881b7b62f90",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Navigation/NavigationResolver.cs",
+      "sourceSha256": "d63b625cab0af4cafb3c6f954f142b733d5a14e01f715a99a051ac5c28f1acc4",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Navigation/NavigationResolver.cs",
+      "initialSha256": "d63b625cab0af4cafb3c6f954f142b733d5a14e01f715a99a051ac5c28f1acc4",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+      "sourceSha256": "49d01e621981c698a339e69ccf9977e99895b4147066d28f4c8d95a188b7a9a7",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+      "initialSha256": "49d01e621981c698a339e69ccf9977e99895b4147066d28f4c8d95a188b7a9a7",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LocalContentContracts.cs",
+      "sourceSha256": "b28df276c68022144f52ca94d4af664d29720c6d81c892b5680d9f88ec540f61",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LocalContentContracts.cs",
+      "initialSha256": "b28df276c68022144f52ca94d4af664d29720c6d81c892b5680d9f88ec540f61",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "sourceSha256": "e94a26aa8a8ae810b924d90092b59cdf74349dcd67c7ff1ac384695a53507d6d",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "initialSha256": "e94a26aa8a8ae810b924d90092b59cdf74349dcd67c7ff1ac384695a53507d6d",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/PathSafety.cs",
+      "sourceSha256": "fd0f16a875b9dddb42255cff122ffbce2f3b7e58a9617b8a919f981d41ee0485",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/PathSafety.cs",
+      "initialSha256": "fd0f16a875b9dddb42255cff122ffbce2f3b7e58a9617b8a919f981d41ee0485",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleAssetManifest.cs",
+      "sourceSha256": "6f2f4dfd4713b80de937c710f2bb85329c87bc645db7f05629d5bcc810d39b98",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleAssetManifest.cs",
+      "initialSha256": "6f2f4dfd4713b80de937c710f2bb85329c87bc645db7f05629d5bcc810d39b98",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "sourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "initialSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs",
+      "sourceSha256": "4fe0d8aa09405c28a7eee189348a8bd1c88e0e29fb77094d265a557e364f881a",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs",
+      "initialSha256": "4fe0d8aa09405c28a7eee189348a8bd1c88e0e29fb77094d265a557e364f881a",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs",
+      "sourceSha256": "13bbae46778d59bf7e5d52cbb96cdc014448f21c953949bce339666b45be0afe",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs",
+      "initialSha256": "13bbae46778d59bf7e5d52cbb96cdc014448f21c953949bce339666b45be0afe",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Paths/AppPaths.cs",
+      "sourceSha256": "b3cf043ae322864d1fd1a49070875c835b91c84011c45616b86780b8d959a2fa",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Paths/AppPaths.cs",
+      "initialSha256": "b3cf043ae322864d1fd1a49070875c835b91c84011c45616b86780b8d959a2fa",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Persistence/AtomicFileWriter.cs",
+      "sourceSha256": "e3082e0f327d558b426bc44f505b0934c450218fdcb68031dc5a8b476920b99a",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Persistence/AtomicFileWriter.cs",
+      "initialSha256": "e3082e0f327d558b426bc44f505b0934c450218fdcb68031dc5a8b476920b99a",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Properties/AssemblyInfo.cs",
+      "sourceSha256": "3e61513bca0921c1c8c089ca2436eefea786ab18e3cd60d802c14dddfa69992b",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Properties/AssemblyInfo.cs",
+      "initialSha256": "3e61513bca0921c1c8c089ca2436eefea786ab18e3cd60d802c14dddfa69992b",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Sol/SolFileHeader.cs",
+      "sourceSha256": "ff7b93005f3e4dea8faf99b2da2321ec146155fcf714fc330ac12af69aa23b94",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Sol/SolFileHeader.cs",
+      "initialSha256": "ff7b93005f3e4dea8faf99b2da2321ec146155fcf714fc330ac12af69aa23b94",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/packages.lock.json",
+      "sourceSha256": "eb1beb60ba159ebcb90e675b66b758e47e0bde073dcec195a77557b0e4336327",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/packages.lock.json",
+      "initialSha256": "eb1beb60ba159ebcb90e675b66b758e47e0bde073dcec195a77557b0e4336327",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml",
+      "sourceSha256": "e02adcd561dad9b77ba164f388c03740cd70d9bd2c1ec4db4119f835534ffc86",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml",
+      "initialSha256": "e02adcd561dad9b77ba164f388c03740cd70d9bd2c1ec4db4119f835534ffc86",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "sourceSha256": "ce0cff3b8b93de2f677e3df2c0a821fe4b7365bae14847f8195e1065fd236dde",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "initialSha256": "ce0cff3b8b93de2f677e3df2c0a821fe4b7365bae14847f8195e1065fd236dde",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/RuffleTest.sol",
+      "sourceSha256": "f680967f67a440d153d63cfd00c89ece1c0770d79531d51003afa3131758b978",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/RuffleTest.sol",
+      "initialSha256": "f680967f67a440d153d63cfd00c89ece1c0770d79531d51003afa3131758b978",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/THIRD-PARTY.md",
+      "sourceSha256": "b4702573aa120ab010305454d452cb6ab564637e6ffd486f4f90d38451dcb61e",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/THIRD-PARTY.md",
+      "initialSha256": "b4702573aa120ab010305454d452cb6ab564637e6ffd486f4f90d38451dcb61e",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/Test.as",
+      "sourceSha256": "d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/Test.as",
+      "initialSha256": "d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/index.html",
+      "sourceSha256": "e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/index.html",
+      "initialSha256": "e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.fla",
+      "sourceSha256": "1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.fla",
+      "initialSha256": "1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.swf",
+      "sourceSha256": "d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.swf",
+      "initialSha256": "d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.ts",
+      "sourceSha256": "ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.ts",
+      "initialSha256": "ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/Test.as",
+      "sourceSha256": "b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/Test.as",
+      "initialSha256": "b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/output.txt",
+      "sourceSha256": "0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/output.txt",
+      "initialSha256": "0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf",
+      "sourceSha256": "708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf",
+      "initialSha256": "708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.toml",
+      "sourceSha256": "fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.toml",
+      "initialSha256": "fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/shared-object-avm1.swf",
+      "sourceSha256": "1a215bd4d1f1b6833267216650d8b1db94b42b9f72fb6489e18a65c229411b7c",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/shared-object-avm1.swf",
+      "initialSha256": "1a215bd4d1f1b6833267216650d8b1db94b42b9f72fb6489e18a65c229411b7c",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/1ef41ff58c9763bed027.wasm",
+      "sourceSha256": "cd0a675924f4f40a8e1e7e16f8e7fe2105d13edfb2fd650dc42aaeac1e92143a",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/1ef41ff58c9763bed027.wasm",
+      "initialSha256": "cd0a675924f4f40a8e1e7e16f8e7fe2105d13edfb2fd650dc42aaeac1e92143a",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/63468f5322aed2e768a8.wasm",
+      "sourceSha256": "381c459563278d830db728beb8e8f1bdeedb390d50b3c6b16bd6e4af6c2ed016",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/63468f5322aed2e768a8.wasm",
+      "initialSha256": "381c459563278d830db728beb8e8f1bdeedb390d50b3c6b16bd6e4af6c2ed016",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/LICENSE_APACHE",
+      "sourceSha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/LICENSE_APACHE",
+      "initialSha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/LICENSE_MIT",
+      "sourceSha256": "4de9338a7879c68e911742a7d691f0797ff1ef8d8a6fb978b0c711e258fe959c",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/LICENSE_MIT",
+      "initialSha256": "4de9338a7879c68e911742a7d691f0797ff1ef8d8a6fb978b0c711e258fe959c",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/THIRD-PARTY.md",
+      "sourceSha256": "58489a0d4b6e97c03052444047764429d84424eb44aa4914abcbcc10b7cff8bc",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/THIRD-PARTY.md",
+      "initialSha256": "58489a0d4b6e97c03052444047764429d84424eb44aa4914abcbcc10b7cff8bc",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/core.ruffle.0875e44536e955474b0c.js",
+      "sourceSha256": "28fa24cd43c3d91899f92a5beedde63c58753b63850ed4b16484c14791625f7a",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/core.ruffle.0875e44536e955474b0c.js",
+      "initialSha256": "28fa24cd43c3d91899f92a5beedde63c58753b63850ed4b16484c14791625f7a",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/core.ruffle.831c4f4a93befb9e84af.js",
+      "sourceSha256": "16214a9d1cc55219ee196fcd2bab9d303a6985567cbfe8ffc891eebacfd4cd29",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/core.ruffle.831c4f4a93befb9e84af.js",
+      "initialSha256": "16214a9d1cc55219ee196fcd2bab9d303a6985567cbfe8ffc891eebacfd4cd29",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/package.json",
+      "sourceSha256": "097043e1bfb0a094c77411912690245eee966ae1cb672128307f299ad743d90d",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/package.json",
+      "initialSha256": "097043e1bfb0a094c77411912690245eee966ae1cb672128307f299ad743d90d",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/ruffle.js",
+      "sourceSha256": "8593f2d1f7cc39f2000c02813bed664bfb0594dee15c3e8e18ca9f0c201081f2",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/ruffle.js",
+      "initialSha256": "8593f2d1f7cc39f2000c02813bed664bfb0594dee15c3e8e18ca9f0c201081f2",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "sourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "initialSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+      "sourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+      "initialSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/IDocumentStartInjector.cs",
+      "sourceSha256": "bcd85fe94b974d7d3e8ffd75d4451d0f2cf925ae73d5aa6ce7e1cea5a8a5815d",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/IDocumentStartInjector.cs",
+      "initialSha256": "bcd85fe94b974d7d3e8ffd75d4451d0f2cf925ae73d5aa6ce7e1cea5a8a5815d",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+      "sourceSha256": "0a5e1f23e5024f823a6c194d67f7df1aed55404a05ddddf5b097f4a43591daa3",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+      "initialSha256": "0a5e1f23e5024f823a6c194d67f7df1aed55404a05ddddf5b097f4a43591daa3",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "sourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "initialSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/GateZeroSessionJournal.cs",
+      "sourceSha256": "8bb75414fc8abda71e15435953bd34aa04451a25e0696839627204a53801eae1",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/GateZeroSessionJournal.cs",
+      "initialSha256": "8bb75414fc8abda71e15435953bd34aa04451a25e0696839627204a53801eae1",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/BundleResourceLocator.cs",
+      "sourceSha256": "2afa78abe2ee582df26bd951d64cb87cca219d4effddbe987b97e25bf5205a06",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/BundleResourceLocator.cs",
+      "initialSha256": "2afa78abe2ee582df26bd951d64cb87cca219d4effddbe987b97e25bf5205a06",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/MacDocumentStartInjector.cs",
+      "sourceSha256": "667ad6d8f65e526c56205e83ccab97a42b6580858b4f0128b65180d464836e4f",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/MacDocumentStartInjector.cs",
+      "initialSha256": "667ad6d8f65e526c56205e83ccab97a42b6580858b4f0128b65180d464836e4f",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "sourceSha256": "91b677b904d0029b4cc148257c4de0e1434a14818b339c16c665577bf99906c1",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "initialSha256": "91b677b904d0029b4cc148257c4de0e1434a14818b339c16c665577bf99906c1",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/Commands.cs",
+      "sourceSha256": "ea1a9249a6189d84ab69442dbf0435383a55b60f1c1c53aa79f492cfcc0c3d2c",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/Commands.cs",
+      "initialSha256": "ea1a9249a6189d84ab69442dbf0435383a55b60f1c1c53aa79f492cfcc0c3d2c",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "sourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "initialSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/ObservableObject.cs",
+      "sourceSha256": "0b7425b38d20f8976ff343fcd43033a8d3bcf38a5fbd62fb0fb9aa33ce57eba9",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/ObservableObject.cs",
+      "initialSha256": "0b7425b38d20f8976ff343fcd43033a8d3bcf38a5fbd62fb0fb9aa33ce57eba9",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml",
+      "sourceSha256": "b6d58cc8254c3f699e8933efa8216e96d1a9d46259f28b3f4daa9fe98e82ab39",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml",
+      "initialSha256": "b6d58cc8254c3f699e8933efa8216e96d1a9d46259f28b3f4daa9fe98e82ab39",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "sourceSha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "initialSha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml",
+      "sourceSha256": "aa42196f266db8e99b41a3e5f19d1b786857021275332ed205ff9a262942c478",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml",
+      "initialSha256": "aa42196f266db8e99b41a3e5f19d1b786857021275332ed205ff9a262942c478",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "sourceSha256": "d0c7cd111eea2784bdfb67a82ac4b2ee56ad77d304bfe00c5e966be1563e968f",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "initialSha256": "d0c7cd111eea2784bdfb67a82ac4b2ee56ad77d304bfe00c5e966be1563e968f",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/packages.lock.json",
+      "sourceSha256": "1b64525e9aa1c26798bfe96c368f249ceea552273532510939fa822ad1ed0262",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/packages.lock.json",
+      "initialSha256": "1b64525e9aa1c26798bfe96c368f249ceea552273532510939fa822ad1ed0262",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+      "sourceSha256": "263e751a41971ff6e44123d690737f0d09466a24334f3258cf79352df258625d",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+      "initialSha256": "263e751a41971ff6e44123d690737f0d09466a24334f3258cf79352df258625d",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/GateZeroFixtureTests.cs",
+      "sourceSha256": "acb62afdd6d28a4093e67c02b04236990abe513a2f46f5eae9e3e6dae00cacf2",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/GateZeroFixtureTests.cs",
+      "initialSha256": "acb62afdd6d28a4093e67c02b04236990abe513a2f46f5eae9e3e6dae00cacf2",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/LoopbackContentHostTests.cs",
+      "sourceSha256": "b95834e006a88ed0ae8a8b012d15a530955ee835a279fc3e157a7e28b19ce185",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/LoopbackContentHostTests.cs",
+      "initialSha256": "b95834e006a88ed0ae8a8b012d15a530955ee835a279fc3e157a7e28b19ce185",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/NavigationResolverTests.cs",
+      "sourceSha256": "06b457bcecc11d86b5630ee851530c4cd319a1413b0cb43a46e77c6a6e2b0b55",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/NavigationResolverTests.cs",
+      "initialSha256": "06b457bcecc11d86b5630ee851530c4cd319a1413b0cb43a46e77c6a6e2b0b55",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/PathSafetyTests.cs",
+      "sourceSha256": "beb824e0b535ccd82f6f00fbacd9c9b5e0f981eb8e2056c0033cfd54deb8b226",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/PathSafetyTests.cs",
+      "initialSha256": "beb824e0b535ccd82f6f00fbacd9c9b5e0f981eb8e2056c0033cfd54deb8b226",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleDocumentStartScriptBuilderTests.cs",
+      "sourceSha256": "6e8eee6d2f90dbdf3226f4e918708e72dceb56f766325d2893d5f54a4d432482",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleDocumentStartScriptBuilderTests.cs",
+      "initialSha256": "6e8eee6d2f90dbdf3226f4e918708e72dceb56f766325d2893d5f54a4d432482",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RufflePlayerCoordinatorTests.cs",
+      "sourceSha256": "7aa036f20f66a154de37483746603049c681d224a3de026bdac442cf1cc63c46",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RufflePlayerCoordinatorTests.cs",
+      "initialSha256": "7aa036f20f66a154de37483746603049c681d224a3de026bdac442cf1cc63c46",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleSaveStoreTests.cs",
+      "sourceSha256": "1e5a948a714daa52029e5395533d3204bd22ba413b7288505f9f9e1c842fc9e7",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleSaveStoreTests.cs",
+      "initialSha256": "1e5a948a714daa52029e5395533d3204bd22ba413b7288505f9f9e1c842fc9e7",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/SolFileInspectorTests.cs",
+      "sourceSha256": "79fb7459090ab4042788dc5ec61bcacac0f6be95a22be28bf74900d1f1c29dee",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/SolFileInspectorTests.cs",
+      "initialSha256": "79fb7459090ab4042788dc5ec61bcacac0f6be95a22be28bf74900d1f1c29dee",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/TestSupport.cs",
+      "sourceSha256": "cca1d1f90ac21b7ffced937d7abd3e5ebf468b0cefcbdc1095683f6e9e286136",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/TestSupport.cs",
+      "initialSha256": "cca1d1f90ac21b7ffced937d7abd3e5ebf468b0cefcbdc1095683f6e9e286136",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/WebBridgeProtocolTests.cs",
+      "sourceSha256": "f4b9ef3734b86a6ac55887f03138165639c9310863c6093ae6d34533afddec75",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/WebBridgeProtocolTests.cs",
+      "initialSha256": "f4b9ef3734b86a6ac55887f03138165639c9310863c6093ae6d34533afddec75",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/packages.lock.json",
+      "sourceSha256": "4ea9907cf78609dff878a51199b6c307614d57332a9d18eda78f526561048f70",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/packages.lock.json",
+      "initialSha256": "4ea9907cf78609dff878a51199b6c307614d57332a9d18eda78f526561048f70",
+      "reason": "P01 independent runnable prototype; retain original fixture depth, pinned assets and locks"
+    }
+  ]
+}

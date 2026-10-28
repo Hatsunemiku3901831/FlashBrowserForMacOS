@@ -1,0 +1,2414 @@
+{
+  "schemaVersion": 1,
+  "sourceRoot": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser",
+  "sourceHead": "7cfbe01596168aca6326db7a68ca1c15d1b55638",
+  "sourceRemote": "https://github.com/Mzying2001/CefFlashBrowser.git",
+  "capturedAt": "2026-10-28T06:27:45.084336+11:00",
+  "worktreeStatus": " M AGENTS.md\n?? .DS_Store\n?? Docs/.DS_Store\n?? Docs/flashMacOS-task-pack.zip\n?? Docs/flashMacOS-task-pack/\n?? Docs/macos-porting-plan.zh-CN.md\n?? spike/\n",
+  "baselineSha256": "3239cde28c0f0628d620617adf324e188ef3bff4bfe9746c36fee2e06c1f812f",
+  "baselineDelta": {
+    "added": [],
+    "removed": [],
+    "changed": []
+  },
+  "files": [
+    {
+      "sourceRelativePath": "AGENTS.md",
+      "snapshotRelativePath": "reference/legacy/AGENTS.md",
+      "size": 9108,
+      "sha256": "920209cc83638c85d91412c938a71a4f974b20a3c701f34ff5b5ea4618aac8ab",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/CefFlashBrowser.FlashBrowser.csproj",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/CefFlashBrowser.FlashBrowser.csproj",
+      "size": 548,
+      "sha256": "508289c714d91403eb3c9194956e6a8b19d0e66461698ad7a978a49e0f3879fb",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/CefFlashSettings.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/CefFlashSettings.cs",
+      "size": 1091,
+      "sha256": "c8b9ddce462b203bf4cbbbb4b9c636862728fe405e6d1e63839110af5517bde1",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/ChromiumFlashBrowser.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/ChromiumFlashBrowser.cs",
+      "size": 3364,
+      "sha256": "f03d9ccdbf7cd7c05a577437c94dce5ebf22308f72a376bd4fc27bcf65354aff",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/ChromiumWebBrowserEx.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/ChromiumWebBrowserEx.cs",
+      "size": 12220,
+      "sha256": "92119456162de844c1fc506a77a39e6f42436216a948f3d3b70ff83eabb5d985",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/AudioHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/AudioHandler.cs",
+      "size": 921,
+      "sha256": "218b8c9caa3d665be7028d8f7b6bca62655c6145de035428d233a77e30f92dda",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/ContextMenuHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/ContextMenuHandler.cs",
+      "size": 939,
+      "sha256": "1c53fcf3a31b37227b22f06d1708bd7d694649a96064ef7be4ca744496ac9f54",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/DialogHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/DialogHandler.cs",
+      "size": 475,
+      "sha256": "cfd0082f268f29b87766f6a71a4f942938a7df9dd3da0230246f14d39bceb0be",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/DisplayHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/DisplayHandler.cs",
+      "size": 1486,
+      "sha256": "27a413b69e72c95deed2099255735b96cd9a3a0910df68507b652bf569b592b2",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/DownloadHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/DownloadHandler.cs",
+      "size": 562,
+      "sha256": "e75fb42242d880c43f96230ad6387a57e33c69d2a32934b1abb38a363c228db0",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/DragHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/DragHandler.cs",
+      "size": 536,
+      "sha256": "df315b67439f0d9aa1aa222481c0953811e6d5c0387691ebb5fbd3cca9003415",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/FindHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/FindHandler.cs",
+      "size": 352,
+      "sha256": "6a2087c49befea3111d6d37baa5dae76ba765c8e9aaa8d1d63ec1e7c83ad4e4f",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/FocusHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/FocusHandler.cs",
+      "size": 520,
+      "sha256": "2f098f66c0e8233a47ecef6be0a8cc32ca554ed09695896fedcb9066189e1ba4",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/JsDialogHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/JsDialogHandler.cs",
+      "size": 858,
+      "sha256": "2528811650a2dffe00a0b9d04ca6a597693fee1d629c6f2f70c1cc97596ad6f7",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/KeyboardHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/KeyboardHandler.cs",
+      "size": 631,
+      "sha256": "2d82d3ec134618b68cfc4671ada0452a42a2d77b8a0dd59427ee07c54ab4ea05",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/LifeSpanHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/LifeSpanHandler.cs",
+      "size": 925,
+      "sha256": "5435fbe5545a194b2ae9bfb64458902efeb9bbc6818c2f96c37c2f10e26749ca",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/LoadHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/LoadHandler.cs",
+      "size": 688,
+      "sha256": "6c53b3cef68322ec8ef9ae949448df6d214f62b5a7d7f1924dc12f20cd7ab61b",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/RenderProcessMessageHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/RenderProcessMessageHandler.cs",
+      "size": 733,
+      "sha256": "8ccf567b5391dde28d8aa96b35044176f3498fa02116d9d50c3e8c9dd851166b",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/RequestHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/RequestHandler.cs",
+      "size": 2447,
+      "sha256": "dcd399b87ae17752fd1932106e3375a4f085d2e6738c188dec60f0aa8dbb168c",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Handlers/ResourceRequestHandlerFactory.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Handlers/ResourceRequestHandlerFactory.cs",
+      "size": 553,
+      "sha256": "c69a2a7719e794481c80cd3fc85765bc150a5fd94a040eb77535a4dd018b93f9",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Internals/WpfFocusHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Internals/WpfFocusHandler.cs",
+      "size": 1963,
+      "sha256": "066f5148adbe61c0cf4c83f5a6384ab26df7a8551d4f54e7879cf17ff16b130d",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/Internals/WpfKeyboardHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/Internals/WpfKeyboardHandler.cs",
+      "size": 1876,
+      "sha256": "1b106f6ec819aa9243025872de310352deb8769d5aee9500c30efa09d004b58e",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.FlashBrowser/JsContextEventArgs.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.FlashBrowser/JsContextEventArgs.cs",
+      "size": 360,
+      "sha256": "feefe38e303aeaffffa03a63fb847bbd8486766f8bce34d179b02c181cd2e441",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Log/CefFlashBrowser.Log.csproj",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Log/CefFlashBrowser.Log.csproj",
+      "size": 168,
+      "sha256": "0006120d3e53e196bc7891d8e0811f0638703d986fdd6dd554a343329b496920",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Log/FileLogger.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Log/FileLogger.cs",
+      "size": 4343,
+      "sha256": "6466bfdfd63bb10af5dca12a3f0afb830afc55cfe0feb11425cfdcc89367dddf",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Log/ILogger.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Log/ILogger.cs",
+      "size": 603,
+      "sha256": "7aa8600b53e031d283184bc3cff17d55c9799225d88d4cae7c7949269d55d86f",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Singleton/CefFlashBrowser.Singleton.vcxproj",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Singleton/CefFlashBrowser.Singleton.vcxproj",
+      "size": 6868,
+      "sha256": "0ff7b7ab11cc6bf3e931842be4a0f594a4f76a402471cab74fbd78775570802c",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Singleton/CefFlashBrowser.Singleton.vcxproj.filters",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Singleton/CefFlashBrowser.Singleton.vcxproj.filters",
+      "size": 811,
+      "sha256": "7d7232da5c5536aaca7099248d4394d0d5114d3798796b5c906c18b950339a71",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Singleton/MsgReceiver.cpp",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Singleton/MsgReceiver.cpp",
+      "size": 4604,
+      "sha256": "7acd05dc11c8b790c3794bd539c9140dd919fe2b126460bf023eafde367a974c",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Singleton/MsgReceiver.h",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Singleton/MsgReceiver.h",
+      "size": 1765,
+      "sha256": "928ab13aff31483473701b1342a793c35fd19f400c0d427e946f9f2ab02d0ca9",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/.editorconfig",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/.editorconfig",
+      "size": 52,
+      "sha256": "5f70cd3e139d0419845ce5e8f30988990478485d7b77e0f0aeadb12f47086ba0",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/CefFlashBrowser.Sol.vcxproj",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/CefFlashBrowser.Sol.vcxproj",
+      "size": 7570,
+      "sha256": "b754a510b6199e05fdf87ffd8d9dfb187c68abad2ec6781818822e25c7829ea7",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/CefFlashBrowser.Sol.vcxproj.filters",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/CefFlashBrowser.Sol.vcxproj.filters",
+      "size": 1292,
+      "sha256": "04f0b9b8422400d6796d49c6b199ac3d5bd2acb0d6c2b8c5be3fd8cb508e09e0",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/cli.cpp",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/cli.cpp",
+      "size": 10546,
+      "sha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/cli.h",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/cli.h",
+      "size": 4168,
+      "sha256": "e278bc9fc670a608be689da1ba14d6540ba40a3c53c13f23b5c6a0c1bfaa3122",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/sol.cpp",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/sol.cpp",
+      "size": 36113,
+      "sha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/sol.h",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/sol.h",
+      "size": 8754,
+      "sha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/utils.cpp",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/utils.cpp",
+      "size": 1100,
+      "sha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/utils.h",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/utils.h",
+      "size": 1553,
+      "sha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/utilscli.cpp",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/utilscli.cpp",
+      "size": 1686,
+      "sha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Sol/utilscli.h",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Sol/utilscli.h",
+      "size": 545,
+      "sha256": "c08c183fc0cb9f2f1fd644e4374fafc6aabef48bcbf503ed8569eaf3448370e8",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "size": 32070,
+      "sha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/CefFlashBrowser.Tests.csproj",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/CefFlashBrowser.Tests.csproj",
+      "size": 3023,
+      "sha256": "52a00130efc00825d2db03c14afb32b66a74a600bc3a46c53890637a38969eff",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/ConverterTests.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/ConverterTests.cs",
+      "size": 6483,
+      "sha256": "f078e04055c727ce52d10b1206c1d3145b1a0f94b7eb8424d17878526c23096c",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/FileLoggerTests.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/FileLoggerTests.cs",
+      "size": 5469,
+      "sha256": "2000491b8715c887c88b6c98153d4809ceaed62fbb091dfb0c9ae3cf9cef5424",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/SettingsTests.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/SettingsTests.cs",
+      "size": 3035,
+      "sha256": "3e54457cbce8d4f88ff1cc2c9f40e4e215ff129d54582b0e5a7c8ee68444b188",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "size": 28753,
+      "sha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/TestData/FBCookie.sol",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/TestData/FBCookie.sol",
+      "size": 269,
+      "sha256": "5189e30cf485f3f6427ff275c942877cbdd29637907342ac8c8433aacf6df4a4",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/TestData/mao.sol",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/TestData/mao.sol",
+      "size": 34,
+      "sha256": "efd9d1d647fa1542e63e2aa57d824e9b3b82eac1f25f36ee64abf5f16a94fa0b",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/TestData/pvz.sol",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/TestData/pvz.sol",
+      "size": 95,
+      "sha256": "f87829c3be383331cd9c2895d42e4da57ded6cb7132ce03f8cad3dbbe4bd9ad7",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/TestData/settings.sol",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/TestData/settings.sol",
+      "size": 845,
+      "sha256": "c1f9c4c1700f440596daee7f9d2725093c7539ddc6503a3ca2450d9b8a7df226",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.Tests/UrlHelperTests.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.Tests/UrlHelperTests.cs",
+      "size": 3291,
+      "sha256": "a954af0935443d8ffeb93344fe36fb7bf4b3ce2145d486a28297f89d6f69bc56",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/CefFlashBrowser.WinformCefSharp4WPF.csproj",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/CefFlashBrowser.WinformCefSharp4WPF.csproj",
+      "size": 447,
+      "sha256": "3fe6a2d2c1e9b46a4bb486f7099a54e8da38e055f75c46a2a1ad322da5f38a73",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/CefSettings.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/CefSettings.cs",
+      "size": 121,
+      "sha256": "6c08b1de9b6741699338370fae199558aa5214d1e2c460ee53679d7262b1a190",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/ChromiumWebBrowser.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/ChromiumWebBrowser.cs",
+      "size": 26571,
+      "sha256": "1d7cbafaa9c4018091341ef61af2329e10a644511bb5b2d2a0c52e3190ce0496",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/IWpfWebBrowser.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/IWpfWebBrowser.cs",
+      "size": 1000,
+      "sha256": "bd4965f2b3015d3df65512e5f8b60cabf4c505070c93b9e0c3ab610334a78dc4",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/AudioHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/AudioHandlerWrapper.cs",
+      "size": 1590,
+      "sha256": "617ab75e297664520749b21ccfd25f11749a81691a15673779e0e923df5174ea",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/ContextMenuHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/ContextMenuHandlerWrapper.cs",
+      "size": 1590,
+      "sha256": "987b2cd797f0bfc50385e4f410ec51650a523042d7f6bdc1e59f7c1b1536ada3",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/DialogHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/DialogHandlerWrapper.cs",
+      "size": 920,
+      "sha256": "58c35aa4819805e5578bfc3a2a3d6ad2cfd7d1f11d0f35283ecbe7681955687e",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/DisplayHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/DisplayHandlerWrapper.cs",
+      "size": 2337,
+      "sha256": "bba123f97cb5e63a8acfaa0d8bc236bafac314c870bd9c2191c7dc4535777657",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/DownloadHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/DownloadHandlerWrapper.cs",
+      "size": 984,
+      "sha256": "ac4d4870e1677601d9a9451519d1e156237a477c5867450b255250d1be3c0995",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/DragHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/DragHandlerWrapper.cs",
+      "size": 984,
+      "sha256": "9a0561dd9457450c4e381a3720b4b285c11c4f5926129c2cc35f60e969c84fd2",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/FindHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/FindHandlerWrapper.cs",
+      "size": 792,
+      "sha256": "f5edda300bfe7c2fc8e0a066fa39bd40c825349028a7d8565bcfbf62b3c41c8d",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/FocusHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/FocusHandlerWrapper.cs",
+      "size": 987,
+      "sha256": "647a6a4c3658234bb57abd59367c10930afa37e56d64b5d780a129273eb825ca",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/IHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/IHandlerWrapper.cs",
+      "size": 218,
+      "sha256": "8f3eff4a13518e059bfd3ac1172b165eae6f8ba398b6496a958e1685e326343e",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/JsDialogHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/JsDialogHandlerWrapper.cs",
+      "size": 1492,
+      "sha256": "b0ae32f09b62a2e60281faa071a49d42e2389e4ae107d27b6e83f3716e7fecbb",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/KeyboardHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/KeyboardHandlerWrapper.cs",
+      "size": 1177,
+      "sha256": "84926a98928e59cc9e9ccd387517d53096a4d23289562560919f3a56e72b7185",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/LifeSpanHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/LifeSpanHandlerWrapper.cs",
+      "size": 1545,
+      "sha256": "b13759c768b0d6987b2c25ada6c7bba3d32bf9dde904d443d4af64e61485a0dc",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/LoadHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/LoadHandlerWrapper.cs",
+      "size": 1266,
+      "sha256": "7fd6125e583412110188b4d63c57f4f2bcfaaca8bc72ce304a0a34eb2b3074f4",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/RenderProcessMessageHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/RenderProcessMessageHandlerWrapper.cs",
+      "size": 1389,
+      "sha256": "dc2a036942d817bf0e9fdd57c59fc08437c030083c7c9a069f3251c38309f1df",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/RequestHandlerWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/RequestHandlerWrapper.cs",
+      "size": 3622,
+      "sha256": "e7c9954849c052ffd2b736fc78791c5b9f88bd678801494338504749f0902892",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/ResourceRequestHandlerFactoryWrapper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/ResourceRequestHandlerFactoryWrapper.cs",
+      "size": 1043,
+      "sha256": "ac55737d7da8e4ef7f0a53c756938b439eeb8e0bfbde2ecaa78b114fe554d640",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser.WinformCefSharp4WPF/Internals/Win32.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser.WinformCefSharp4WPF/Internals/Win32.cs",
+      "size": 281,
+      "sha256": "40d21645edb78b83f50f245471702d92badd5d8de70169f13a2f4fadc0754f12",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/App.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/App.xaml",
+      "size": 2181,
+      "sha256": "1dbf695eee898de61e02fec1be923ba6b53cdc3f6e0ca2dd24ff6c9e127b2e43",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/App.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/App.xaml.cs",
+      "size": 4683,
+      "sha256": "0ff5a59863ffd7537719dfff81cdd3b5539d87a088637ff5664b46ada87c305b",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Emoticons/Emoticons.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Emoticons/Emoticons.xaml",
+      "size": 2884,
+      "sha256": "d4783afda3338710af0d55acaa11723342f7b47519475fb44f54c45036b3c013",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Icons/icon.ico",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Icons/icon.ico",
+      "size": 90022,
+      "sha256": "6504c70bde22e3bdcbe12147e07e8d14e81c6308e58bb5d4c2c4b0e846f09e78",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Icons/page.png",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Icons/page.png",
+      "size": 709,
+      "sha256": "6d5414e08b04b26a07ab81e1039772620c7ac587b5eafcd898fa41bd5a4bd764",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Language/en-US.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Language/en-US.xaml",
+      "size": 13704,
+      "sha256": "1e109e643137c4db9b7c9e0546f738b612e0cce05be9ce7b52f0e60c62c5c2ee",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Language/fr-FR.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Language/fr-FR.xaml",
+      "size": 14748,
+      "sha256": "4425bfd82991c91cfbfb1bbce5c58b7793b52682780cc1fbca44104239504014",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Language/it.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Language/it.xaml",
+      "size": 14154,
+      "sha256": "6955f3a92b692b4fc2449dbd6823ef05d465c81d0634b21be078d92ce11d77ae",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Language/langs.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Language/langs.xaml",
+      "size": 3346,
+      "sha256": "68cd3b96d583f8b056d1952a90df813fcaa6a7848999184f3746ff2e13ea43e6",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Language/zh-CN.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Language/zh-CN.xaml",
+      "size": 13731,
+      "sha256": "bd3e1c62b58cc110d44593497717c8babe31af2278905b33598249ce2ed8225d",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Language/zh-TW.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Language/zh-TW.xaml",
+      "size": 13917,
+      "sha256": "0a9c440a46bbaca2e60933e7df95f75255418e767b898291a1e541db991979b4",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/add.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/add.svg",
+      "size": 1506,
+      "sha256": "39b781ccf958ce9a9f4fffd5bea2f559ea7fd7471c51f76f5ffef1113bddaf23",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/back.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/back.svg",
+      "size": 1120,
+      "sha256": "718ceddbed4919e34a201b6a9d801548c8ed344312b463c3ce7b5bd623cda31e",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/down.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/down.svg",
+      "size": 1101,
+      "sha256": "68c0c520b5f9b9340ad05de53b5095ed9111dcec0fb65a52ec90595591aa65fc",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/edit.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/edit.svg",
+      "size": 799,
+      "sha256": "dc2f8dfc48320bd9a06753f22c6acef37c937210406f09fdb6f1f276a5f75ea1",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/export.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/export.svg",
+      "size": 846,
+      "sha256": "5422c21225ac73756b6545a4667281d1e4d038845a92b4019c78a63f5ca31903",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/forward.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/forward.svg",
+      "size": 1123,
+      "sha256": "5efd59254d3299b78dd377e32736cc79c524ed654b57d60e8007c2a1a5461848",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/import.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/import.svg",
+      "size": 840,
+      "sha256": "cadd73b303d58561f80adfbb80aa70d33c12979ef54e6511dda86f10524861ac",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/more.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/more.svg",
+      "size": 1258,
+      "sha256": "7687ec285fe7f95581fe1a769b0987faef9a62af1e6930dbefed0917afe16cb7",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/page.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/page.svg",
+      "size": 1240,
+      "sha256": "292e993f4a8a96cd381609fac8e5a6dfc59403fb73bfbd20fabd4aa1b302cac9",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/reload.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/reload.svg",
+      "size": 1636,
+      "sha256": "c3891bbe4d7b24f367c89fc18bf3f71c49f3dd778fc82ae3f5c946a4840bed3b",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/search.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/search.svg",
+      "size": 785,
+      "sha256": "9a515040de8d0cc219c9ddd1ef48ea0b48897c6d976f6a1172583b3f1d2811ec",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/stop.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/stop.svg",
+      "size": 1532,
+      "sha256": "ad04242ac7d55d23c2f7b9c96c37cb23a23da2cd4394ab184c21002037a01af5",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/sub.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/sub.svg",
+      "size": 1159,
+      "sha256": "214ed244244c20073911127eb70950da6d0b4d59972ddf165b3975475dee6c67",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/trash.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/trash.svg",
+      "size": 1139,
+      "sha256": "3c49742166da8f6ecd344200cdf0cd1ad5ed25fcac7a868fe3826d858af82cb7",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/up.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/up.svg",
+      "size": 1118,
+      "sha256": "72bbe66300b8279d6bbce4819644c700ddfccc788481a9d8e0af79467fc1b75f",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/Svgs/warning.svg",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/Svgs/warning.svg",
+      "size": 1501,
+      "sha256": "4a40293d0e00aa5882bde8b61abf3e565143434d5573879732d27a571b947bb7",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Assets/SwfPlayer/swfplayer.html",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Assets/SwfPlayer/swfplayer.html",
+      "size": 852,
+      "sha256": "b039539e01bee692d4b63e97953dd12943b31267a11cde80315f4dcf2f0001ad",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/CefFlashBrowser.csproj",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/CefFlashBrowser.csproj",
+      "size": 6076,
+      "sha256": "07f591408208cd4fb30bcc0bcbf915f4dc5795bffc686005e84035ae18cd18ab",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Data/GlobalData.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Data/GlobalData.cs",
+      "size": 9150,
+      "sha256": "e75d8ab3849a574ef5669bf88d2b434152f556af9b7023a63cf85818da046b7a",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Data/MessageTokens.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Data/MessageTokens.cs",
+      "size": 2105,
+      "sha256": "407f32f70286cf2271994ff765ff848bb4e3548ba8d740f77138d65e052c8421",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/AppInfo.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/AppInfo.cs",
+      "size": 1119,
+      "sha256": "44c174cde95057c1649913bd7eb6da7123e2a4eed9575170167a847e9f4c9697",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/CefMenuItemInfo.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/CefMenuItemInfo.cs",
+      "size": 1137,
+      "sha256": "dd2e6b5e0765e948b9bcd2777ef44fc41f1dd357e96bff5288d2e31e8e0c613a",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/FakeFlashVersionSetting.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/FakeFlashVersionSetting.cs",
+      "size": 207,
+      "sha256": "d5316dcce827a7083cc280f65273b5e5c42a994654752c994bdbe7ac18a04630",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/FavoritesFile.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/FavoritesFile.cs",
+      "size": 132,
+      "sha256": "36df5927ee00336190dab72cd740dffd561c245cca4a316857f2b661bae23ee1",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/NavigationType.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/NavigationType.cs",
+      "size": 143,
+      "sha256": "07670ad2fbf6110655c3a59b6954bfa8f4903d76eeba6e1c69ad599aa8f1213b",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/NewPageBehavior.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/NewPageBehavior.cs",
+      "size": 126,
+      "sha256": "7aa6b2161611a023448c43cade60b13f4dac38305d74abb57536e3fc8794fb4f",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/PathInfo.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/PathInfo.cs",
+      "size": 2391,
+      "sha256": "265d697a99993efc86f547b0d8a5fb19d5c0a488c4a0a03809d10b3385b92c72",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/ProxySettings.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/ProxySettings.cs",
+      "size": 372,
+      "sha256": "f6ac9916a7bc4bd2ff24db062cee6b5c47be3d1bc9888b45100600173d84b3a6",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/SearchEngine.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/SearchEngine.cs",
+      "size": 227,
+      "sha256": "7e8ffb696479bd59e9039e26d01519d884c3965069a6b7de071f18dee68e5b44",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/Settings.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/Settings.cs",
+      "size": 6385,
+      "sha256": "87df9d3e61bc28fb0c26510bb6f8e7f1695ca3246837aff9031e189a49c459a1",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/SolArray.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/SolArray.cs",
+      "size": 1128,
+      "sha256": "d32ca8be9edb7760865ef28f653268227bae1bdb367b1e4fcbb48623886f4856",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/SolEnums.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/SolEnums.cs",
+      "size": 267,
+      "sha256": "35d662dc09064a0533b46c7301a24be8028c8d000cf19a0c552cd15d2cd5169e",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/SolFileInfo.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/SolFileInfo.cs",
+      "size": 281,
+      "sha256": "8167319d2220014f2cb5e853733d984008a954b61bf62c4d6f37543a86ef1f7c",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/SolObject.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/SolObject.cs",
+      "size": 954,
+      "sha256": "c2bbe540bf23ff4048cd2a3ae562099faf475150af47c3e7446594b2c5147351",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/SolTypeDesc.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/SolTypeDesc.cs",
+      "size": 465,
+      "sha256": "1f12a1073c7d4bace65a34b32ff838a3f62abfde4f29f1dcfbd18d9c236385b3",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/Theme.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/Theme.cs",
+      "size": 102,
+      "sha256": "042e616f52d22605ec3563c8ecb1336cce6ae5c03b137ea5809f5e803acff2fc",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/UserAgentPreset.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/UserAgentPreset.cs",
+      "size": 312,
+      "sha256": "58613ac530d53ecf596fac6627f22bfbd0010c154f322687961e0447fd4b495f",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/UserAgentSetting.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/UserAgentSetting.cs",
+      "size": 204,
+      "sha256": "a20c34a79ee786761d3999490f1eccc1e2fc13e66d5e799f3ac6afaf3edf85b9",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/Website.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/Website.cs",
+      "size": 527,
+      "sha256": "451fc10044cb989d603bcbc57e78b4e27aa821783cef71c0200441e25c9f31bb",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Models/WindowSizeInfo.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Models/WindowSizeInfo.cs",
+      "size": 3183,
+      "sha256": "62dfe0707957d6e76104d6906d8ffcf64ac2ad213adfb28936c4705c2d2c927b",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Program.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Program.cs",
+      "size": 6891,
+      "sha256": "a2bfada3a0b4e08db5f8772613fec61d41c14cc25ccb0c4406485f425e87fac3",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Themes/Generic.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Themes/Generic.xaml",
+      "size": 3187,
+      "sha256": "c51f6686b1cb2e58ad2a8e1706f7f600c2f02da5c8a2a65d222faaf44ffb5bff",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Behaviors/DropFileBehavior.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Behaviors/DropFileBehavior.cs",
+      "size": 1466,
+      "sha256": "bdc367585cd90f51cd94af2799845c66035c7ed20d5ecbbd246cf798a746e634",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Behaviors/TextBoxSelectAllOnFocus.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Behaviors/TextBoxSelectAllOnFocus.cs",
+      "size": 1371,
+      "sha256": "9c632a0be8a9ccc75b69e2eb27cb1d807e4bd84d4f47f628018f074a56495b98",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Behaviors/WindowBehavior.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Behaviors/WindowBehavior.cs",
+      "size": 998,
+      "sha256": "41a4630d5717188369e5dbc67ac054d69c37e7542cb5973eb4080f6db1aa1c2d",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Converters/BinaryToSizeString.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Converters/BinaryToSizeString.cs",
+      "size": 1104,
+      "sha256": "d41527972b7b3cbda6826be4f14ff9a1609152b3b322387d6e87011efff05a99",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Converters/Converters.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Converters/Converters.xaml",
+      "size": 676,
+      "sha256": "c7c7d225f5e89a5557b30fe46dc878696a186cbd786e649abe9879b33b779277",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Converters/IntToDouble.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Converters/IntToDouble.cs",
+      "size": 434,
+      "sha256": "9e42741f18693d0f9fb4c3800ae21ac0484849f4aa97b0db088dc025547373fd",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Converters/MultiplyConverter.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Converters/MultiplyConverter.cs",
+      "size": 521,
+      "sha256": "91e508b2508e8b15d61acb51dd5431b0983d522c0f0912be67934544f9645e2a",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Converters/ObjectGetType.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Converters/ObjectGetType.cs",
+      "size": 482,
+      "sha256": "7e69179063f46326320fd7a55bac9cc88c46b783a91c23eface27a748207f99f",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Converters/ObjectToString.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Converters/ObjectToString.cs",
+      "size": 490,
+      "sha256": "e1f73e87d7fe4c6ce8a4b31daf616dff6c5e034d82cd9d4c258574b523962d20",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Converters/UrlGetFileName.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Converters/UrlGetFileName.cs",
+      "size": 513,
+      "sha256": "931a1a4f00d0ff4e6ab834935c74b231535153b8716240b3ac921c5c7190c87d",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Converters/ValueConverterBase.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Converters/ValueConverterBase.cs",
+      "size": 828,
+      "sha256": "2fb668d0d12f66d92567ccabcad7b9ea8fb92c03bd4ea11a65072507f31cf8a0",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Converters/ZoomLevelToScale.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Converters/ZoomLevelToScale.cs",
+      "size": 521,
+      "sha256": "2d465202367b5f729050409a326b792caf60465012a0534dc25d74342c213281",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/DialogHelper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/DialogHelper.cs",
+      "size": 4327,
+      "sha256": "bdd6d27257bc47e2154d2cf7081f8b08dcf472b0082d21ad5c9c5b197e11d493",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/EmoticonsHelper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/EmoticonsHelper.cs",
+      "size": 926,
+      "sha256": "1196eff932d6612936c849ca22f6347dee9c2761dea051b53708e60cf11c8a33",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Handlers/ContextMenuHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Handlers/ContextMenuHandler.cs",
+      "size": 7568,
+      "sha256": "ea08911c65f467b5aa91ddf86a2ae16a0c42078a29bbc0bce0e335ac28713ecd",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Handlers/DisableDragHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Handlers/DisableDragHandler.cs",
+      "size": 375,
+      "sha256": "02bb501640a9bc741c6e44e1c2ce8d186c9ba3d22c7d76404d78ea6bf29765ff",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Handlers/DownloadHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Handlers/DownloadHandler.cs",
+      "size": 664,
+      "sha256": "78817c78eb2b38c80305a883b3af34a8f3facbe439a6d98d2aacc856776ede66",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Handlers/JsDialogHandler.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Handlers/JsDialogHandler.cs",
+      "size": 2576,
+      "sha256": "b485c83c67cba1edf33e641fb32e0ef65be1ec1b51f607bd6eeedc2a382b45ed",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/HwndHelper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/HwndHelper.cs",
+      "size": 5334,
+      "sha256": "f6aad53f9316412fb4212767f072abbe32b681cf52426179d3ec0d2272403b06",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/LanguageManager.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/LanguageManager.cs",
+      "size": 3655,
+      "sha256": "93d1d51cf5ce65b5d7c0059316eed0ed2a1e879c35deed01ea61d3372a547bb9",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/LogHelper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/LogHelper.cs",
+      "size": 2818,
+      "sha256": "c8af2db99e7aaea44d736214e81885c012226339c150a5a4c6e31250283c543a",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/RangeObservableCollection.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/RangeObservableCollection.cs",
+      "size": 2014,
+      "sha256": "05aeff84fc29ec85392b81917cb59e15e4e96c236d81a08145bbdd97a9c9f275",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/SolHelper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/SolHelper.cs",
+      "size": 4409,
+      "sha256": "a24d994b475df9fdb32e6300ac20ee1944d0443582f007977294bf023983d7d8",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/SolNodeTemplateSelector.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/SolNodeTemplateSelector.cs",
+      "size": 3121,
+      "sha256": "a76b6da3d352d8579f7d006f5b9e8b78e12019d27314490f0b67979522598e82",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/ThemeManager.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/ThemeManager.cs",
+      "size": 3779,
+      "sha256": "46a5a7f5128a052b3e27347d8af524a7078498bc99d4d7d077136dbc2f12bc30",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/UrlHelper.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/UrlHelper.cs",
+      "size": 3806,
+      "sha256": "48a5454b62dcf98546349c32d1d6587aebc614c0b9671248345b3d87d734edd0",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/Win32.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/Win32.cs",
+      "size": 6500,
+      "sha256": "e1ed13e4cdefacf601804091bd06aae352d5b997b89d61576f2f811928c69fc1",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Utils/WindowManager.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Utils/WindowManager.cs",
+      "size": 12363,
+      "sha256": "0d3e12d01f0c04666a5d81f4e57744e9f611ec5ca3bebd6dbbea695ffe400bb3",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/AddFavoriteDialogViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/AddFavoriteDialogViewModel.cs",
+      "size": 1694,
+      "sha256": "bb4480b6e2474e15d9075767b24534bc20a0af861995e0a631eff6ecb1b32e83",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/BrowserWindowViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/BrowserWindowViewModel.cs",
+      "size": 11877,
+      "sha256": "f12f502133898e6fe744762ad9cd4b7c7099f43574f118f95d6c4a6100416234",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/FavoritesManagerViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/FavoritesManagerViewModel.cs",
+      "size": 3740,
+      "sha256": "1649a2166d3844fd818f35974c5386ca160f6e4054e1bcf8c45acd5e79826b8d",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/ItemViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/ItemViewModel.cs",
+      "size": 1963,
+      "sha256": "8340379fdbb8d8cadd9d83a42a4d99bfca332b9d0ac1231abd3e3ca0a255112c",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/LanguageItemViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/LanguageItemViewModel.cs",
+      "size": 1655,
+      "sha256": "463fa9a50d991dc8e4297dabb2f8b6ad873426f26c1439c7498e047d5c51ac7b",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/LanguageSelectorViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/LanguageSelectorViewModel.cs",
+      "size": 815,
+      "sha256": "c229007bf8423f46079bcc2d98e8bbef79647fa22825f9f5013de780a0c0ead4",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+      "size": 6476,
+      "sha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/SaveMgrWorkspaceViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/SaveMgrWorkspaceViewModel.cs",
+      "size": 8318,
+      "sha256": "ce6f0675dba640a455e509e5c2378cb2f6773ef2ca1d4929475d2f79d49c664b",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/SettingsWindowViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/SettingsWindowViewModel.cs",
+      "size": 13160,
+      "sha256": "3a1efcd662857e16c8754a9cb3084683fe1f5c0d92fecfb66b03c84cd130fc72",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/SolEditorWindowViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/SolEditorWindowViewModel.cs",
+      "size": 14236,
+      "sha256": "72d29bbc3dc6312cdee8ba57d75a9aa7c613dd337b6e641b454ac4fdef9cc6f9",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/SolNodeViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/SolNodeViewModel.cs",
+      "size": 11230,
+      "sha256": "6ce614393ccb6c15932f3346a9a842c184709924359ee65e6b98b2c4222ad657",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/SolSaveManagerViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/SolSaveManagerViewModel.cs",
+      "size": 4796,
+      "sha256": "451bcf39604b8a165b2a1a5725fdc7748a60a07133492aa2ba81c0e61c8583d9",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/ViewModels/ViewModelLocator.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/ViewModels/ViewModelLocator.cs",
+      "size": 1555,
+      "sha256": "16d64c9a0071440f432ef0cae4cfded3cd50456e3649bc85ebf58732b84b3d70",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/BrowserWindow.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/BrowserWindow.xaml",
+      "size": 33230,
+      "sha256": "98fedb6e8e4798723f523aee0562a83f02f19ae3398fabf9d5acb9753d8f9aae",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/BrowserWindow.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/BrowserWindow.xaml.cs",
+      "size": 17711,
+      "sha256": "ec728663263ea4eea7061afa5d5ee08d714d3f20836b6a0add316a82265ae5b2",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Custom/HwndContainer.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Custom/HwndContainer.cs",
+      "size": 2621,
+      "sha256": "30aeea4deaac8acc63e80e0aeb0d8b3eec1ebd15c9c5621751adac3be1818e24",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Custom/SettingGroup.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Custom/SettingGroup.cs",
+      "size": 817,
+      "sha256": "8815446131192bcfaeaaac6ccefe79344f2f94719937188336edc2babc1253e6",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Custom/SettingItem.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Custom/SettingItem.cs",
+      "size": 2395,
+      "sha256": "a3357c2af5926c756fce7109f48e22877efd5a1c72f295a375201265eba0ed03",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/AddFavoriteDialog.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/AddFavoriteDialog.xaml",
+      "size": 3408,
+      "sha256": "4e3bfa641658be171cb6fcb28309d4217982d730c011bd013b48014378d0de90",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/AddFavoriteDialog.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/AddFavoriteDialog.xaml.cs",
+      "size": 939,
+      "sha256": "31d15624d70091916e873489c16fbfffeb016abb2d8e0d0a94856b6a30edc1f8",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/AddSolItemDialog.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/AddSolItemDialog.xaml",
+      "size": 6598,
+      "sha256": "0e78283e0d7fbda37c28fba89baf0abdbddc053604acd3f305fc66974bb05012",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/AddSolItemDialog.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/AddSolItemDialog.xaml.cs",
+      "size": 4542,
+      "sha256": "624cdf3e1740923e04fc9cb24c08f0314ebe9495d00115d8df24194988eaf4fc",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/JsAlertDialog.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/JsAlertDialog.xaml",
+      "size": 2705,
+      "sha256": "bb8893d281b90dd85b7c421525b6e8c134f3c3ec102613297905b174c8ee874a",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/JsAlertDialog.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/JsAlertDialog.xaml.cs",
+      "size": 951,
+      "sha256": "012f05a0d841ec61270ade04e5031417f8ebfff11c8a0234d3ca37c44c143c90",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/JsConfirmDialog.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/JsConfirmDialog.xaml",
+      "size": 3049,
+      "sha256": "05eb21f17a79b4d3cb8480813210edbb65b482537401170c67ab5f15230c38e5",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/JsConfirmDialog.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/JsConfirmDialog.xaml.cs",
+      "size": 1107,
+      "sha256": "c9797f4c271e3cc130e66b023663228af6da9e6b542646ff810700d2630302b8",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/JsPromptDialog.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/JsPromptDialog.xaml",
+      "size": 3036,
+      "sha256": "d57c73d945a3d8c459e3ee1a43f0260f565db6a4c9f1263e95b4f1739087d2c6",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/JsPromptDialog.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/JsPromptDialog.xaml.cs",
+      "size": 1597,
+      "sha256": "1a3a4cc9cd0fdc62f8874a13e63a4a10e1ef338fabdd87b9d8acb16cdb542391",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/SelectLanguageDialog.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/SelectLanguageDialog.xaml",
+      "size": 3443,
+      "sha256": "49422f07e9f7fb9f64c1d1d2fdff62967e7c3210978ccfb71dd8c1a2e15dae45",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/SelectLanguageDialog.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/SelectLanguageDialog.xaml.cs",
+      "size": 497,
+      "sha256": "037d62257fe8c209f2f60828b6eaa844323cd8a42b5d6d255eba2c2f15f356ff",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/TextEditorDialog.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/TextEditorDialog.xaml",
+      "size": 3387,
+      "sha256": "d0639f5106b66b963b2f07f302f7000c126329d5f3c5f0a795dee1da0ace128d",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/Dialogs/TextEditorDialog.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/Dialogs/TextEditorDialog.xaml.cs",
+      "size": 1287,
+      "sha256": "8c1ecfba8dc4bf376ee33569aaf5b36a6d045e58fbe6f49e0a55ade39e0b3dce",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/FavoritesManager.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/FavoritesManager.xaml",
+      "size": 10730,
+      "sha256": "4b7e9bdda48099b5f154c39193fdf2d6030d69d7527a42a3b0b97fce6dafa4fb",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/FavoritesManager.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/FavoritesManager.xaml.cs",
+      "size": 1521,
+      "sha256": "c57ec5b15c52f723c812b8718cc89c0459e05896d10bbd30e9c7e5cfcc5dd320",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/MainWindow.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/MainWindow.xaml",
+      "size": 9498,
+      "sha256": "270361931d6cc6bfc87889387050c871d7f829a70fb8e6b699026bc490abaa5d",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/MainWindow.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/MainWindow.xaml.cs",
+      "size": 1049,
+      "sha256": "b31db045cf2879057681ea45359ca648f7b77b8d202adb141405c687452985a3",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/PopupWebPage.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/PopupWebPage.xaml",
+      "size": 1219,
+      "sha256": "e27f2d9fe477433c0152f9f79898bca05fa7d9c7ef1db4eaed0224f2384754a0",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/PopupWebPage.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/PopupWebPage.xaml.cs",
+      "size": 3943,
+      "sha256": "a99306fada178318ebee65f6713fb9b1367e4f20b0944e2bb8c1f2fc0e390fbd",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/SettingsWindow.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/SettingsWindow.xaml",
+      "size": 21092,
+      "sha256": "2f47790d66caf4e9281614cfabb1ce9299f952b713a20ed2020dbeaad1731d68",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/SettingsWindow.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/SettingsWindow.xaml.cs",
+      "size": 536,
+      "sha256": "501fe44c7c5e88078820298c0391ddbfd0ce3312f525d2af07e6251e6ea43d19",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/SolEditorWindow.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/SolEditorWindow.xaml",
+      "size": 24923,
+      "sha256": "1e6a3b6078eab2c7dfb23fe732ae8307e4fb9120b280fd6b67480b7d0cf092ff",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/SolEditorWindow.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/SolEditorWindow.xaml.cs",
+      "size": 1711,
+      "sha256": "df054e383639cbd16a59b47c2370cdf7a308a6669942e061731615106ab33457",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/SolSaveManager.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/SolSaveManager.xaml",
+      "size": 15364,
+      "sha256": "6e5b11ec71d7ba213046c9b446eed7674b03999f1b6c67be92d8b04cdba8cbd4",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/SolSaveManager.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/SolSaveManager.xaml.cs",
+      "size": 3310,
+      "sha256": "997841c47c31752997608d96c6a3f13d776c1cfd7cdf9692cbb9da6ddd1b9db4",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/SwfPlayerWindow.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/SwfPlayerWindow.xaml",
+      "size": 1261,
+      "sha256": "afbda4e3dd66442ea2d71c07a0a631bbb693268d49b87e69208cfa23739578ea",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/SwfPlayerWindow.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/SwfPlayerWindow.xaml.cs",
+      "size": 4860,
+      "sha256": "26eb9d43ca9382d3add7f5c78e84c4713f038c315fe78baf725a2f47f5c67b59",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/ViewSourceWindow.xaml",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/ViewSourceWindow.xaml",
+      "size": 1148,
+      "sha256": "567c7a6c4f9388c52b146b69f8d2cc9c08ba122efb4cea20b30f9b53dc848202",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "CefFlashBrowser/Views/ViewSourceWindow.xaml.cs",
+      "snapshotRelativePath": "reference/legacy/CefFlashBrowser/Views/ViewSourceWindow.xaml.cs",
+      "size": 2633,
+      "sha256": "0d09d5780b4c80e094881bc929d30f59d4a4e1d7609dcd8a1f734e4fc3a3be00",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "Docs/amf0-file-format-specification.pdf",
+      "snapshotRelativePath": "reference/legacy/Docs/amf0-file-format-specification.pdf",
+      "size": 140284,
+      "sha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "Docs/amf3-file-format-spec.pdf",
+      "snapshotRelativePath": "reference/legacy/Docs/amf3-file-format-spec.pdf",
+      "size": 287073,
+      "sha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "Docs/macos-porting-plan.zh-CN.md",
+      "snapshotRelativePath": "reference/legacy/Docs/macos-porting-plan.zh-CN.md",
+      "size": 28567,
+      "sha256": "b162166dcfa26b06a08c7df21cf4c2d048685ff89b3cb30a59f32dca26b0ab59",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "LICENSE",
+      "snapshotRelativePath": "reference/legacy/LICENSE",
+      "size": 1067,
+      "sha256": "8c7617640ad12e8192549e417a49b729609fa5022e6c58dabfbd19d53fd5c45f",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "README.en.md",
+      "snapshotRelativePath": "reference/legacy/README.en.md",
+      "size": 1915,
+      "sha256": "afb71760c9fc6f5efdd7fedb54700bbae2d1e3b406767e94ed542ceb9093a273",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "README.md",
+      "snapshotRelativePath": "reference/legacy/README.md",
+      "size": 1838,
+      "sha256": "16789fca4eceabde4fd4eaac6214d1b8919a0219b25f6189f5bbfcca2489be55",
+      "gitState": "tracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/.gitignore",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/.gitignore",
+      "size": 11,
+      "sha256": "f162171ded7ff8c1d6032f7cb50317bc19cc4d1bbd4757be9f8ea75cdec540f1",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/AGENTS.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/AGENTS.md",
+      "size": 5387,
+      "sha256": "ebe74e497bce8c56d49b9579079492ad119dd924615b62c6c1e0f719a1c5e9b5",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/CefFlashBrowser.MacOS.Spike.slnx",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/CefFlashBrowser.MacOS.Spike.slnx",
+      "size": 327,
+      "sha256": "4e02927efda996cf67305548a5720215c6cf778436d5aea330d236d53f61dc71",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/Directory.Build.props",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/Directory.Build.props",
+      "size": 586,
+      "sha256": "0f2ba6c004dd07cb2adb0e700d520bcd377f45df81e1ee3abe55ae077252a052",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/Directory.Packages.props",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/Directory.Packages.props",
+      "size": 737,
+      "sha256": "d3272ebb487297e82ac8bee64be68cad81b57ba98c8fbc0d5d7ef4681f709dca",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/README.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/README.md",
+      "size": 6238,
+      "sha256": "5e7a376e6e2cb8b0a660fc37d032b4a1e68326d513269945d7d11c9289c0cb8c",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/docs/ADR-0001-wkwebview-backend.zh-CN.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/docs/ADR-0001-wkwebview-backend.zh-CN.md",
+      "size": 3958,
+      "sha256": "2544c3c8b50f0ddb667f8132769d9a57567f712080346a6e82ecf7bb28090189",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/docs/development-handoff.zh-CN.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/docs/development-handoff.zh-CN.md",
+      "size": 42026,
+      "sha256": "62383f4629e28b3543baa5928911fe69c1c39be90386cc1dc70b6054f02a15ab",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/docs/engineering-spec.zh-CN.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/docs/engineering-spec.zh-CN.md",
+      "size": 12902,
+      "sha256": "201029f8c0d1dbcb70f6b6f7ef4cea9c8b4370738da503bc269ee1bf68d93ac8",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/docs/gate0-results.zh-CN.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/docs/gate0-results.zh-CN.md",
+      "size": 14890,
+      "sha256": "9c5f1ec082ac64e31fccf9b1bb15eb0b975e99005e7f1fe2693dd35f14387647",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/docs/h0.2-h0.3a-gate0-hardening.zh-CN.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/docs/h0.2-h0.3a-gate0-hardening.zh-CN.md",
+      "size": 31529,
+      "sha256": "088cb1906ce99b5aa70cd302570356628204f9361c152eb779ffc60c0d5f3e31",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/docs/h0.3b1-player-reliability-externalinterface.zh-CN.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/docs/h0.3b1-player-reliability-externalinterface.zh-CN.md",
+      "size": 26518,
+      "sha256": "2d1a0e8ca477be3de348d60c772d21248c174e12876806ac9587814b28b1e7e6",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/docs/interfaces.zh-CN.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/docs/interfaces.zh-CN.md",
+      "size": 16899,
+      "sha256": "531ac9465266fa75d3aa5a3297deb4c2f7f23ada4564fe4c24470d3fe188f892",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/docs/variables.zh-CN.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/docs/variables.zh-CN.md",
+      "size": 14366,
+      "sha256": "271b4db779a6a8df0fadc470ca8257475bbd0a056e9f44c815c3246d93e589d4",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/global.json",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/global.json",
+      "size": 109,
+      "sha256": "1497bda77ac26a91600f9eaa9d733be95a970961816c63738a4aafe1dc9c14e3",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/packaging/macos/CefFlashBrowser.development.entitlements",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/packaging/macos/CefFlashBrowser.development.entitlements",
+      "size": 393,
+      "sha256": "3726221a606dae99b53f3f561754842b0e18fad422c134479e4a5fa9a5f466a4",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/packaging/macos/CefFlashBrowser.entitlements",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/packaging/macos/CefFlashBrowser.entitlements",
+      "size": 321,
+      "sha256": "a2f94dda68da5a6d994132cfc3ee49f07b83bccc5c1b9d5653e2e5fdb228ff41",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/packaging/macos/Info.plist",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/packaging/macos/Info.plist",
+      "size": 1199,
+      "sha256": "b57bb9aa6951c13e5c38cc267edfaf5977b2eda9810182c01b8dbf283624ce2b",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/scripts/package-macos.sh",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/scripts/package-macos.sh",
+      "size": 2259,
+      "sha256": "e6dc82e3d760b9693faa084c43477de019242d3cebfb644fd87ca2ebb17251e8",
+      "gitState": "untracked",
+      "executable": true
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/scripts/verify-arm64-baseline.sh",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/scripts/verify-arm64-baseline.sh",
+      "size": 3087,
+      "sha256": "6e7677bcf7bf3f57adc66e1f1c4bbdcfbed8f4f451aa7b21bf744f707e4bff37",
+      "gitState": "untracked",
+      "executable": true
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs",
+      "size": 1708,
+      "sha256": "9126c7bbe43c3a6f93c83f72dc491e4f4edfaf7a0594fdc54e415f648635a259",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/WebBridgeProtocol.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/WebBridgeProtocol.cs",
+      "size": 3091,
+      "sha256": "3bb286dbde457915b52d6405a3920a0110e64e75517b9096f601f881b7b62f90",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Navigation/NavigationResolver.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Navigation/NavigationResolver.cs",
+      "size": 3498,
+      "sha256": "d63b625cab0af4cafb3c6f954f142b733d5a14e01f715a99a051ac5c28f1acc4",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+      "size": 136,
+      "sha256": "49d01e621981c698a339e69ccf9977e99895b4147066d28f4c8d95a188b7a9a7",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LocalContentContracts.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LocalContentContracts.cs",
+      "size": 553,
+      "sha256": "b28df276c68022144f52ca94d4af664d29720c6d81c892b5680d9f88ec540f61",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "size": 38475,
+      "sha256": "e94a26aa8a8ae810b924d90092b59cdf74349dcd67c7ff1ac384695a53507d6d",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/PathSafety.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/PathSafety.cs",
+      "size": 1585,
+      "sha256": "fd0f16a875b9dddb42255cff122ffbce2f3b7e58a9617b8a919f981d41ee0485",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleAssetManifest.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleAssetManifest.cs",
+      "size": 2769,
+      "sha256": "6f2f4dfd4713b80de937c710f2bb85329c87bc645db7f05629d5bcc810d39b98",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "size": 9350,
+      "sha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs",
+      "size": 12331,
+      "sha256": "4fe0d8aa09405c28a7eee189348a8bd1c88e0e29fb77094d265a557e364f881a",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs",
+      "size": 7412,
+      "sha256": "13bbae46778d59bf7e5d52cbb96cdc014448f21c953949bce339666b45be0afe",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Paths/AppPaths.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Paths/AppPaths.cs",
+      "size": 1526,
+      "sha256": "b3cf043ae322864d1fd1a49070875c835b91c84011c45616b86780b8d959a2fa",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Persistence/AtomicFileWriter.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Persistence/AtomicFileWriter.cs",
+      "size": 1600,
+      "sha256": "e3082e0f327d558b426bc44f505b0934c450218fdcb68031dc5a8b476920b99a",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Properties/AssemblyInfo.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Properties/AssemblyInfo.cs",
+      "size": 108,
+      "sha256": "3e61513bca0921c1c8c089ca2436eefea786ab18e3cd60d802c14dddfa69992b",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Sol/SolFileHeader.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Sol/SolFileHeader.cs",
+      "size": 2295,
+      "sha256": "ff7b93005f3e4dea8faf99b2da2321ec146155fcf714fc330ac12af69aa23b94",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/packages.lock.json",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/packages.lock.json",
+      "size": 90,
+      "sha256": "eb1beb60ba159ebcb90e675b66b758e47e0bde073dcec195a77557b0e4336327",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml",
+      "size": 648,
+      "sha256": "e02adcd561dad9b77ba164f388c03740cd70d9bd2c1ec4db4119f835534ffc86",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "size": 1280,
+      "sha256": "ce0cff3b8b93de2f677e3df2c0a821fe4b7365bae14847f8195e1065fd236dde",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/RuffleTest.sol",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/RuffleTest.sol",
+      "size": 279,
+      "sha256": "f680967f67a440d153d63cfd00c89ece1c0770d79531d51003afa3131758b978",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/THIRD-PARTY.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/THIRD-PARTY.md",
+      "size": 3067,
+      "sha256": "b4702573aa120ab010305454d452cb6ab564637e6ffd486f4f90d38451dcb61e",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/Test.as",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/Test.as",
+      "size": 5715,
+      "sha256": "d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/index.html",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/index.html",
+      "size": 1906,
+      "sha256": "e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.fla",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.fla",
+      "size": 4804,
+      "sha256": "1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.swf",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.swf",
+      "size": 2308,
+      "sha256": "d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.ts",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-external-interface/test.ts",
+      "size": 11769,
+      "sha256": "ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/Test.as",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/Test.as",
+      "size": 60,
+      "sha256": "b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/output.txt",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/output.txt",
+      "size": 13,
+      "sha256": "0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf",
+      "size": 580,
+      "sha256": "708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.toml",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.toml",
+      "size": 15,
+      "sha256": "fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/shared-object-avm1.swf",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/shared-object-avm1.swf",
+      "size": 796,
+      "sha256": "1a215bd4d1f1b6833267216650d8b1db94b42b9f72fb6489e18a65c229411b7c",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/1ef41ff58c9763bed027.wasm",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/1ef41ff58c9763bed027.wasm",
+      "size": 14201591,
+      "sha256": "cd0a675924f4f40a8e1e7e16f8e7fe2105d13edfb2fd650dc42aaeac1e92143a",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/63468f5322aed2e768a8.wasm",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/63468f5322aed2e768a8.wasm",
+      "size": 14146177,
+      "sha256": "381c459563278d830db728beb8e8f1bdeedb390d50b3c6b16bd6e4af6c2ed016",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/LICENSE_APACHE",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/LICENSE_APACHE",
+      "size": 9723,
+      "sha256": "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/LICENSE_MIT",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/LICENSE_MIT",
+      "size": 1097,
+      "sha256": "4de9338a7879c68e911742a7d691f0797ff1ef8d8a6fb978b0c711e258fe959c",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/THIRD-PARTY.md",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/THIRD-PARTY.md",
+      "size": 1263,
+      "sha256": "58489a0d4b6e97c03052444047764429d84424eb44aa4914abcbcc10b7cff8bc",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/core.ruffle.0875e44536e955474b0c.js",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/core.ruffle.0875e44536e955474b0c.js",
+      "size": 104433,
+      "sha256": "28fa24cd43c3d91899f92a5beedde63c58753b63850ed4b16484c14791625f7a",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/core.ruffle.831c4f4a93befb9e84af.js",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/core.ruffle.831c4f4a93befb9e84af.js",
+      "size": 110362,
+      "sha256": "16214a9d1cc55219ee196fcd2bab9d303a6985567cbfe8ffc891eebacfd4cd29",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/package.json",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/package.json",
+      "size": 418,
+      "sha256": "097043e1bfb0a094c77411912690245eee966ae1cb672128307f299ad743d90d",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/ruffle.js",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Ruffle/ruffle.js",
+      "size": 461418,
+      "sha256": "8593f2d1f7cc39f2000c02813bed664bfb0594dee15c3e8e18ca9f0c201081f2",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "size": 12159,
+      "sha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+      "size": 2193,
+      "sha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/IDocumentStartInjector.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/IDocumentStartInjector.cs",
+      "size": 190,
+      "sha256": "bcd85fe94b974d7d3e8ffd75d4451d0f2cf925ae73d5aa6ce7e1cea5a8a5815d",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+      "size": 1455,
+      "sha256": "0a5e1f23e5024f823a6c194d67f7df1aed55404a05ddddf5b097f4a43591daa3",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "size": 5363,
+      "sha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/GateZeroSessionJournal.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/GateZeroSessionJournal.cs",
+      "size": 2971,
+      "sha256": "8bb75414fc8abda71e15435953bd34aa04451a25e0696839627204a53801eae1",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/BundleResourceLocator.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/BundleResourceLocator.cs",
+      "size": 444,
+      "sha256": "2afa78abe2ee582df26bd951d64cb87cca219d4effddbe987b97e25bf5205a06",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/MacDocumentStartInjector.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/MacDocumentStartInjector.cs",
+      "size": 4986,
+      "sha256": "667ad6d8f65e526c56205e83ccab97a42b6580858b4f0128b65180d464836e4f",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "size": 413,
+      "sha256": "91b677b904d0029b4cc148257c4de0e1434a14818b339c16c665577bf99906c1",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/Commands.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/Commands.cs",
+      "size": 1776,
+      "sha256": "ea1a9249a6189d84ab69442dbf0435383a55b60f1c1c53aa79f492cfcc0c3d2c",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "size": 14986,
+      "sha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/ObservableObject.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/ObservableObject.cs",
+      "size": 776,
+      "sha256": "0b7425b38d20f8976ff343fcd43033a8d3bcf38a5fbd62fb0fb9aa33ce57eba9",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml",
+      "size": 5530,
+      "sha256": "b6d58cc8254c3f699e8933efa8216e96d1a9d46259f28b3f4daa9fe98e82ab39",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "size": 7294,
+      "sha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml",
+      "size": 960,
+      "sha256": "aa42196f266db8e99b41a3e5f19d1b786857021275332ed205ff9a262942c478",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "size": 2841,
+      "sha256": "d0c7cd111eea2784bdfb67a82ac4b2ee56ad77d304bfe00c5e966be1563e968f",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/packages.lock.json",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/packages.lock.json",
+      "size": 9870,
+      "sha256": "1b64525e9aa1c26798bfe96c368f249ceea552273532510939fa822ad1ed0262",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+      "size": 2488,
+      "sha256": "263e751a41971ff6e44123d690737f0d09466a24334f3258cf79352df258625d",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/GateZeroFixtureTests.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/GateZeroFixtureTests.cs",
+      "size": 4596,
+      "sha256": "acb62afdd6d28a4093e67c02b04236990abe513a2f46f5eae9e3e6dae00cacf2",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/LoopbackContentHostTests.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/LoopbackContentHostTests.cs",
+      "size": 12242,
+      "sha256": "b95834e006a88ed0ae8a8b012d15a530955ee835a279fc3e157a7e28b19ce185",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/NavigationResolverTests.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/NavigationResolverTests.cs",
+      "size": 1913,
+      "sha256": "06b457bcecc11d86b5630ee851530c4cd319a1413b0cb43a46e77c6a6e2b0b55",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/PathSafetyTests.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/PathSafetyTests.cs",
+      "size": 1532,
+      "sha256": "beb824e0b535ccd82f6f00fbacd9c9b5e0f981eb8e2056c0033cfd54deb8b226",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleDocumentStartScriptBuilderTests.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleDocumentStartScriptBuilderTests.cs",
+      "size": 1580,
+      "sha256": "6e8eee6d2f90dbdf3226f4e918708e72dceb56f766325d2893d5f54a4d432482",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RufflePlayerCoordinatorTests.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RufflePlayerCoordinatorTests.cs",
+      "size": 14858,
+      "sha256": "7aa036f20f66a154de37483746603049c681d224a3de026bdac442cf1cc63c46",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleSaveStoreTests.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/RuffleSaveStoreTests.cs",
+      "size": 2767,
+      "sha256": "1e5a948a714daa52029e5395533d3204bd22ba413b7288505f9f9e1c842fc9e7",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/SolFileInspectorTests.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/SolFileInspectorTests.cs",
+      "size": 1959,
+      "sha256": "79fb7459090ab4042788dc5ec61bcacac0f6be95a22be28bf74900d1f1c29dee",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/TestSupport.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/TestSupport.cs",
+      "size": 1201,
+      "sha256": "cca1d1f90ac21b7ffced937d7abd3e5ebf468b0cefcbdc1095683f6e9e286136",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/WebBridgeProtocolTests.cs",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/WebBridgeProtocolTests.cs",
+      "size": 6119,
+      "sha256": "f4b9ef3734b86a6ac55887f03138165639c9310863c6093ae6d34533afddec75",
+      "gitState": "untracked",
+      "executable": false
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/packages.lock.json",
+      "snapshotRelativePath": "reference/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/packages.lock.json",
+      "size": 4265,
+      "sha256": "4ea9907cf78609dff878a51199b6c307614d57332a9d18eda78f526561048f70",
+      "gitState": "untracked",
+      "executable": false
+    }
+  ],
+  "exclusions": [
+    {
+      "path": "spike/macos-host/artifacts",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/bin",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/obj",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/bin",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/obj",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/bin",
+      "reason": "generated/cache directory"
+    },
+    {
+      "path": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/obj",
+      "reason": "generated/cache directory"
+    }
+  ]
+}

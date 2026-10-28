@@ -1,0 +1,392 @@
+using CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Storage;
+using CefFlashBrowser.MacOS.Spike.Core.Sol;
+
+namespace CefFlashBrowser.MacOS.Spike.Tests;
+
+[TestClass]
+public sealed class RufflePlayerCoordinatorTests
+{
+    [TestMethod]
+    public async Task BridgeStoreFailureRaisesFaultExactlyOnceAndIsObserved()
+    {
+        var browser = new RecordingBrowserSession();
+        await using var host = new StubContentHost();
+        var store = new ControlledSaveStore(throwOnUpsert: true);
+        await using var coordinator = new RufflePlayerCoordinator(browser, host, store);
+        var faultReceived = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var faultCount = 0;
+        coordinator.Faulted += exception =>
+        {
+            Interlocked.Increment(ref faultCount);
+            faultReceived.TrySetResult(exception);
+        };
+
+        browser.PublishBridgeMessage(new WebBridgeMessage("saveChanged", "first", "data"));
+
+        var exception = await faultReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await coordinator.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.IsInstanceOfType<InvalidOperationException>(exception);
+        Assert.AreEqual(1, Volatile.Read(ref faultCount));
+    }
+
+    [TestMethod]
+    public async Task DisposeAsyncWaitsForAnAcceptedBridgeWriteToFinish()
+    {
+        var browser = new RecordingBrowserSession();
+        await using var host = new StubContentHost();
+        var store = new ControlledSaveStore(blockFirstUpsert: true);
+        await using var coordinator = new RufflePlayerCoordinator(browser, host, store);
+        var faults = 0;
+        coordinator.Faulted += _ => Interlocked.Increment(ref faults);
+
+        browser.PublishBridgeMessage(new WebBridgeMessage("saveChanged", "first", "data"));
+        await store.FirstUpsertStarted.WaitAsync(TimeSpan.FromSeconds(5));
+        var disposal = coordinator.DisposeAsync().AsTask();
+        var completedBeforeRelease = disposal.IsCompleted;
+
+        store.ReleaseFirstUpsert();
+        await disposal.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.IsFalse(completedBeforeRelease);
+        Assert.AreEqual(0, Volatile.Read(ref faults));
+        CollectionAssert.AreEqual(new List<string> { "first" }, store.CompletedKeys.ToArray());
+    }
+
+    [TestMethod]
+    public async Task MessagesPublishedAfterDisposeStartsAreIgnored()
+    {
+        var browser = new RecordingBrowserSession();
+        await using var host = new StubContentHost();
+        var store = new ControlledSaveStore(blockFirstUpsert: true);
+        await using var coordinator = new RufflePlayerCoordinator(browser, host, store);
+        var changedKeys = new List<string>();
+        coordinator.SaveChanged += entry => changedKeys.Add(entry.Key);
+
+        browser.PublishBridgeMessage(new WebBridgeMessage("saveChanged", "accepted", "data"));
+        await store.FirstUpsertStarted.WaitAsync(TimeSpan.FromSeconds(5));
+        var disposal = coordinator.DisposeAsync().AsTask();
+        var completedBeforeRelease = disposal.IsCompleted;
+        browser.PublishBridgeMessage(new WebBridgeMessage("saveChanged", "too-late", "data"));
+
+        store.ReleaseFirstUpsert();
+        await disposal.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.IsFalse(completedBeforeRelease);
+        CollectionAssert.AreEqual(new List<string> { "accepted" }, store.StartedKeys.ToArray());
+        CollectionAssert.AreEqual(new List<string> { "accepted" }, changedKeys);
+    }
+
+    [TestMethod]
+    public async Task AcceptedBridgeWritesCompleteInArrivalOrder()
+    {
+        var browser = new RecordingBrowserSession();
+        await using var host = new StubContentHost();
+        var store = new ControlledSaveStore(blockFirstUpsert: true);
+        await using var coordinator = new RufflePlayerCoordinator(browser, host, store);
+
+        browser.PublishBridgeMessage(new WebBridgeMessage("saveChanged", "first", "data"));
+        await store.FirstUpsertStarted.WaitAsync(TimeSpan.FromSeconds(5));
+        browser.PublishBridgeMessage(new WebBridgeMessage("saveChanged", "second", "data"));
+        var secondStartedBeforeRelease = store.SecondUpsertStarted.IsCompleted;
+
+        store.ReleaseFirstUpsert();
+        await store.SecondUpsertStarted.WaitAsync(TimeSpan.FromSeconds(5));
+        await coordinator.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.IsFalse(secondStartedBeforeRelease);
+        CollectionAssert.AreEqual(
+            new List<string> { "first", "second" },
+            store.CompletedKeys.ToArray());
+    }
+
+    [TestMethod]
+    public async Task PlayerCommandsUseOneSerializableResultBoundary()
+    {
+        var browser = new RecordingBrowserSession();
+        await using var host = new StubContentHost();
+        var store = new ControlledSaveStore();
+        await using var coordinator = new RufflePlayerCoordinator(browser, host, store);
+
+        await coordinator.PauseAsync();
+        await coordinator.ResumeAsync();
+        await coordinator.ReloadAsync();
+        await coordinator.RequestFullscreenAsync();
+        await coordinator.SetVolumeAsync(0.25d);
+
+        Assert.HasCount(5, browser.ExecutedScripts);
+        foreach (var script in browser.ExecutedScripts)
+        {
+            StringAssert.Contains(script, "const api = window.__cefFlashBrowserPlayerApi;");
+            StringAssert.Contains(script, "if (api) {");
+            StringAssert.Contains(script, "void (");
+            StringAssert.Contains(script, "return true;");
+            Assert.IsFalse(script.Contains("return api.", StringComparison.Ordinal));
+        }
+
+        StringAssert.Contains(browser.ExecutedScripts[0], "void (api.suspend());");
+        StringAssert.Contains(browser.ExecutedScripts[1], "void (api.resume());");
+        StringAssert.Contains(browser.ExecutedScripts[2], "void (api.reload());");
+        StringAssert.Contains(browser.ExecutedScripts[3], "void (api.requestFullscreen());");
+        StringAssert.Contains(browser.ExecutedScripts[4], "void (api.volume = 0.25);");
+    }
+
+    [TestMethod]
+    public async Task CompatibilityResultProjectsOnlyItsShortMessageToStatus()
+    {
+        var browser = new RecordingBrowserSession();
+        await using var host = new StubContentHost();
+        var store = new ControlledSaveStore();
+        await using var coordinator = new RufflePlayerCoordinator(browser, host, store);
+        var statusReceived = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        coordinator.StatusChanged += status => statusReceived.TrySetResult(status);
+
+        browser.PublishBridgeMessage(new WebBridgeMessage(
+            "compatibilityResult",
+            "external-interface/v1",
+            "PRIVATE_STRUCTURED_RESULT",
+            Message: "PASS available=true jsToAs=123.4 asToJs=true structured=true"));
+
+        var status = await statusReceived.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.AreEqual(
+            "PASS available=true jsToAs=123.4 asToJs=true structured=true",
+            status);
+        Assert.IsFalse(status.Contains("PRIVATE_STRUCTURED_RESULT", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task ImportAndDeleteDoNotReturnPromisesToTheNativeWebView()
+    {
+        using var directory = new TemporaryDirectory();
+        using var store = new JsonRuffleSaveStore(directory.GetPath("saves.json"));
+        var browser = new RecordingBrowserSession();
+        await using var host = new StubContentHost();
+        await using var coordinator = new RufflePlayerCoordinator(browser, host, store);
+
+        var entry = await coordinator.ImportAsync(
+            TestAssets.Sol("RuffleTest.sol"),
+            "127.0.0.1//RuffleTest");
+
+        Assert.HasCount(1, browser.ExecutedScripts);
+        AssertReloadReturnsSerializableValue(browser.ExecutedScripts[0]);
+
+        browser.ExecutedScripts.Clear();
+        await coordinator.DeleteAsync(entry);
+
+        Assert.HasCount(1, browser.ExecutedScripts);
+        AssertReloadReturnsSerializableValue(browser.ExecutedScripts[0]);
+    }
+
+    private static void AssertReloadReturnsSerializableValue(string script)
+    {
+        StringAssert.Contains(script, "void window.__cefFlashBrowserPlayerApi.reload();");
+        StringAssert.Contains(script, "return true;");
+        Assert.IsFalse(
+            script.Contains(
+                "return window.__cefFlashBrowserPlayerApi.reload();",
+                StringComparison.Ordinal));
+    }
+
+    private sealed class RecordingBrowserSession : IBrowserSession
+    {
+        private Action<WebBridgeMessage>? _bridgeMessageReceived;
+
+        public BrowserState State => BrowserState.Empty;
+
+        public Task Ready => Task.CompletedTask;
+
+        public List<string> ExecutedScripts { get; } = [];
+
+        public event Action<BrowserState>? StateChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public event Action<Uri>? PopupRequested
+        {
+            add { }
+            remove { }
+        }
+
+        public event Action<BrowserDownloadRequest>? DownloadRequested
+        {
+            add { }
+            remove { }
+        }
+
+        public event Action<WebBridgeMessage>? BridgeMessageReceived
+        {
+            add => _bridgeMessageReceived += value;
+            remove => _bridgeMessageReceived -= value;
+        }
+
+        public event Action<Exception>? Faulted
+        {
+            add { }
+            remove { }
+        }
+
+        public ValueTask NavigateAsync(Uri address, CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        public ValueTask GoBackAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        public ValueTask GoForwardAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        public ValueTask ReloadAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        public ValueTask StopAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        public ValueTask<string?> ExecuteScriptAsync(
+            string script,
+            CancellationToken cancellationToken = default)
+        {
+            ExecutedScripts.Add(script);
+            return ValueTask.FromResult<string?>("true");
+        }
+
+        public ValueTask DownloadAsync(
+            BrowserDownloadRequest request,
+            string destinationPath,
+            CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        public void PublishBridgeMessage(WebBridgeMessage message)
+        {
+            _bridgeMessageReceived?.Invoke(message);
+        }
+    }
+
+    private sealed class ControlledSaveStore : IRuffleSaveStore
+    {
+        private readonly object _sync = new();
+        private readonly bool _blockFirstUpsert;
+        private readonly bool _throwOnUpsert;
+        private readonly TaskCompletionSource _firstUpsertStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _secondUpsertStarted =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _releaseFirstUpsert =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly List<string> _startedKeys = [];
+        private readonly List<string> _completedKeys = [];
+
+        public ControlledSaveStore(bool blockFirstUpsert = false, bool throwOnUpsert = false)
+        {
+            _blockFirstUpsert = blockFirstUpsert;
+            _throwOnUpsert = throwOnUpsert;
+        }
+
+        public Task FirstUpsertStarted => _firstUpsertStarted.Task;
+
+        public Task SecondUpsertStarted => _secondUpsertStarted.Task;
+
+        public IReadOnlyList<string> StartedKeys
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    return _startedKeys.ToArray();
+                }
+            }
+        }
+
+        public IReadOnlyList<string> CompletedKeys
+        {
+            get
+            {
+                lock (_sync)
+                {
+                    return _completedKeys.ToArray();
+                }
+            }
+        }
+
+        public ValueTask<IReadOnlyList<RuffleSaveEntry>> GetAllAsync(
+            CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult<IReadOnlyList<RuffleSaveEntry>>([]);
+
+        public async ValueTask<RuffleSaveEntry> UpsertAsync(
+            string key,
+            string base64Data,
+            CancellationToken cancellationToken = default)
+        {
+            int callNumber;
+            lock (_sync)
+            {
+                _startedKeys.Add(key);
+                callNumber = _startedKeys.Count;
+            }
+
+            if (callNumber == 1)
+            {
+                _firstUpsertStarted.TrySetResult();
+            }
+            else if (callNumber == 2)
+            {
+                _secondUpsertStarted.TrySetResult();
+            }
+
+            if (_throwOnUpsert)
+            {
+                throw new InvalidOperationException("Controlled save-store failure.");
+            }
+
+            if (_blockFirstUpsert && callNumber == 1)
+            {
+                await _releaseFirstUpsert.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            lock (_sync)
+            {
+                _completedKeys.Add(key);
+            }
+
+            return new RuffleSaveEntry(
+                key,
+                base64Data,
+                key,
+                SolEncoding.Amf0,
+                0,
+                DateTimeOffset.UtcNow);
+        }
+
+        public ValueTask<bool> RemoveAsync(string key, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(false);
+
+        public void ReleaseFirstUpsert()
+        {
+            _releaseFirstUpsert.TrySetResult();
+        }
+    }
+
+    private sealed class StubContentHost : ILocalContentHost
+    {
+        public Uri? BaseUri => null;
+
+        public Uri? DiagnosticsUri => null;
+
+        public Uri? RufflePublicPath => null;
+
+        public ValueTask StartAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+
+        public ValueTask<LocalSwfSource> RegisterSwfAsync(
+            string filePath,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+}

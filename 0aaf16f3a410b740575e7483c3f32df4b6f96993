@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "inputs": [
+    {
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Sol/sol.cpp",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+      "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    },
+    {
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Sol/sol.h",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+      "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    },
+    {
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Sol/utils.cpp",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+      "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    },
+    {
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Sol/utils.h",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+      "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    },
+    {
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Sol/cli.cpp",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+      "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    },
+    {
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Sol/utilscli.cpp",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+      "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    },
+    {
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+      "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    },
+    {
+      "snapshotPath": "reference/legacy/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+      "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    },
+    {
+      "snapshotPath": "reference/legacy/Docs/amf0-file-format-specification.pdf",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+      "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    },
+    {
+      "snapshotPath": "reference/legacy/Docs/amf3-file-format-spec.pdf",
+      "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+      "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61",
+      "targetPaths": [
+        "src/FlashMacOS.Domain/Sol",
+        "tests/FlashMacOS.Sol.Managed.Tests",
+        "test-assets/sol-golden",
+        "docs/codec-support-matrix.json"
+      ],
+      "reason": "Read-only algorithm/specification/test reference; new pure C# type graph and manually transcribed normative cases"
+    }
+  ]
+}

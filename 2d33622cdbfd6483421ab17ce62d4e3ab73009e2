@@ -1,0 +1,91 @@
+using System.Text.Json;
+
+namespace FlashMacOS.Tests;
+
+internal static class AmfGolden
+{
+    public static string DirectoryPath => Path.Combine(AppContext.BaseDirectory, "SolGolden");
+    public static JsonElement Fixture(string name)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(DirectoryPath, "manifest.json")));
+        return document.RootElement.GetProperty("fixtures").EnumerateArray().Single(item => item.GetProperty("id").GetString() == name).Clone();
+    }
+    public static byte[] Bytes(JsonElement fixture) => File.ReadAllBytes(Path.Combine(DirectoryPath, Path.GetFileName(fixture.GetProperty("path").GetString()!)));
+    public static void AssertExpected(JsonElement expected, AmfValue value, AmfGraph graph)
+    {
+        switch (expected.ValueKind)
+        {
+            case JsonValueKind.String:
+                var text = expected.GetString();
+                if (text == "undefined") Assert.IsInstanceOfType<AmfUndefined>(value);
+                else if (text == "null") Assert.IsInstanceOfType<AmfNull>(value);
+                else Assert.AreEqual(text, Assert.IsInstanceOfType<AmfString>(value).Value);
+                return;
+            case JsonValueKind.True: case JsonValueKind.False:
+                Assert.AreEqual(expected.GetBoolean(), Assert.IsInstanceOfType<AmfBoolean>(value).Value); return;
+            case JsonValueKind.Number:
+                Assert.AreEqual(expected.GetInt32(), Assert.IsInstanceOfType<AmfInteger>(value).Value); return;
+        }
+        if (expected.TryGetProperty("numberBits", out var number) && number.ValueKind == JsonValueKind.String)
+        { Assert.AreEqual(number.GetString(), Bits(Assert.IsInstanceOfType<AmfNumber>(value))); return; }
+        if (expected.TryGetProperty("integer", out var integer))
+        { Assert.AreEqual(integer.GetInt32(), Assert.IsInstanceOfType<AmfInteger>(value).Value); return; }
+        if (expected.TryGetProperty("avmPlus", out var avm))
+        { AssertExpected(avm, Assert.IsInstanceOfType<AmfAvmPlus>(value).Value, graph); return; }
+        var reference = Assert.IsInstanceOfType<AmfReference>(value);
+        if (expected.TryGetProperty("ref", out var target)) { Assert.AreEqual(new AmfNodeId(target.GetInt32()), reference.Target); return; }
+        var node = graph.Nodes[reference.Target];
+        foreach (var property in expected.EnumerateObject())
+        {
+            switch (property.Name)
+            {
+                case "nodeId": case "arrayId": Assert.AreEqual(property.Value.GetInt32(), node.Id.Value); break;
+                case "arrayKind": Assert.AreEqual(property.Value.GetString(), ((AmfArrayNode)node).ArrayKind.ToString()); break;
+                case "dense": AssertValues(property.Value, ((AmfArrayNode)node).Dense, graph); break;
+                case "associative": AssertProperties(property.Value, ((AmfArrayNode)node).Associative, graph); break;
+                case "declaredAssociativeCount": Assert.AreEqual(property.Value.GetUInt32(), ((AmfArrayNode)node).DeclaredAssociativeCount); break;
+                case "properties": AssertProperties(property.Value, ((AmfObjectNode)node).Properties, graph); break;
+                case "objectKind": Assert.AreEqual(property.Value.GetString(), ((AmfObjectNode)node).ObjectKind.ToString()); break;
+                case "className": Assert.AreEqual(property.Value.GetString(), ((AmfObjectNode)node).Traits.ClassName); break;
+                case "dynamic": Assert.AreEqual(property.Value.GetBoolean(), ((AmfObjectNode)node).Traits.IsDynamic); break;
+                case "sealedNames": CollectionAssert.AreEqual(property.Value.EnumerateArray().Select(item => item.GetString()).ToArray(), ((AmfObjectNode)node).Traits.SealedNames.ToArray()); break;
+                case "sealedValues": AssertValues(property.Value, ((AmfObjectNode)node).SealedValues, graph); break;
+                case "millisecondsBits": Assert.AreEqual(property.Value.GetString(), Bits(((AmfDateNode)node).Milliseconds)); break;
+                case "reservedTimezone": Assert.AreEqual(property.Value.GetInt16(), ((AmfDateNode)node).ReservedAmf0Timezone); break;
+                case "xmlDocument": Assert.AreEqual(AmfNodeKind.XmlDocument, node.Kind); Assert.AreEqual(property.Value.GetString(), ((AmfXmlNode)node).Text); break;
+                case "xml": Assert.AreEqual(AmfNodeKind.Xml, node.Kind); Assert.AreEqual(property.Value.GetString(), ((AmfXmlNode)node).Text); break;
+                case "bytesHex": Assert.AreEqual(property.Value.GetString(), Convert.ToHexStringLower(((AmfByteArrayNode)node).Bytes.Span)); break;
+                case "weakKeys": Assert.AreEqual(property.Value.GetBoolean(), ((AmfDictionaryNode)node).WeakKeys); break;
+                case "entries":
+                    var entries = ((AmfDictionaryNode)node).Entries; Assert.AreEqual(property.Value.GetArrayLength(), entries.Count);
+                    var i = 0; foreach (var pair in property.Value.EnumerateArray())
+                    { AssertExpected(pair[0], entries[i].Key, graph); AssertExpected(pair[1], entries[i++].Value, graph); }
+                    break;
+                case "vector": AssertVectorKind(property.Value.GetString(), node); break;
+                case "fixed": Assert.AreEqual(property.Value.GetBoolean(), Fixed(node)); break;
+                case "typeName": Assert.AreEqual(property.Value.GetString(), ((AmfVectorObjectNode)node).TypeName); break;
+                case "values":
+                    if (node is AmfVectorObjectNode objects) AssertValues(property.Value, objects.Values, graph);
+                    else if (node is AmfVectorIntNode ints) CollectionAssert.AreEqual(property.Value.EnumerateArray().Select(item => item.GetInt32()).ToArray(), ints.Values.ToArray());
+                    else CollectionAssert.AreEqual(property.Value.EnumerateArray().Select(item => item.GetUInt32()).ToArray(), ((AmfVectorUIntNode)node).Values.ToArray());
+                    break;
+                case "numberBits": CollectionAssert.AreEqual(property.Value.EnumerateArray().Select(item => item.GetString()).ToArray(), ((AmfVectorNumberNode)node).Values.Select(Bits).ToArray()); break;
+                case "traitTableCount": case "stringTable": break; // Wire reference bytes are independently checked by canonical fixtures.
+                default: Assert.Fail("No expected-semantics assertion for " + property.Name); break;
+            }
+        }
+    }
+    private static string Bits(AmfNumber number) => unchecked((ulong)number.RawBits).ToString("x16", System.Globalization.CultureInfo.InvariantCulture);
+    private static void AssertValues(JsonElement expected, IReadOnlyList<AmfValue> actual, AmfGraph graph)
+    { Assert.AreEqual(expected.GetArrayLength(), actual.Count); var i = 0; foreach (var value in expected.EnumerateArray()) AssertExpected(value, actual[i++], graph); }
+    private static void AssertProperties(JsonElement expected, IReadOnlyList<AmfProperty> actual, AmfGraph graph)
+    {
+        Assert.AreEqual(expected.GetArrayLength(), actual.Count); var i = 0;
+        foreach (var pair in expected.EnumerateArray())
+        { Assert.AreEqual(pair[0].GetString(), actual[i].Name); AssertExpected(pair[1], actual[i++].Value, graph); }
+    }
+    private static bool Fixed(AmfNode node) => node switch
+    { AmfVectorIntNode x => x.IsFixed, AmfVectorUIntNode x => x.IsFixed, AmfVectorNumberNode x => x.IsFixed, AmfVectorObjectNode x => x.IsFixed, _ => throw new AssertFailedException("Expected vector") };
+    private static void AssertVectorKind(string? expected, AmfNode node) => Assert.AreEqual(expected, node switch
+    { AmfVectorIntNode => "int", AmfVectorUIntNode => "uint", AmfVectorNumberNode => "double", AmfVectorObjectNode => "object", _ => throw new AssertFailedException("Expected vector") });
+}

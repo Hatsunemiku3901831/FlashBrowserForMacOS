@@ -1,0 +1,58 @@
+using FlashMacOS.Application.Flash;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class RuffleDocumentStartScriptBuilderTests
+{
+    [TestMethod]
+    public void SiteProfilesKeepPerHostConfigurationAndCompatibilityNotice()
+    {
+        var profiles = new[] { new FlashMacOS.Domain.Flash.RuffleSiteProfile("fixture.example", new FlashMacOS.Domain.Flash.RuffleGameConfiguration("custom", "low", "noScale"), "Unverified fixture") };
+        var script = RuffleDocumentStartScriptBuilder.Build("globalThis.runtimeFixture=true;", new Uri("http://127.0.0.1:1234/assets/"), profiles: profiles);
+        StringAssert.Contains(script, "fixture.example");
+        StringAssert.Contains(script, "Unverified fixture");
+        StringAssert.Contains(script, "profile.host === location.hostname");
+        Assert.DoesNotContain("mole-login", script);
+    }
+
+    [TestMethod]
+    public void BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode()
+    {
+        const string runtime = "globalThis.__ruffleRuntimeFixture = true;";
+        var publicPath = new Uri("http://127.0.0.1:12345/token/assets/ruffle/");
+
+        var script = RuffleDocumentStartScriptBuilder.Build(runtime, publicPath);
+
+        StringAssert.Contains(script, runtime);
+        StringAssert.Contains(script, publicPath.AbsoluteUri);
+        StringAssert.Contains(script, RuffleAssetManifest.Version);
+        StringAssert.Contains(script, "Storage.prototype.setItem");
+        StringAssert.Contains(script, "new Proxy(nativeLocalStorage");
+        StringAssert.Contains(script, "setTimeout(scanStorage");
+        // W02: the old click interceptor re-requested downloads; native WKDownload now keeps the original request.
+        Assert.IsFalse(script.Contains("downloadRequested", StringComparison.Ordinal));
+        StringAssert.Contains(script, "__cefFlashBrowserDocumentStart");
+        Assert.IsTrue(script.IndexOf("window.RufflePlayer.config", StringComparison.Ordinal)
+            < script.IndexOf(runtime, StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void NativeTransportUsesADistinctRegistrationWithoutChangingLegacyFallback()
+    {
+        var script = RuffleDocumentStartScriptBuilder.Build("globalThis.runtimeFixture=true;", new Uri("http://127.0.0.1:1234/assets/"), FlashMacOS.Application.Browser.WebBridgeNames.NativeHandler);
+        StringAssert.Contains(script, "const bridgeName = \"flashMacOSNativeBridgeV1\"");
+        var legacy = RuffleDocumentStartScriptBuilder.Build("globalThis.runtimeFixture=true;", new Uri("http://127.0.0.1:1234/assets/"));
+        Assert.AreNotEqual(script, legacy);
+    }
+
+    [TestMethod]
+    public void BuildPageBootstrapUsesValidComputedBridgeMemberAccess()
+    {
+        var script = RuffleDocumentStartScriptBuilder.BuildPageBootstrap(
+            new Uri("http://127.0.0.1:12345/token/assets/ruffle/"));
+
+        StringAssert.Contains(script, "messageHandlers?.[\"cefFlashBrowserBridge\"]");
+        Assert.DoesNotContain("messageHandlers?.\"", script);
+    }
+}

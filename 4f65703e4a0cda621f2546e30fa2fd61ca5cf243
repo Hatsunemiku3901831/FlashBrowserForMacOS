@@ -1,0 +1,618 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "targetPath": "scripts/run-native.py",
+      "beforeSha256": "567724801818ea65975afd32360900f41311622fc75c1a8a44fbc9c0d728cd27",
+      "targetSha256": "9319816cb4a4a096a4b10da3b59730bbbbe2df92b3f283558d466a3c8d7b9649",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/BrowserNavigationPolicy.cs",
+      "beforeSha256": null,
+      "targetSha256": "07985889ec2cd382909d8d7ba54a2bfe18880a87ba0bfbb609b692c99cbd268a",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/BrowserWorkspace.cs",
+      "beforeSha256": null,
+      "targetSha256": "c01a4617021fccf1745366eab16951c3cbe937e323d8b96ba7acaf29efe074c4",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/IBrowserSession.cs",
+      "beforeSha256": "e55926b07d0b2e81790aa1dbcb2f5f40a356d785c073d2f05595cced133eda89",
+      "targetSha256": "c69240dca776a32488c2b058ac4cfdb24bf05f6c3a6588abf138ef9c1eae910a",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/IBrowserTools.cs",
+      "beforeSha256": null,
+      "targetSha256": "3bb52ca333575ce0b44284a4fdd13207a7281c5151ca39e0c10b136d6940c767",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/WebBridgeNames.cs",
+      "beforeSha256": "a03b2a2e1be918a887922b8b44560d6f0ccb073a8b343035a64a3ff09b778729",
+      "targetSha256": "79a734202f4f06f420c146881688a5c1c3707feb4ceacdd47e66a00db88dd2e3",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/AvaloniaNativeWebViewSession.cs",
+      "beforeSha256": "84a9469700f0c8bb6b76427ba88cc1f58f2c4e40419eaf592f2cd9b0b440114a",
+      "targetSha256": "62e302ecae0e7d6e73fd8a8fb8bda11f7e088ecbdd465cad9eb3fa0a43922962",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/Diagnostics/BrowserNativeVerification.cs",
+      "beforeSha256": null,
+      "targetSha256": "04ca4a56016889344122a179f4d219c1a7838cc48d296033cfec9716d38506d7",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/FlashMacOS.Browser.WebKit.csproj",
+      "beforeSha256": "3031767722524f74a6a6434068f0d4925b30bccd06b49ec0fc974aad01059201",
+      "targetSha256": "3813ad9287b45c718803a5959268cf5326bd852416e7c4b942b5ec498129cd89",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/MacBrowserBridge.cs",
+      "beforeSha256": null,
+      "targetSha256": "d9c748eb7d745e652dada2d823cba3aa851104c0b1ad98500f5eb1400f50d49e",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKWebView.h",
+          "originalSourceSha256": "73b5dc56e11b5ec0d46b6c3afea3e6fa779868534b0dd05a67d9a58d54426e04"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKNavigationDelegate.h",
+          "originalSourceSha256": "7b6ed34a794d7648e27874ea366106a7562650ccda21403b3564042f5f37c40d"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKUIDelegate.h",
+          "originalSourceSha256": "f24e7b09319df68eb2a82a89959dc619aeae4326b6f440691ec7bcffefc4aee1"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKScriptMessage.h",
+          "originalSourceSha256": "8e463f3a17ee20eadb0c46ae994d9a627efd36e6ed1c937433d643b86e3464e0"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKFrameInfo.h",
+          "originalSourceSha256": "25e6b7ad85ec4a54797a3ff9fe264e7d1a40f1f342265413ba6c94dd509beed6"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKFindConfiguration.h",
+          "originalSourceSha256": "28d4a7dccf57a8e61662831384a8b8d20801d2c2fac128422f78e650bae0b2c0"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKWebsiteDataStore.h",
+          "originalSourceSha256": "02cb250148a3011b18925c43b5a45522802e58b637bf5dc4994d35b9421f91b1"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/Native/FlashMacOSWebKit.m",
+      "beforeSha256": null,
+      "targetSha256": "e82c85df8e47dab172d7fcc27bfb9e91977d985a3e48649aa1613d197da6b47b",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKWebView.h",
+          "originalSourceSha256": "73b5dc56e11b5ec0d46b6c3afea3e6fa779868534b0dd05a67d9a58d54426e04"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKNavigationDelegate.h",
+          "originalSourceSha256": "7b6ed34a794d7648e27874ea366106a7562650ccda21403b3564042f5f37c40d"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKUIDelegate.h",
+          "originalSourceSha256": "f24e7b09319df68eb2a82a89959dc619aeae4326b6f440691ec7bcffefc4aee1"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKScriptMessage.h",
+          "originalSourceSha256": "8e463f3a17ee20eadb0c46ae994d9a627efd36e6ed1c937433d643b86e3464e0"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKFrameInfo.h",
+          "originalSourceSha256": "25e6b7ad85ec4a54797a3ff9fe264e7d1a40f1f342265413ba6c94dd509beed6"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKFindConfiguration.h",
+          "originalSourceSha256": "28d4a7dccf57a8e61662831384a8b8d20801d2c2fac128422f78e650bae0b2c0"
+        },
+        {
+          "originalSourcePath": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks/WebKit.framework/Headers/WKWebsiteDataStore.h",
+          "originalSourceSha256": "02cb250148a3011b18925c43b5a45522802e58b637bf5dc4994d35b9421f91b1"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/WebBridgeProtocol.cs",
+      "beforeSha256": "5acc1e3360492bf5fe06426d57ff1d32f5ddd5ca39126f57941d40844ec63031",
+      "targetSha256": "49fd383e57f5fe88d4b8e3073e2a9692d37a72bdf7e73903038aa2d99cd9292a",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/App.axaml",
+      "beforeSha256": "29a6748b2727a5ffa4cd4a66b43d3913fd7d4367e773ee8807e4b2ca68700a00",
+      "targetSha256": "28ee824b149ccc35b7e32055eb101f463ac21f92368f5a741789b999d9539460",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/App.axaml.cs",
+      "beforeSha256": "62063ac6bb90867ad537d88977a2c0bd444473801c81f87c964a3c9143988c0b",
+      "targetSha256": "ba253c572a80b741e108f4848e5c0eed8fb4595bc5ae5749048cb95f2d6565d4",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Composition/CompositionRoot.cs",
+      "beforeSha256": "d22a35c3ea3218a0dafbd76851d48e310b906f248ff45c036184e7a5223ed2b5",
+      "targetSha256": "823972ecda2610167cbec07a652f8986a36d983048aca5ec11364e9c5daeacb6",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs",
+      "beforeSha256": "e5d78ba399d4fc0db0bc22e8fd6ad586a450f752e63036f77a04353d3058550d",
+      "targetSha256": "3bfdf9bf98314f6765cb4ec53740542d0063d164820e6a10b91721a47816e9df",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "b5c5d727fc9b73525edb87b659ff2e4b0655828136f23721f7cd0dde10a82b51"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+          "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+          "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/DocumentStartScriptSource.cs",
+          "originalSourceSha256": "bcbd8383bfa9b94ceb73f5265a72d670b593f619b8730bce25897d6a383ca911"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+          "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+          "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Views/MainWindow.axaml",
+      "beforeSha256": "6cfe7287c9c7402af24b051eee4f2a40596adc5af1140195b68ae95309792948",
+      "targetSha256": "42555f62f1a071d4bc66b078e4b0f680d10b0faec832d9b03aac58b895de0f2f",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Views/MainWindow.axaml.cs",
+      "beforeSha256": "0c7647e73b6b9db4647f2be1032ffe21d7c227a7ba1202837617e20820f5d5d9",
+      "targetSha256": "df86c0c7b90847e2e0c287a0bfe1289219831c2b3e47c3e04b754285d6e2d4cd",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Browser/BrowserCapabilities.cs",
+      "beforeSha256": null,
+      "targetSha256": "617ed5c9c4a7eac84deb75987800718719a24c0cd55da16339321ea83c7e5eee",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Browser/BrowserModels.cs",
+      "beforeSha256": "cf8c00c36c61e9912168ff3d370328bf87cb0559fbce41f983792836e024a16c",
+      "targetSha256": "6f395c97611b8df8f0aa260276477a12bed0bfe7cd8a413b30ea2ef8004b29f3",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Hosting/BrowserValidationSite.cs",
+      "beforeSha256": null,
+      "targetSha256": "d6faf8e3523e29956ab99d410abd32919e131a6c39fc9e1be6422f8fcfe1a86c",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Hosting/CompatibilityContentHost.cs",
+      "beforeSha256": "4f35f7891fe92b8f91a0a06060034b5917af80a125441b49b0b289b939f9e4bf",
+      "targetSha256": "72a85188575719dbb9e2c282bf2a9af8da6b6aec013c7a778fa7f38a8b1685ce",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Runtime/DocumentStartScriptSource.cs",
+      "beforeSha256": "1db57991d36c4b69419ce7ebd54eacc6e433d848950645aab487bbaa4aaaf674",
+      "targetSha256": "d86c9c2ae1aba2af116e3d98fb681840d84bda606f6ce159205ce255a0cd5e2e",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Diagnostics/CompatibilityEvidenceRecorder.cs",
+      "beforeSha256": "218bf64aaf077a6b664ffe5c79bdd57849e132d567992703e3c431384d4d6130",
+      "targetSha256": "55e1583b6195069505e699232cd14ef9e5ecf5829a8975261cef11ce82ef5b69",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Paths/AppProfile.cs",
+      "beforeSha256": "995379740116da555f8d0e70daea4688df736a9c08e4467f2896db275fa86e2c",
+      "targetSha256": "df8074ae3471667b66dc51145b47239c3b17cc637c3da9fef4f7a28666af4d71",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Application.Tests/BrowserWorkspaceTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "9aca2d21329ce1354c8544cf9fcdc96bfb080fe16970ec082562638763df5fa3",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/BrowserNativeBoundaryTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "060a8f2d04909be97fe353a96305d955532a08362c921e4ead22880ade832eb6",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/NativeEvidenceRecorderTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "8e59c4c98206a9157fcfb015c86fa9ad50ed16d4c67661062f6f7f3628ebbaf9",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/RuffleDocumentStartScriptBuilderTests.cs",
+      "beforeSha256": "3c405e2711773ae8006dac4ee169ef6b75628c434903746867de57434cf2b644",
+      "targetSha256": "500c26c49d77dd7b93147b96dc276e2fd95e3f94b6732d63a5212958b816c42a",
+      "reason": "W01 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": []
+    }
+  ]
+}

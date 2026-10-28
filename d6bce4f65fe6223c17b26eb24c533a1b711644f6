@@ -1,0 +1,40 @@
+using System.Buffers;
+
+namespace FlashMacOS.Sol.Managed;
+
+// Fixed-size blocks avoid a large payload's final terminator doubling a contiguous buffer.
+internal sealed class AmfBuffer : IDisposable
+{
+    private const int BlockSize = 64 * 1024;
+    private readonly List<byte[]> _blocks = [];
+    public int Length { get; private set; }
+    public void WriteByte(byte value)
+    {
+        var offset = Length % BlockSize; var block = WritableBlock(); block[offset] = value; Length++;
+    }
+    public void Write(ReadOnlySpan<byte> bytes)
+    {
+        while (!bytes.IsEmpty)
+        {
+            var offset = Length % BlockSize; var count = Math.Min(BlockSize - offset, bytes.Length);
+            bytes[..count].CopyTo(WritableBlock().AsSpan(offset, count)); Length += count; bytes = bytes[count..];
+        }
+    }
+    private byte[] WritableBlock()
+    {
+        var index = Length / BlockSize;
+        if (index == _blocks.Count) _blocks.Add(ArrayPool<byte>.Shared.Rent(BlockSize));
+        return _blocks[index];
+    }
+    public byte[] ToArray()
+    {
+        var result = new byte[Length];
+        for (var i = 0; i < _blocks.Count; i++) _blocks[i].AsSpan(0, Math.Min(BlockSize, Length - i * BlockSize)).CopyTo(result.AsSpan(i * BlockSize));
+        return result;
+    }
+    public void Dispose()
+    {
+        foreach (var block in _blocks) ArrayPool<byte>.Shared.Return(block, clearArray: true);
+        _blocks.Clear(); Length = 0;
+    }
+}

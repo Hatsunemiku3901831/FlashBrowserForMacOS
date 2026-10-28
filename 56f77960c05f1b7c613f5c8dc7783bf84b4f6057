@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sourceManifestSha256": "1b535474f00b5cb7189c9320d744f8ee38e3faa6df94d1a76e15f96ee7827c8b",
+  "changes": [
+    {
+      "sourceRelativePath": "spike/macos-host/README.md",
+      "sourceSha256": "5e7a376e6e2cb8b0a660fc37d032b4a1e68326d513269945d7d11c9289c0cb8c",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/README.md",
+      "targetSha256": "5789601d44fe04812956f110ce60a4639af8a68ed4116e72bca6c88df8750cb7",
+      "reason": "P01 explicit isolated profile, WebKit store/bundle identity and active README; no runtime/package/fixture upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/packaging/macos/Info.plist",
+      "sourceSha256": "b57bb9aa6951c13e5c38cc267edfaf5977b2eda9810182c01b8dbf283624ce2b",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/packaging/macos/Info.plist",
+      "targetSha256": "6217dc2023f72a1d7f9469b584d01509ebd2dcd9794d782e8ff5dc326feecc95",
+      "reason": "P01 explicit isolated profile, WebKit store/bundle identity and active README; no runtime/package/fixture upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "sourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "targetSha256": "549d2305a2151d38c1847ce51ffe5f5eccda8f93e70da2166dab63c60adb15e0",
+      "reason": "P01 explicit isolated profile, WebKit store/bundle identity and active README; no runtime/package/fixture upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+      "sourceSha256": "0a5e1f23e5024f823a6c194d67f7df1aed55404a05ddddf5b097f4a43591daa3",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+      "targetSha256": "2596df5028127d8b496547285431cbb4fa713ec3553f164428d555c0f427038d",
+      "reason": "P01 explicit isolated profile, WebKit store/bundle identity and active README; no runtime/package/fixture upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "sourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "targetSha256": "41ab1d6abb6ab21b4f7e74b4c64dbfcc24473b0c802c7c05dfd24379c66cd356",
+      "reason": "P01 explicit isolated profile, WebKit store/bundle identity and active README; no runtime/package/fixture upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "sourceSha256": "91b677b904d0029b4cc148257c4de0e1434a14818b339c16c665577bf99906c1",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Program.cs",
+      "targetSha256": "cb3d11fbb9027a3a0fe5666ac13b3d032194147e6b9fbc0fd6cbd22696f46e36",
+      "reason": "P01 explicit isolated profile, WebKit store/bundle identity and active README; no runtime/package/fixture upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Paths/TestProfile.cs",
+      "targetSha256": "5cfe39521a089fb50a7b12c5a6985a800225dcb52153381cfc402b52965e04fc",
+      "reason": "P01 new profile implementation and isolation regression tests"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/TestProfileTests.cs",
+      "targetSha256": "ab5d6b94b37efe22a491a39b230f1aa1dec0f7a06def995845ac025e329ec0e7",
+      "reason": "P01 new profile implementation and isolation regression tests"
+    }
+  ]
+}

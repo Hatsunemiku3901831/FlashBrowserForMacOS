@@ -1,0 +1,155 @@
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Avalonia.Platform;
+using Avalonia.Threading;
+
+namespace FlashMacOS.Browser.WebKit;
+
+internal sealed record NativeBrowserEvent(int Kind, long Generation, string Payload, string Origin, bool IsMainFrame);
+
+/// <summary>Owns the native delegate proxy, callback root and pending native operations.</summary>
+internal sealed partial class MacBrowserBridge : IDisposable
+{
+    private readonly Action<NativeBrowserEvent> _receive;
+    private readonly Action<Exception> _failure;
+    private readonly Dictionary<long, TaskCompletionSource<bool>> _finds = [];
+    private GCHandle _root;
+    private nint _handle;
+    private long _command;
+    private Exception? _callbackFailure;
+
+    public unsafe MacBrowserBridge(IPlatformHandle platform, Action<NativeBrowserEvent> receive, Action<Exception> failure)
+    {
+        if (!Dispatcher.UIThread.CheckAccess()) throw new InvalidOperationException("WK attachment requires the UI thread.");
+        if (platform is not IAppleWKWebViewPlatformHandle apple) throw new PlatformNotSupportedException("A WKWebView handle is required.");
+        _receive = receive; _failure = failure; _root = GCHandle.Alloc(this);
+        try
+        {
+            _handle = Attach(apple.WKWebView, WebBridgeNames.NativeHandler, FlashMacOS.Domain.Identity.ProductIdentity.Name, &Receive, GCHandle.ToIntPtr(_root));
+            if (_handle == 0) throw new InvalidOperationException(Marshal.PtrToStringUTF8(LastError()));
+        }
+        catch { _root.Free(); throw; }
+    }
+
+    public void SetZoom(double value)
+    {
+        RequireAttached();
+        if (SetNativeZoom(_handle, value) == 0) throw new InvalidOperationException("WKWebView rejected zoom.");
+    }
+
+    public void SetInspection(bool enabled)
+    {
+        RequireAttached();
+        if (SetNativeInspection(_handle, enabled ? 1 : 0) == 0) throw new InvalidOperationException("WKWebView rejected inspection setting.");
+    }
+
+    public async ValueTask<bool> FindAsync(string text, bool backwards, bool caseSensitive, CancellationToken cancellationToken)
+    {
+        RequireAttached(); cancellationToken.ThrowIfCancellationRequested();
+        var id = ++_command;
+        var completion = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _finds.Add(id, completion);
+        try
+        {
+            if (Find(_handle, text, backwards ? 1 : 0, caseSensitive ? 1 : 0, id) == 0)
+                throw new InvalidOperationException("WKWebView rejected find.");
+            return await completion.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(false);
+        }
+        finally { await Dispatcher.UIThread.InvokeAsync(() => _finds.Remove(id)); }
+    }
+
+    /// <summary>Starts a GET WKDownload in this view's data store; returns the native download ID.</summary>
+    public long StartDownload(Uri address)
+    {
+        RequireAttached();
+        var id = StartNativeDownload(_handle, address.AbsoluteUri);
+        return id != 0 ? id : throw new InvalidOperationException("WKWebView rejected the download request.");
+    }
+
+    public void SetDownloadDestination(long id, string? stagingPath)
+    {
+        RequireAttached();
+        if (SetNativeDownloadDestination(_handle, id, stagingPath) == 0) throw new InvalidOperationException("The download is not waiting for a destination.");
+    }
+
+    public void CancelDownload(long id)
+    {
+        RequireAttached();
+        if (CancelNativeDownload(_handle, id) == 0) throw new InvalidOperationException("The download is not active.");
+    }
+
+    public int CancelAllDownloads()
+    {
+        RequireAttached();
+        return CancelAllNativeDownloads(_handle);
+    }
+
+    /// <summary>Loads an exact main-frame request, preserving method, body and content type.</summary>
+    public void Load(BrowserRequest request)
+    {
+        RequireAttached();
+        var body = request.Body ?? [];
+        if (LoadRequest(_handle, request.Address.AbsoluteUri, request.Method, body, body.Length, request.ContentType) == 0)
+            throw new InvalidOperationException("WKWebView rejected the request.");
+    }
+
+    private void RequireAttached()
+    {
+        ObjectDisposedException.ThrowIf(_handle == 0, this);
+        if (!Dispatcher.UIThread.CheckAccess()) throw new InvalidOperationException("WK commands require the UI thread.");
+    }
+
+    [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+    private static void Receive(nint context, int kind, long generation, nint payload, nint origin, int flags)
+    {
+        var owner = (MacBrowserBridge)GCHandle.FromIntPtr(context).Target!;
+        try
+        {
+            var value = Marshal.PtrToStringUTF8(payload) ?? "";
+            if (kind == 6)
+            {
+                if (owner._finds.TryGetValue(generation, out var completion)) completion.TrySetResult(value == "true");
+            }
+            else owner._receive(new NativeBrowserEvent(kind, generation, value, Marshal.PtrToStringUTF8(origin) ?? "", flags != 0));
+        }
+        catch (Exception exception)
+        {
+            owner._callbackFailure = exception;
+            try { owner._failure(exception); }
+            catch (Exception reportingFailure)
+            {
+                owner._callbackFailure = new AggregateException(exception, reportingFailure);
+                Console.Error.WriteLine(owner._callbackFailure);
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_handle == 0) return;
+        RequireAttached();
+        // Native detach disables callbacks before completing/aborting sheets. Pending finds are cancelled.
+        Detach(_handle); _handle = 0;
+        foreach (var completion in _finds.Values) completion.TrySetCanceled();
+        _finds.Clear(); _root.Free();
+        if (_callbackFailure is not null) throw new InvalidOperationException("A native callback failed; cleanup completed but the session is not accepted.", _callbackFailure);
+    }
+
+    private const string Library = "FlashMacOSWebKit";
+    [LibraryImport(Library, EntryPoint = "fm_attach", StringMarshalling = StringMarshalling.Utf8)]
+    private static unsafe partial nint Attach(nint view, string handler, string applicationName, delegate* unmanaged[Cdecl]<nint, int, long, nint, nint, int, void> callback, nint context);
+    [LibraryImport(Library, EntryPoint = "fm_last_error")] private static partial nint LastError();
+    [LibraryImport(Library, EntryPoint = "fm_detach")] private static partial void Detach(nint handle);
+    [LibraryImport(Library, EntryPoint = "fm_set_zoom")] private static partial int SetNativeZoom(nint handle, double zoom);
+    [LibraryImport(Library, EntryPoint = "fm_set_inspection")] private static partial int SetNativeInspection(nint handle, int enabled);
+    [LibraryImport(Library, EntryPoint = "fm_find", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial int Find(nint handle, string query, int backwards, int caseSensitive, long command);
+    [LibraryImport(Library, EntryPoint = "fm_download_start", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial long StartNativeDownload(nint handle, string address);
+    [LibraryImport(Library, EntryPoint = "fm_download_destination", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial int SetNativeDownloadDestination(nint handle, long id, string? path);
+    [LibraryImport(Library, EntryPoint = "fm_download_cancel")] private static partial int CancelNativeDownload(nint handle, long id);
+    [LibraryImport(Library, EntryPoint = "fm_download_cancel_all")] private static partial int CancelAllNativeDownloads(nint handle);
+    [LibraryImport(Library, EntryPoint = "fm_load_request", StringMarshalling = StringMarshalling.Utf8)]
+    private static partial int LoadRequest(nint handle, string address, string method, byte[] body, int length, string? contentType);
+}

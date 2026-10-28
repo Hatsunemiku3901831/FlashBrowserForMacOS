@@ -1,0 +1,19 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:CefFlashBrowser.Utils.Converters">
+
+    <local:UrlGetFileName x:Key="UrlGetFileName"/>
+
+    <local:IntToDouble x:Key="IntToDouble"/>
+
+    <local:ObjectToString x:Key="ObjectToString"/>
+
+    <local:ObjectGetType x:Key="ObjectGetType"/>
+
+    <local:BinaryToSizeString x:Key="BinaryToSizeString"/>
+
+    <local:BinaryToSizeString x:Key="BinaryToReadableSizeString" UseReadableSize="True"/>
+
+    <local:ZoomLevelToScale x:Key="ZoomLevelToScale"/>
+
+</ResourceDictionary>

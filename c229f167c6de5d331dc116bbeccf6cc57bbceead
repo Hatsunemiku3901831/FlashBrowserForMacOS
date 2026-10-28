@@ -1,0 +1,58 @@
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Sol.Managed;
+
+public sealed class AmfCodec : IAmfCodec
+{
+    private readonly IAmf3ValueCodec _amf3;
+    public AmfCodec() : this(new Amf3ValueCodec([])) { }
+    public AmfCodec(IEnumerable<IAmfExternalizableCodec> externalizableCodecs) : this(new Amf3ValueCodec(externalizableCodecs)) { }
+    internal AmfCodec(IAmf3ValueCodec amf3) => _amf3 = amf3;
+
+    public AmfGraph Decode(ReadOnlyMemory<byte> source, SolEncoding encoding, AmfLimits? limits = null, CancellationToken cancellationToken = default)
+    {
+        if (!Enum.IsDefined(encoding)) throw new ArgumentOutOfRangeException(nameof(encoding));
+        var reader = new AmfReadContext(source, encoding, limits ?? AmfLimits.Default, _amf3, cancellationToken);
+        var value = encoding == SolEncoding.Amf0 ? reader.ReadAmf0(0) : _amf3.Read(reader, 0);
+        if (reader.Remaining != 0) throw reader.Error("TrailingData", "A single AMF value must consume the entire input.");
+        cancellationToken.ThrowIfCancellationRequested();
+        return reader.Graph([new("", value)]);
+    }
+
+    public byte[] Encode(AmfGraph graph, SolEncoding encoding, AmfLimits? limits = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(graph);
+        if (!Enum.IsDefined(encoding)) throw new ArgumentOutOfRangeException(nameof(encoding));
+        if (graph.Entries.Count != 1) throw new ArgumentException("Raw AMF encoding requires exactly one root value.", nameof(graph));
+        cancellationToken.ThrowIfCancellationRequested(); ValidateGraph(graph, cancellationToken);
+        using var writer = new AmfWriteContext(graph, encoding, limits ?? AmfLimits.Default, _amf3, cancellationToken);
+        if (encoding == SolEncoding.Amf0) writer.WriteAmf0(graph.Entries[0].Value, 0);
+        else _amf3.Write(writer, graph.Entries[0].Value, 0);
+        cancellationToken.ThrowIfCancellationRequested();
+        return writer.ToArray();
+    }
+
+    internal static void ValidateGraph(AmfGraph graph, CancellationToken cancellationToken = default)
+    {
+        var unsupported = graph.FindUnsupported(cancellationToken);
+        if (unsupported.Count != 0)
+        {
+            var item = unsupported[0];
+            throw new AmfFormatException("Unsupported", item.Encoding, checked((int)item.Offset), item.Marker, item.Reason);
+        }
+    }
+}
+
+internal interface IAmf3ValueCodec
+{
+    AmfValue Read(AmfReadContext context, int depth);
+    void Write(AmfWriteContext context, AmfValue value, int depth);
+}
+
+internal sealed class MissingAmf3Codec : IAmf3ValueCodec
+{
+    public AmfValue Read(AmfReadContext context, int depth) =>
+        throw new AmfFormatException("Amf3DelegateUnavailable", SolEncoding.Amf3, Math.Max(0, context.Position - 1), 0x11, "AMF3 implementation is required for this value.");
+    public void Write(AmfWriteContext context, AmfValue value, int depth) =>
+        throw new AmfFormatException("Amf3DelegateUnavailable", SolEncoding.Amf3, Math.Max(0, context.Position - 1), 0x11, "AMF3 implementation is required for this value.");
+}

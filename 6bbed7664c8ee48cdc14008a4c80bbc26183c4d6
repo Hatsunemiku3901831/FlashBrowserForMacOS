@@ -1,0 +1,147 @@
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Sol.Managed;
+
+internal sealed partial class AmfWriteContext
+{
+    private readonly Dictionary<string, int> _strings3 = new(StringComparer.Ordinal);
+    private readonly Dictionary<AmfNodeId, int> _objects3 = [];
+    private readonly Dictionary<AmfTraits, int> _traits3 = new(TraitsComparer.Instance);
+
+    public void WriteU29(uint value)
+    {
+        if (value > 0x1fffffff) throw Error("U29Overflow", "U29 has at most 29 payload bits.");
+        if (value < 0x80) WriteByte((byte)value);
+        else if (value < 0x4000) { WriteByte((byte)((value >> 7) | 0x80)); WriteByte((byte)(value & 0x7f)); }
+        else if (value < 0x200000)
+        { WriteByte((byte)((value >> 14) | 0x80)); WriteByte((byte)(((value >> 7) & 0x7f) | 0x80)); WriteByte((byte)(value & 0x7f)); }
+        else
+        { WriteByte((byte)(((value >> 22) & 0x7f) | 0x80)); WriteByte((byte)(((value >> 15) & 0x7f) | 0x80)); WriteByte((byte)(((value >> 8) & 0x7f) | 0x80)); WriteByte((byte)value); }
+    }
+    private void WriteString3(string value)
+    {
+        if (value.Length == 0) { WriteU29(1); return; }
+        if (_strings3.TryGetValue(value, out var index)) { WriteU29((uint)index << 1); return; }
+        var bytes = Utf8Bytes(value); CountItems(1);
+        WriteU29(((uint)bytes.Length << 1) | 1); WriteBytes(bytes); _strings3.Add(value, _strings3.Count);
+    }
+    public void WriteAmf3(AmfValue value, int depth, IReadOnlyDictionary<string, AmfExternalRegistration> registry)
+    {
+        var previous = Encoding; Encoding = SolEncoding.Amf3;
+        try
+        {
+            CountValue(depth);
+            switch (value)
+            {
+                case AmfUndefined: WriteByte(0); break;
+                case AmfNull: WriteByte(1); break;
+                case AmfBoolean boolean: WriteByte(boolean.Value ? (byte)3 : (byte)2); break;
+                case AmfInteger integer:
+                    if (integer.Value is < -268435456 or > 268435455) throw Error("IntegerOverflow", "AMF3 integer must fit signed 29 bits; explicitly convert Int32 to Number if needed.");
+                    WriteByte(4); WriteU29(unchecked((uint)integer.Value) & 0x1fffffff); break;
+                case AmfNumber number: WriteByte(5); WriteNumber(number); break;
+                case AmfString text: WriteByte(6); WriteString3(text.Value); break;
+                case AmfReference reference: WriteNode3(reference.Target, depth, registry); break;
+                default: throw Error("ConversionRequired", "This value has no direct AMF3 representation.");
+            }
+        }
+        finally { Encoding = previous; }
+    }
+    private void WriteNode3(AmfNodeId id, int depth, IReadOnlyDictionary<string, AmfExternalRegistration> registry)
+    {
+        var node = Node(id);
+        var offset = Position;
+        var marker = node.Kind switch
+        { AmfNodeKind.XmlDocument => 7, AmfNodeKind.Date => 8, AmfNodeKind.Array => 9, AmfNodeKind.Object => 10,
+          AmfNodeKind.Xml => 11, AmfNodeKind.ByteArray => 12, AmfNodeKind.VectorInt => 13, AmfNodeKind.VectorUInt => 14,
+          AmfNodeKind.VectorNumber => 15, AmfNodeKind.VectorObject => 16, _ => 17 };
+        WriteByte((byte)marker);
+        if (_objects3.TryGetValue(id, out var index)) { WriteU29((uint)index << 1); return; }
+        _objects3.Add(id, _objects3.Count);
+        switch (node)
+        {
+            case AmfXmlNode xml:
+                var bytes = Utf8Bytes(xml.Text); WriteU29(((uint)bytes.Length << 1) | 1); WriteBytes(bytes); break;
+            case AmfDateNode date:
+                if (date.ReservedAmf0Timezone.HasValue) throw Error("ConversionRequired", "AMF0 reserved timezone metadata requires an explicit date conversion.");
+                WriteU29(1); WriteNumber(date.Milliseconds); break;
+            case AmfByteArrayNode binary: WriteU29(((uint)binary.Bytes.Length << 1) | 1); WriteBytes(binary.Bytes.Span); break;
+            case AmfArrayNode array:
+                if (array.ArrayKind != AmfArrayKind.Amf3Mixed) throw Error("ConversionRequired", "AMF0 array kind requires explicit conversion.");
+                WriteU29(((uint)array.Dense.Count << 1) | 1);
+                foreach (var property in array.Associative) { WriteName3(property.Name); WriteAmf3(property.Value, depth + 1, registry); }
+                WriteString3(""); foreach (var child in array.Dense) WriteAmf3(child, depth + 1, registry); break;
+            case AmfObjectNode item: WriteObject3(item, depth, offset, registry); break;
+            case AmfVectorIntNode vector:
+                CountItems(vector.Values.Count); WriteVectorHeader3(vector.Values.Count, vector.IsFixed);
+                foreach (var child in vector.Values) WriteUInt32(unchecked((uint)child)); break;
+            case AmfVectorUIntNode vector:
+                CountItems(vector.Values.Count); WriteVectorHeader3(vector.Values.Count, vector.IsFixed);
+                foreach (var child in vector.Values) WriteUInt32(child); break;
+            case AmfVectorNumberNode vector:
+                CountItems(vector.Values.Count); WriteVectorHeader3(vector.Values.Count, vector.IsFixed);
+                foreach (var child in vector.Values) WriteNumber(child); break;
+            case AmfVectorObjectNode vector:
+                WriteVectorHeader3(vector.Values.Count, vector.IsFixed); WriteString3(vector.TypeName);
+                foreach (var child in vector.Values) WriteAmf3(child, depth + 1, registry); break;
+            case AmfDictionaryNode dictionary:
+                WriteU29(((uint)dictionary.Entries.Count << 1) | 1); WriteByte(dictionary.WeakKeys ? (byte)1 : (byte)0);
+                foreach (var entry in dictionary.Entries) { WriteAmf3(entry.Key, depth + 1, registry); WriteAmf3(entry.Value, depth + 1, registry); }
+                break;
+            default: throw Error("UnsupportedNode", "The AMF3 writer does not recognize this node implementation.");
+        }
+    }
+    private void WriteName3(string name)
+    {
+        if (name.Length == 0) throw Error("ConversionRequired", "An empty AMF3 dynamic or associative name is a terminator, not a property.");
+        WriteString3(name);
+    }
+    private void WriteVectorHeader3(int count, bool fixedVector) { WriteU29(((uint)count << 1) | 1); WriteByte(fixedVector ? (byte)1 : (byte)0); }
+    private void WriteObject3(AmfObjectNode item, int depth, int offset, IReadOnlyDictionary<string, AmfExternalRegistration> registry)
+    {
+        if (item.ObjectKind != AmfObjectKind.Amf3Object) throw Error("ConversionRequired", "AMF0 object kind requires explicit conversion.");
+        var traits = item.Traits;
+        if (_traits3.TryGetValue(traits, out var index)) WriteU29(((uint)index << 2) | 1);
+        else
+        {
+            CountItems(1);
+            WriteU29(((uint)traits.SealedNames.Count << 4) | 3 | (traits.IsDynamic ? 8u : 0) | (traits.IsExternalizable ? 4u : 0));
+            WriteString3(traits.ClassName); foreach (var name in traits.SealedNames) WriteString3(name);
+            _traits3.Add(traits, _traits3.Count);
+        }
+        if (traits.IsExternalizable)
+        {
+            if (item.ExternalData is null || !registry.TryGetValue(traits.ClassName, out var registration) || registration.CodecId != item.ExternalCodecId)
+                throw Error("UnknownExternalizable", "The exact registered class codec is required to preserve external data.", 0x0a);
+            try { registration.Codec.Write(new ExternalOutput(this, registry, depth), item.ExternalData); }
+            catch (Exception error) when (Amf3ValueCodec.IsLayoutFailure(error))
+            { throw new AmfFormatException("ExternalCodecFailure", SolEncoding.Amf3, offset, 0x0a, "Registered class codec rejected its layout.", error); }
+            return;
+        }
+        foreach (var value in item.SealedValues) WriteAmf3(value, depth + 1, registry);
+        if (traits.IsDynamic)
+        {
+            foreach (var property in item.Properties) { WriteName3(property.Name); WriteAmf3(property.Value, depth + 1, registry); }
+            WriteString3("");
+        }
+    }
+    private sealed class ExternalOutput(AmfWriteContext owner, IReadOnlyDictionary<string, AmfExternalRegistration> registry, int depth) : IAmfExternalOutput
+    {
+        public void WriteValue(AmfValue value) => owner.WriteAmf3(value, depth + 1, registry);
+        public void WriteByte(byte value) => owner.WriteByte(value);
+        public void WriteUInt32(uint value) => owner.WriteUInt32(value);
+        public void WriteBytes(ReadOnlySpan<byte> bytes) => owner.WriteBytes(bytes);
+        public AmfNode GetNode(AmfReference reference) => owner.Node(reference.Target);
+    }
+    private sealed class TraitsComparer : IEqualityComparer<AmfTraits>
+    {
+        public static TraitsComparer Instance { get; } = new();
+        public bool Equals(AmfTraits? x, AmfTraits? y) => ReferenceEquals(x, y) || (x is not null && y is not null &&
+            x.ClassName == y.ClassName && x.IsDynamic == y.IsDynamic && x.IsExternalizable == y.IsExternalizable && x.SealedNames.SequenceEqual(y.SealedNames, StringComparer.Ordinal));
+        public int GetHashCode(AmfTraits obj)
+        {
+            var hash = new HashCode(); hash.Add(obj.ClassName, StringComparer.Ordinal); hash.Add(obj.IsDynamic); hash.Add(obj.IsExternalizable);
+            foreach (var name in obj.SealedNames) hash.Add(name, StringComparer.Ordinal); return hash.ToHashCode();
+        }
+    }
+}

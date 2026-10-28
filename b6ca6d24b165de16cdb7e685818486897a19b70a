@@ -1,0 +1,269 @@
+using System.Buffers.Binary;
+using System.Security.Cryptography;
+using FlashMacOS.Application.Sol;
+using FlashMacOS.Infrastructure.Persistence;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class SolEditorTransactionTests
+{
+    [TestMethod]
+    [DataRow("settings.sol")]
+    [DataRow("mao.sol")]
+    [DataRow("pvz.sol")]
+    [DataRow("FBCookie.sol")]
+    [DataRow("RuffleTest.sol")]
+    public async Task OriginalBytesAndBackupRemainRecoverableForAllExistingSolFiles(string name)
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath(name); File.Copy(TestAssets.Sol(name), path);
+        var bytes = await File.ReadAllBytesAsync(path); var codec = new SolCodec();
+        await using var editor = await SolEditorSession.OpenAsync(codec, new SolFileStorage(), path);
+        Assert.IsFalse(editor.Current.IsReadOnly); Assert.IsFalse(editor.Current.IsDirty);
+        Assert.AreEqual(Hash(bytes), editor.Current.FileRevision.Sha256); CollectionAssert.AreEqual(bytes, editor.OriginalBytes.ToArray());
+        Assert.IsFalse(File.Exists(path + ".bak"));
+        await editor.ExportOriginalAsync(directory.GetPath("原件副本.sol"));
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(directory.GetPath("原件副本.sol")));
+        var document = editor.Current.Document!; await editor.SaveAsync(editor.Current.Version);
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(path + ".bak"));
+        Assert.IsTrue(AmfGraphEquality.Equivalent(document.Graph, codec.Decode(await File.ReadAllBytesAsync(path)).Graph));
+        Assert.AreEqual(Hash(await File.ReadAllBytesAsync(path)), editor.Current.FileRevision.Sha256);
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(TestAssets.Sol(name)));
+    }
+
+    [TestMethod]
+    public async Task RootObjectAndArrayEditsUndoRedoAndReloadPersistTypedValues()
+    {
+        using var directory = new TemporaryDirectory(); var codec = new SolCodec();
+        await using var editor = SolEditorSession.Create(codec, new SolFileStorage(), "draft", SolEncoding.Amf3);
+        Assert.IsTrue(editor.Current.IsDirty);
+        await Apply(new InsertSolEntry(0, "score", new AmfInteger(1)));
+        var array = new AmfArrayNode(new(7), AmfArrayKind.Amf3Mixed, [new AmfInteger(1)], [new("coins", new AmfInteger(10))]);
+        await Apply(new AddSolGraphEntry(1, "inventory", new AmfReference(array.Id), [array]));
+        var item = new AmfObjectNode(new(8), new AmfTraits("Player", true), properties: [new("name", new AmfString("old"))]);
+        await Apply(new AddSolGraphEntry(2, "player", new AmfReference(item.Id), [item]));
+        await Apply(new ReplaceSolNode(new AmfArrayNode(array.Id, AmfArrayKind.Amf3Mixed,
+            [new AmfInteger(99), new AmfString("火")], [new("coins", new AmfInteger(100))])));
+        await Apply(new ReplaceSolNode(new AmfObjectNode(item.Id, item.Traits, properties: [new("name", new AmfString("小摩尔")), new("active", new AmfBoolean(true))])));
+        await Apply(new ReplaceSolEntry(0, "level", new AmfInteger(42)));
+        await Apply(new InsertSolEntry(3, "temporary", AmfNull.Instance)); await Apply(new RemoveSolEntry(3));
+        await Apply(new RenameSolDocument("中文存档"));
+        await editor.UndoAsync(editor.Current.Version); Assert.AreEqual("draft", editor.Current.Document!.Name);
+        await editor.RedoAsync(editor.Current.Version); Assert.AreEqual("中文存档", editor.Current.Document!.Name);
+        var path = directory.GetPath("中文 空格/编辑结果.sol"); var saved = await editor.SaveAsAsync(path, editor.Current.Version);
+        Assert.IsFalse(saved.IsDirty); Assert.AreEqual(path, saved.Path);
+        var read = codec.Decode(await File.ReadAllBytesAsync(path)); Assert.IsTrue(AmfGraphEquality.Equivalent(saved.Document!.Graph, read.Graph));
+        Assert.AreEqual(42, ((AmfInteger)read.Graph.Entries[0].Value).Value);
+        var readArray = (AmfArrayNode)read.Graph.Nodes[((AmfReference)read.Graph.Entries[1].Value).Target];
+        Assert.AreEqual("火", ((AmfString)readArray.Dense[1]).Value); Assert.AreEqual(100, ((AmfInteger)readArray.Associative[0].Value).Value);
+        var readObject = (AmfObjectNode)read.Graph.Nodes[((AmfReference)read.Graph.Entries[2].Value).Target];
+        Assert.AreEqual("Player", readObject.Traits.ClassName); Assert.AreEqual("小摩尔", ((AmfString)readObject.Properties[0].Value).Value);
+        await editor.UndoAsync(editor.Current.Version); Assert.IsTrue(editor.Current.IsDirty);
+        await editor.RedoAsync(editor.Current.Version); Assert.IsFalse(editor.Current.IsDirty);
+        ValueTask<SolEditorSnapshot> Apply(ISolEdit edit) => editor.ApplyAsync(edit, editor.Current.Version);
+    }
+
+    [TestMethod]
+    public async Task StaleEditsBranchesAndBoundedHistoryCannotOverwriteCurrentState()
+    {
+        await using var editor = SolEditorSession.Create(new SolCodec(), new SolFileStorage(), "start", SolEncoding.Amf3, maximumHistoryStates: 2);
+        await editor.ApplyAsync(new RenameSolDocument("A"), 0);
+        var same = editor.Current;
+        await Assert.ThrowsExactlyAsync<SolEditConflictException>(() => editor.ApplyAsync(new RenameSolDocument("stale"), 0).AsTask());
+        Assert.AreSame(same, editor.Current);
+        await editor.ApplyAsync(new RenameSolDocument("B"), editor.Current.Version);
+        await editor.ApplyAsync(new RenameSolDocument("C"), editor.Current.Version);
+        await editor.UndoAsync(editor.Current.Version); Assert.AreEqual("B", editor.Current.Document!.Name); Assert.IsFalse(editor.Current.CanUndo);
+        await editor.ApplyAsync(new RenameSolDocument("D"), editor.Current.Version); Assert.IsFalse(editor.Current.CanRedo);
+        same = editor.Current;
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => editor.ApplyAsync(new ReplaceSolNode(new AmfXmlNode(new(99), "", true)), editor.Current.Version).AsTask());
+        Assert.AreSame(same, editor.Current);
+    }
+
+    [TestMethod]
+    public async Task ConcurrentEditsWithTheSameVersionHaveOnlyOneWinner()
+    {
+        await using var editor = SolEditorSession.Create(new SolCodec(), new SolFileStorage(), "start", SolEncoding.Amf3);
+        var first = editor.ApplyAsync(new RenameSolDocument("A"), 0).AsTask(); var second = editor.ApplyAsync(new RenameSolDocument("B"), 0).AsTask();
+        await Assert.ThrowsExactlyAsync<SolEditConflictException>(() => Task.WhenAll(first, second));
+        Assert.AreEqual(1, new[] { first, second }.Count(task => task.IsCompletedSuccessfully)); Assert.AreEqual(1L, editor.Current.Version);
+    }
+
+    [TestMethod]
+    public async Task ExternalFileConflictPreservesDraftAndReloadRequiresAnExplicitOperation()
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath("save.sol"); File.Copy(TestAssets.Sol("mao.sol"), path);
+        var original = await File.ReadAllBytesAsync(path); var codec = new SolCodec();
+        await using var editor = await SolEditorSession.OpenAsync(codec, new SolFileStorage(), path);
+        await editor.ApplyAsync(new ReplaceSolEntry(0, "level", new AmfInteger(77)), editor.Current.Version); var draft = editor.Current;
+        var external = codec.Encode(new("mao", SolEncoding.Amf3, new AmfGraph([new("level", new AmfInteger(88))]))); await File.WriteAllBytesAsync(path, external);
+        await Assert.ThrowsExactlyAsync<PersistenceConflictException>(() => editor.SaveAsync(draft.Version).AsTask());
+        Assert.AreSame(draft, editor.Current); Assert.IsTrue(editor.Current.IsDirty); CollectionAssert.AreEqual(external, await File.ReadAllBytesAsync(path));
+        Assert.IsFalse(File.Exists(path + ".bak"));
+        await editor.ReloadAsync(editor.Current.Version); Assert.AreEqual(88, ((AmfInteger)editor.Current.Document!.Graph.Entries[0].Value).Value);
+        Assert.IsFalse(editor.Current.IsDirty); CollectionAssert.AreEqual(original, editor.OriginalBytes.ToArray());
+    }
+
+    [TestMethod]
+    public async Task SaveAsDoesNotOverwriteAnExistingDestinationWithoutItsRevision()
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath("exists.sol"); File.Copy(TestAssets.Sol("mao.sol"), path);
+        var bytes = await File.ReadAllBytesAsync(path);
+        await using var editor = SolEditorSession.Create(new SolCodec(), new SolFileStorage(), "new", SolEncoding.Amf3);
+        var initial = editor.Current;
+        await Assert.ThrowsExactlyAsync<PersistenceConflictException>(() => editor.SaveAsAsync(path, initial.Version).AsTask());
+        Assert.AreSame(initial, editor.Current); CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(path));
+        await editor.SaveAsAsync(path, initial.Version, new(true, Hash(bytes)));
+        Assert.IsFalse(editor.Current.IsDirty); CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(path + ".bak"));
+    }
+
+    [TestMethod]
+    [DataRow((int)AtomicWriteStage.TemporaryCreated, false)]
+    [DataRow((int)AtomicWriteStage.ContentFlushed, false)]
+    [DataRow((int)AtomicWriteStage.BeforeCommit, false)]
+    [DataRow((int)AtomicWriteStage.TemporaryCreated, true)]
+    [DataRow((int)AtomicWriteStage.ContentFlushed, true)]
+    [DataRow((int)AtomicWriteStage.BeforeCommit, true)]
+    public async Task WriteFailureOrCancellationNeverPublishesASavedState(int stage, bool cancel)
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath("atomic.sol"); File.Copy(TestAssets.Sol("mao.sol"), path);
+        var bytes = await File.ReadAllBytesAsync(path); using var cancellation = new CancellationTokenSource(); var enabled = true;
+        var storage = new SolFileStorage((actual, token) =>
+        {
+            if (enabled && actual == (AtomicWriteStage)stage) { if (cancel) cancellation.Cancel(); else throw new IOException("Synthetic SOL disk failure"); }
+            return ValueTask.CompletedTask;
+        });
+        await using var editor = await SolEditorSession.OpenAsync(new SolCodec(), storage, path);
+        await editor.ApplyAsync(new ReplaceSolEntry(0, "level", new AmfInteger(100)), editor.Current.Version); var draft = editor.Current;
+        if (cancel) await Assert.ThrowsAsync<OperationCanceledException>(() => editor.SaveAsync(draft.Version, cancellation.Token).AsTask());
+        else await Assert.ThrowsExactlyAsync<IOException>(() => editor.SaveAsync(draft.Version).AsTask());
+        Assert.AreSame(draft, editor.Current); CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(path)); Assert.IsFalse(File.Exists(path + ".bak"));
+        Assert.HasCount(0, Directory.GetFiles(directory.RootPath, "*.tmp"));
+        enabled = false; await editor.SaveAsync(editor.Current.Version); Assert.IsFalse(editor.Current.IsDirty);
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(path + ".bak"));
+    }
+
+    [TestMethod]
+    public async Task CancellationAfterTheDiskCommitStillPublishesTheCommittedRevision()
+    {
+        using var directory = new TemporaryDirectory(); using var cancellation = new CancellationTokenSource();
+        var storage = new CancelAfterCommitStorage(cancellation); var path = directory.GetPath("after-commit.sol");
+        await using var editor = SolEditorSession.Create(new SolCodec(), storage, "committed", SolEncoding.Amf3);
+        var result = await editor.SaveAsAsync(path, editor.Current.Version, cancellationToken: cancellation.Token);
+        Assert.IsTrue(cancellation.IsCancellationRequested); Assert.IsFalse(result.IsDirty);
+        Assert.AreEqual(Hash(await File.ReadAllBytesAsync(path)), result.FileRevision.Sha256);
+    }
+
+    [TestMethod]
+    [DataRow("marker")]
+    [DataRow("external")]
+    [DataRow("damaged")]
+    public async Task UnsupportedOrDamagedFilesRemainReadOnlyAndExportExactOriginals(string kind)
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath("unknown.sol"); var bytes = Unsupported(kind); await File.WriteAllBytesAsync(path, bytes);
+        await using var editor = await SolEditorSession.OpenAsync(new SolCodec(), new SolFileStorage(), path);
+        Assert.IsTrue(editor.Current.IsReadOnly); Assert.IsNull(editor.Current.Document); Assert.HasCount(1, editor.Current.Diagnostics);
+        Assert.AreEqual(kind == "damaged" ? "InvalidHeader" : kind == "external" ? "UnknownExternalizable" : "UnsupportedMarker", editor.Current.Diagnostics[0].Code);
+        if (kind != "damaged") Assert.AreEqual(kind == "external" ? 24 : 25, editor.Current.Diagnostics[0].Offset);
+        var state = editor.Current;
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => editor.SaveAsync(state.Version).AsTask());
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() => editor.ApplyAsync(new RenameSolDocument("bad"), state.Version).AsTask());
+        Assert.AreSame(state, editor.Current); await editor.ExportOriginalAsync(directory.GetPath("raw.sol"));
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(directory.GetPath("raw.sol")));
+        await Assert.ThrowsExactlyAsync<PersistenceConflictException>(() => editor.ExportOriginalAsync(path).AsTask());
+        CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(path)); Assert.IsFalse(File.Exists(path + ".bak"));
+    }
+
+    [TestMethod]
+    public async Task BackupRecoveryPreservesBadCurrentAndValidBackupBeforeRestoring()
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath("recover.sol"); var backup = await File.ReadAllBytesAsync(TestAssets.Sol("mao.sol"));
+        var bad = Convert.FromHexString("00ff"); await File.WriteAllBytesAsync(path, bad); await File.WriteAllBytesAsync(path + ".bak", backup);
+        await using var editor = await SolEditorSession.OpenAsync(new SolCodec(), new SolFileStorage(), path);
+        var result = await editor.RecoverBackupAsync(editor.Current.Version);
+        Assert.IsFalse(result.Snapshot.IsReadOnly); Assert.IsFalse(result.Snapshot.IsDirty);
+        Assert.IsNotNull(result.ArchivedCurrentPath); CollectionAssert.AreEqual(bad, await File.ReadAllBytesAsync(result.ArchivedCurrentPath));
+        CollectionAssert.AreEqual(backup, await File.ReadAllBytesAsync(path)); CollectionAssert.AreEqual(backup, await File.ReadAllBytesAsync(path + ".bak"));
+        CollectionAssert.AreEqual(bad, editor.OriginalBytes.ToArray()); Assert.AreEqual(6, ((AmfInteger)editor.Current.Document!.Graph.Entries[0].Value).Value);
+    }
+
+    [TestMethod]
+    public async Task BadBackupIsRejectedBeforeAnyRecoveryArchiveOrDiskMutation()
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath("recover.sol"); var bad = Convert.FromHexString("00ff");
+        File.Copy(TestAssets.Sol("mao.sol"), path); var bytes = await File.ReadAllBytesAsync(path); await File.WriteAllBytesAsync(path + ".bak", bad);
+        await using var editor = await SolEditorSession.OpenAsync(new SolCodec(), new SolFileStorage(), path); var state = editor.Current;
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(() => editor.RecoverBackupAsync(state.Version).AsTask());
+        Assert.AreSame(state, editor.Current); CollectionAssert.AreEqual(bytes, await File.ReadAllBytesAsync(path));
+        CollectionAssert.AreEqual(bad, await File.ReadAllBytesAsync(path + ".bak")); Assert.HasCount(0, Directory.GetFiles(directory.RootPath, "*.recovery-*.sol"));
+    }
+
+    [TestMethod]
+    public async Task RecoveryCommitFailurePreservesTheOriginalBackupAndMemoryForRetry()
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath("recover.sol"); var bad = Convert.FromHexString("00ff");
+        var backup = await File.ReadAllBytesAsync(TestAssets.Sol("mao.sol")); await File.WriteAllBytesAsync(path, bad); await File.WriteAllBytesAsync(path + ".bak", backup);
+        var commits = 0; var storage = new SolFileStorage((stage, token) =>
+        { if (stage == AtomicWriteStage.BeforeCommit && ++commits == 2) throw new IOException("Synthetic recovery commit failure"); return ValueTask.CompletedTask; });
+        await using var editor = await SolEditorSession.OpenAsync(new SolCodec(), storage, path); var original = editor.Current;
+        await Assert.ThrowsExactlyAsync<IOException>(() => editor.RecoverBackupAsync(original.Version).AsTask());
+        Assert.AreSame(original, editor.Current); CollectionAssert.AreEqual(bad, await File.ReadAllBytesAsync(path));
+        CollectionAssert.AreEqual(backup, await File.ReadAllBytesAsync(path + ".bak"));
+        var archives = Directory.GetFiles(directory.RootPath, "*.recovery-*.sol"); Assert.HasCount(1, archives);
+        CollectionAssert.AreEqual(bad, await File.ReadAllBytesAsync(archives[0]));
+        await editor.RecoverBackupAsync(editor.Current.Version); CollectionAssert.AreEqual(backup, await File.ReadAllBytesAsync(path));
+    }
+
+    [TestMethod]
+    public async Task ConversionPreviewCannotReplaceAnEditedDocumentEvenWithItsNewVersion()
+    {
+        var codec = new SolCodec(); await using var editor = SolEditorSession.Create(codec, new SolFileStorage(), "draft", SolEncoding.Amf3);
+        await editor.ApplyAsync(new InsertSolEntry(0, "level", new AmfInteger(42)), editor.Current.Version);
+        var plan = await new SolEncodingConversion(codec).AnalyzeAsync(editor.Current.Document!, SolEncoding.Amf0);
+        await editor.ApplyAsync(new RenameSolDocument("changed"), editor.Current.Version); var current = editor.Current;
+        await Assert.ThrowsExactlyAsync<SolEditConflictException>(() => editor.ApplyAsync(new ApplySolConversion(plan), current.Version).AsTask());
+        Assert.AreSame(current, editor.Current);
+        plan = await new SolEncodingConversion(codec).AnalyzeAsync(current.Document!, SolEncoding.Amf0);
+        await editor.ApplyAsync(new ApplySolConversion(plan), editor.Current.Version); Assert.AreEqual(SolEncoding.Amf0, editor.Current.Document!.Encoding);
+        await editor.UndoAsync(editor.Current.Version); Assert.AreEqual(SolEncoding.Amf3, editor.Current.Document!.Encoding);
+    }
+
+    [TestMethod]
+    public async Task SharedDisposeCancelsPendingCodecWorkAndRejectsNewEdits()
+    {
+        using var directory = new TemporaryDirectory(); using var codec = new BlockingCodec();
+        var editor = SolEditorSession.Create(codec, new SolFileStorage(), "pending", SolEncoding.Amf3);
+        var save = editor.SaveAsAsync(directory.GetPath("never.sol"), editor.Current.Version).AsTask(); await codec.Started.Task.WaitAsync(TimeSpan.FromSeconds(3));
+        var first = editor.DisposeAsync().AsTask(); var second = editor.DisposeAsync().AsTask(); Assert.AreSame(first, second);
+        await first.WaitAsync(TimeSpan.FromSeconds(3)); await Assert.ThrowsAsync<OperationCanceledException>(() => save);
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(() => editor.ApplyAsync(new RenameSolDocument("late"), 0).AsTask());
+        Assert.IsFalse(File.Exists(directory.GetPath("never.sol")));
+    }
+
+    private static string Hash(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
+    private static byte[] Unsupported(string kind)
+    {
+        if (kind == "damaged") return [0x00, 0xff];
+        var encoding = kind == "external" ? SolEncoding.Amf3 : SolEncoding.Amf0;
+        var header = new SolCodec().Encode(new("", encoding, new AmfGraph([])));
+        var body = Convert.FromHexString(kind == "external" ? "03780a071f756e6b6e6f776e2e5061796c6f6164deadbeef00" : "000178ff00");
+        var result = header.Concat(body).ToArray(); BinaryPrimitives.WriteUInt32BigEndian(result.AsSpan(2, 4), (uint)(result.Length - 6)); return result;
+    }
+    private sealed class CancelAfterCommitStorage(CancellationTokenSource cancellation) : ISolFileStorage
+    {
+        private readonly SolFileStorage _inner = new();
+        public ValueTask<SolFileImage> ReadAsync(string path, int maximumBytes, CancellationToken cancellationToken = default) => _inner.ReadAsync(path, maximumBytes, cancellationToken);
+        public async ValueTask<SolFileRevision> CommitAsync(string path, ReadOnlyMemory<byte> bytes, SolFileRevision expectedRevision, bool createBackup = true, CancellationToken cancellationToken = default)
+        { var result = await _inner.CommitAsync(path, bytes, expectedRevision, createBackup, cancellationToken); cancellation.Cancel(); return result; }
+    }
+    private sealed class BlockingCodec : ISolCodec, IDisposable
+    {
+        private readonly ManualResetEventSlim _release = new();
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public SolDocument Decode(ReadOnlyMemory<byte> source, AmfLimits? limits = null, CancellationToken cancellationToken = default) => new SolCodec().Decode(source, limits, cancellationToken);
+        public byte[] Encode(SolDocument document, AmfLimits? limits = null, CancellationToken cancellationToken = default)
+        { Started.TrySetResult(); _release.Wait(cancellationToken); return new SolCodec().Encode(document, limits, cancellationToken); }
+        public void Dispose() { _release.Set(); _release.Dispose(); }
+    }
+}

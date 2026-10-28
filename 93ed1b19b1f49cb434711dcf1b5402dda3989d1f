@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-27T23:11:48.163803+00:00",
+  "baseline": "docs/provenance/A02-before.json",
+  "scope": "Formal A02 inputs; fixed upstream assets unchanged; entitlements copied separately with exact provenance",
+  "changes": [
+    {
+      "targetPath": "scripts/package-development.py",
+      "beforeSha256": null,
+      "targetSha256": "e99c9dd471f60c333624b68a59ef31b7255c8b625181b427a0e307ccc18f85a5",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "scripts/run-native.py",
+      "beforeSha256": null,
+      "targetSha256": "ac5181f9485a7ef54d0fe2f7dd7d4eabb2209d961b6f81f53a6b9259952b4ba8",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/BridgeLimits.cs",
+      "beforeSha256": null,
+      "targetSha256": "4972b9b95ff7ff447a8a8cd4ca645b98c76dfeb00397eb3f88b366259b260415",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/BrowserReadiness.cs",
+      "beforeSha256": null,
+      "targetSha256": "a8d4027fbcbfcc9166451357b32f2cb707676a71e9c27e4c681e7a37084b9ed3",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Browser/NavigationMessageGate.cs",
+      "beforeSha256": null,
+      "targetSha256": "925582739f241d1b02f18b7fbf69090aa8b9a0cfeebe272d4f53fbe63accd8c8",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Flash/IFlashPlayer.cs",
+      "beforeSha256": null,
+      "targetSha256": "2c50c840b91ab7232def76a747d1c0ea9c13d52008474346017c4a1b39bdf98e",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Flash/RufflePlayerCoordinator.cs",
+      "beforeSha256": "6001e49071118b2320ff4f1835e19e5812eba6322a45b011482cdf04d6397710",
+      "targetSha256": "404f44b6f11ba172864b22b52379382584a15574ce82e558eafcbe7dbc304122",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs",
+      "originalSourceSha256": "4fe0d8aa09405c28a7eee189348a8bd1c88e0e29fb77094d265a557e364f881a",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs",
+      "bootstrapSourceSha256": "dbe67240b5f897eab1cf2c40be66c7b507c6aebf33ef795a6cfb3de6ef70e9c3"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Lifecycle/AsyncLifecycle.cs",
+      "beforeSha256": null,
+      "targetSha256": "c1469fd0251ee763bd5bcc788b4b2e55518ae831a442dd5dcc6ea62080e3a3fe",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Threading/IUiDispatcher.cs",
+      "beforeSha256": null,
+      "targetSha256": "98d881f852a58a3670f00d3923a3148b5fdcf180ecdaa62d94451cb527e15cf2",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/AvaloniaNativeWebViewSession.cs",
+      "beforeSha256": "e766fe17313e04a9f86c83bba22a454c919744cfe13e9ea03afb1e7e6013314e",
+      "targetSha256": "7f44109b6e48280abcb8362d1dd356c2f0fb77f42006c92687bd94afdedb82ee",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "originalSourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "bootstrapSourceSha256": "183c7e5b87a881a7ec6dd1ec8ef1bb683df77a00bfb9c16d82f0b35c92d23181"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/Diagnostics/NativePageProbe.cs",
+      "beforeSha256": "2714b1688a8fde730fb3c918a04696387b11cc7c36a7a1805f22ad6fbf6d682e",
+      "targetSha256": "5441aa76ccd094077718d88c63006dbb85344c1492c399f2444f46a0c1f66752",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/NativePageProbe.cs",
+      "bootstrapSourceSha256": "e319f94945e9b94d147585dc5fa90df51a4a14459574053b196a216e2e33ff28"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/WebBridgeProtocol.cs",
+      "beforeSha256": "cf252cad034de7e0ea84c689776fe9f0176a0b3f5ac595d05bb4250045664ebb",
+      "targetSha256": "5acc1e3360492bf5fe06426d57ff1d32f5ddd5ca39126f57941d40844ec63031",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/WebBridgeProtocol.cs",
+      "originalSourceSha256": "3bb286dbde457915b52d6405a3920a0110e64e75517b9096f601f881b7b62f90",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/WebBridgeProtocol.cs",
+      "bootstrapSourceSha256": "3bb286dbde457915b52d6405a3920a0110e64e75517b9096f601f881b7b62f90"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/App.axaml.cs",
+      "beforeSha256": "a0b9618938f337800dd59a3f29f5796f4d822e264c661e7e09c91aa802fa1d05",
+      "targetSha256": "1ceeca072314c06fac99642ddf7322e848382aa33e813300521cf1e2923931ca",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "originalSourceSha256": "ce0cff3b8b93de2f677e3df2c0a821fe4b7365bae14847f8195e1065fd236dde",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/App.axaml.cs",
+      "bootstrapSourceSha256": "ce0cff3b8b93de2f677e3df2c0a821fe4b7365bae14847f8195e1065fd236dde"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Composition/CompositionRoot.cs",
+      "beforeSha256": "537d49405738171d03e3ccc26a1bce7112b9e58a589abd7afb0556cfa9345874",
+      "targetSha256": "23517691110bc761f49aac1de161cec75afdab13e82daaafc4450e18ae094ed3",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "bootstrapSourceSha256": "aa583bd1e2c85dbad24f0d4d2a5cd0cfece48099d413954e9d13b6ad616951ac"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/ViewModels/Commands.cs",
+      "beforeSha256": "3bbd83e783feea6466d4adf7bfdddb5a0faa7cf4b3e2c57f6cd012cafc2113bb",
+      "targetSha256": "5b5b85a44606c034ae76ab292d665b3e534c3ab83825e35a4bcf07bb04bcf95c",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/Commands.cs",
+      "originalSourceSha256": "ea1a9249a6189d84ab69442dbf0435383a55b60f1c1c53aa79f492cfcc0c3d2c",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/Commands.cs",
+      "bootstrapSourceSha256": "ea1a9249a6189d84ab69442dbf0435383a55b60f1c1c53aa79f492cfcc0c3d2c"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs",
+      "beforeSha256": "c7d5611b7251c3a623cc5e1c9e01d1634380e2d4b1ccc6f3b42a86baeee98c67",
+      "targetSha256": "9071c6e49aefaeb9cde0d3a053e49c584a70deca73bbe4cc428f1e03a8350794",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "originalSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs",
+      "bootstrapSourceSha256": "5bbe0b543509538bf5e580bcf6cac86c0e4c8b5756e350e1734acca530fbcd96"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Views/MainWindow.axaml.cs",
+      "beforeSha256": "3bdb8d9829a20c313524d8db61105525319d72f6f7bb0eef5eed6cd4ce4d31a4",
+      "targetSha256": "0c7647e73b6b9db4647f2be1032ffe21d7c227a7ba1202837617e20820f5d5d9",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "originalSourceSha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "bootstrapSourceSha256": "e21e5ef698d0416146f2546222ff684b48c118d19c7d5dbceeac83453d64c40c"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Views/PopupWindow.axaml.cs",
+      "beforeSha256": "6db61f387ca4ab7f46cf780c7b016de8403a2718e1b93741018da3e1102805ce",
+      "targetSha256": "46e926a88a83b7bd6ff52a53d840b132e5d115bc07acd7b65494e15935d3c75d",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "originalSourceSha256": "d0c7cd111eea2784bdfb67a82ac4b2ee56ad77d304bfe00c5e966be1563e968f",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/PopupWindow.axaml.cs",
+      "bootstrapSourceSha256": "d0c7cd111eea2784bdfb67a82ac4b2ee56ad77d304bfe00c5e966be1563e968f"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Browser/BrowserModels.cs",
+      "beforeSha256": "10eb8b71f78420f578a3905f0d8c82584955d47615a48d22872ca1c433105d24",
+      "targetSha256": "32a5cc1d7cfb73f65f0b356c1984616e8df33cd0dc023ee25d456a265f0816f1",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs",
+      "originalSourceSha256": "9126c7bbe43c3a6f93c83f72dc491e4f4edfaf7a0594fdc54e415f648635a259",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs",
+      "bootstrapSourceSha256": "9126c7bbe43c3a6f93c83f72dc491e4f4edfaf7a0594fdc54e415f648635a259"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Hosting/LoopbackContentHost.cs",
+      "beforeSha256": "dc102b91884e2ad97e16c7143578fd52f5d959ae02c6c11301ad43a54cd7750a",
+      "targetSha256": "c3bd35fc1582f894ed8c0f7c5fdd7b4d14b45f887d0d2048edbec2c53badb0a1",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "originalSourceSha256": "e94a26aa8a8ae810b924d90092b59cdf74349dcd67c7ff1ac384695a53507d6d",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs",
+      "bootstrapSourceSha256": "7f84f60397bc9832c753a124be6bfd06241f3638f885289f3ec79a4523cd5312"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleDocumentStartScriptBuilder.cs",
+      "beforeSha256": "2dea7270659a491dedbe43648773ebf314f4439925d2e3b368c33d480a26b961",
+      "targetSha256": "06c134edafea6899c014ecaf2887f48b219138148d9cafd0020757ac786af415",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "originalSourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "bootstrapSourceSha256": "e188d905cc24192b3ecc0d8bb774e6d4950d574c9191c538f03aad8c5050d246"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Diagnostics/GateZeroSessionJournal.cs",
+      "beforeSha256": "32cc28ad1aa5268a8be67bec0ec310011a212191657c001ff732c7221c44e345",
+      "targetSha256": "a3c30f18be00846e24adda398c109443f8230025e5c4c666a6142087bce80022",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/GateZeroSessionJournal.cs",
+      "originalSourceSha256": "8bb75414fc8abda71e15435953bd34aa04451a25e0696839627204a53801eae1",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/GateZeroSessionJournal.cs",
+      "bootstrapSourceSha256": "8bb75414fc8abda71e15435953bd34aa04451a25e0696839627204a53801eae1"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Persistence/JsonRuffleSaveStore.cs",
+      "beforeSha256": "47c61ba34e849f92355bd68cbbfd992a995250ce3fc57cbc2f98c2e252bfc036",
+      "targetSha256": "87dbb37e21cb017ddd8ab0cd84da2a241def52ecab7117fe010275126b58a396",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs",
+      "originalSourceSha256": "13bbae46778d59bf7e5d52cbb96cdc014448f21c953949bce339666b45be0afe",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs",
+      "bootstrapSourceSha256": "13bbae46778d59bf7e5d52cbb96cdc014448f21c953949bce339666b45be0afe"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Platform.MacOS/AvaloniaUiDispatcher.cs",
+      "beforeSha256": null,
+      "targetSha256": "833b3680d9379fd23b97b93d5c792c5adc8f849c669503c30fa456670b9f9f87",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Platform.MacOS/MacFileDialogs.cs",
+      "beforeSha256": "d6e4b6d7c5b400d0b957ed5181544ed2337e2573f82a2ff733e96e1c7249d6e5",
+      "targetSha256": "981428c0c0f65f0e2e44344c7ea6010d51e3c1990aa83321d02340eb3cf30661",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "originalSourceSha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "bootstrapSourceSha256": "e21e5ef698d0416146f2546222ff684b48c118d19c7d5dbceeac83453d64c40c"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Application.Tests/AsyncLifecycleTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "edc75ec95fd7061b8c0737d04219d95ab28769e88a8c82a536c2263ae3ae5f4d",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Application.Tests/BrowserBoundaryTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "6bab8ec16a12ac0302e43e98b4cb058a973f4816b1a494f37430353880bfb91d",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Application.Tests/CoordinatorLifetimeTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "812ac6a69ac72b8487b27d57929a66bbc5c0a99117c754eeab47cedb0124d538",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Desktop.Tests/CommandLifetimeTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "430c1f9cc67e82c22de4c8e7e9c67e3f36417b6801d582ef2e2d3157090a981f",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Desktop.Tests/ViewModelLifetimeTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "4ce316469ff646cc7f6a644935c3a2ab8adfe5155e1b7380d900dbd5f5c73c94",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/NativeSessionLifetimeTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "236a9fc614514686569c86cab4cc25dc9e72697c0262dff2ba2cdf9f19a6a98f",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/VersionedBridgeTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "2ed987aa458050fa713a0d19854c240d22ff038a1920e351590f3ba010410c20",
+      "reason": "A02 explicit ports, bounded lifecycle/bridge ownership and race regressions; development-only packaging/native proof where applicable",
+      "origin": "Project authored in flashMacOS; no new external source copy"
+    }
+  ]
+}

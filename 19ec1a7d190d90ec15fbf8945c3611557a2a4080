@@ -1,0 +1,9 @@
+namespace FlashMacOS.Domain.Flash;
+
+public sealed record LocalSwfSource(
+    string Id,
+    string FilePath,
+    Uri PlayerUri,
+    Uri SwfUri,
+    string StoragePrefix);
+

@@ -1,0 +1,90 @@
+using System.Text.Json;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class NativeBrowserPayloadTests
+{
+    private static string Popup(string url, string method = "GET", byte[]? body = null, bool streamed = false, string? contentType = null)
+        => JsonSerializer.Serialize(new { url, method, body = body is null ? null : Convert.ToBase64String(body), streamedBody = streamed, contentType });
+
+    [TestMethod]
+    public void PopupKeepsMethodBodyContentTypeAndTheOpenerPurpose()
+    {
+        var body = "game=mole&note=W02"u8.ToArray();
+        var post = NativeBrowserPayloads.ParsePopupRequest(Popup("https://example.test/echo", "post", body, contentType: "application/x-www-form-urlencoded"), BrowserPurpose.LocalPlayer);
+        Assert.AreEqual(BrowserPurpose.LocalPlayer, post.Purpose);
+        Assert.AreEqual("POST", post.Request.Method);
+        CollectionAssert.AreEqual(body, post.Request.Body);
+        Assert.AreEqual("application/x-www-form-urlencoded", post.Request.ContentType);
+        var get = NativeBrowserPayloads.ParsePopupRequest(Popup("about:blank", contentType: "text/plain"), BrowserPurpose.Web);
+        Assert.IsNull(get.Request.Body); Assert.IsNull(get.Request.ContentType); Assert.AreEqual("about:blank", get.Request.Address.AbsoluteUri);
+        Assert.IsEmpty(NativeBrowserPayloads.ParsePopupRequest(Popup("https://example.test/", "POST"), BrowserPurpose.Web).Request.Body!);
+    }
+
+    [TestMethod]
+    [DataRow("javascript:alert(1)", "GET", false)]
+    [DataRow("file:///etc/hosts", "GET", false)]
+    [DataRow("flashmacos-unknown://x", "GET", false)]
+    [DataRow("blob:https://example.test/id", "GET", false)]
+    [DataRow("https://example.test/", "PUT", false)]
+    [DataRow("https://example.test/", "POST", true)]
+    public void PopupRejectsUnsupportedAddressMethodOrStreamedBody(string url, string method, bool streamed)
+        => Assert.ThrowsExactly<NotSupportedException>(() => NativeBrowserPayloads.ParsePopupRequest(Popup(url, method, streamed: streamed), BrowserPurpose.Web));
+
+    [TestMethod]
+    public void PopupPayloadTypesAreStrictSoANativeShapeErrorIsRejectedVisibly()
+        // W02 native run 01: the dylib sent streamedBody as the integer 0; the session now reports such payloads as a rejected popup.
+        => Assert.ThrowsExactly<InvalidOperationException>(() => NativeBrowserPayloads.ParsePopupRequest(
+            "{\"url\":\"https://example.test/\",\"method\":\"GET\",\"body\":null,\"streamedBody\":0,\"contentType\":null}", BrowserPurpose.Web));
+
+    [TestMethod]
+    public void PopupBodyIsBounded()
+    {
+        NativeBrowserPayloads.ParsePopupRequest(Popup("https://example.test/", "POST", new byte[NativeBrowserPayloads.MaximumPopupBodyBytes]), BrowserPurpose.Web);
+        Assert.ThrowsExactly<InvalidDataException>(() => NativeBrowserPayloads.ParsePopupRequest(
+            Popup("https://example.test/", "POST", new byte[NativeBrowserPayloads.MaximumPopupBodyBytes + 1]), BrowserPurpose.Web));
+    }
+
+    [TestMethod]
+    [DataRow("report.pdf", "report.pdf")]
+    [DataRow("../../etc/passwd", "passwd")]
+    [DataRow("folder\\nested\\save.sol", "save.sol")]
+    [DataRow(".hidden", "hidden")]
+    [DataRow("  spaced name.txt  ", "spaced name.txt")]
+    [DataRow("bad\u0001\u001fname.bin", "badname.bin")]
+    [DataRow("", "download")]
+    [DataRow("..", "download")]
+    [DataRow("/", "download")]
+    public void SuggestedNameBecomesOneSafeFileName(string suggested, string expected)
+    {
+        var request = NativeBrowserPayloads.ParseDownloadRequest(4, JsonSerializer.Serialize(new
+            { url = "https://example.test/f", method = "POST", suggestedFilename = suggested, mimeType = (string?)null, expected = -1L }));
+        Assert.AreEqual(expected, request.SuggestedFileName);
+        Assert.AreEqual(4, request.Id); Assert.AreEqual("POST", request.Method); Assert.IsNull(request.ExpectedBytes); Assert.IsNull(request.MimeType);
+    }
+
+    [TestMethod]
+    public void LongSuggestedNameKeepsItsStartAndExtension()
+    {
+        var name = new string('a', 300) + ".swf";
+        var parsed = NativeBrowserPayloads.ParseDownloadRequest(1, JsonSerializer.Serialize(new { url = "blob:https://e.test/x", method = "GET", suggestedFilename = name, mimeType = "application/x-shockwave-flash", expected = 12L }));
+        Assert.AreEqual(NativeBrowserPayloads.MaximumFileNameCharacters, parsed.SuggestedFileName.Length);
+        StringAssert.EndsWith(parsed.SuggestedFileName, ".swf");
+        Assert.AreEqual(12, parsed.ExpectedBytes); Assert.AreEqual("blob", parsed.Address!.Scheme);
+    }
+
+    [TestMethod]
+    public void DownloadUpdatesMapEachNativeKindToOneTypedEvent()
+    {
+        Assert.AreEqual(new BrowserDownloadUpdate(2, BrowserDownloadEventKind.Progress, 10, null),
+            NativeBrowserPayloads.ParseDownloadUpdate(21, 2, "{\"received\":10,\"expected\":-1}"));
+        Assert.AreEqual(new BrowserDownloadUpdate(2, BrowserDownloadEventKind.Finished, 20), NativeBrowserPayloads.ParseDownloadUpdate(22, 2, "{\"received\":20}"));
+        Assert.AreEqual(BrowserDownloadEventKind.Cancelled, NativeBrowserPayloads.ParseDownloadUpdate(23, 2, "{\"received\":3,\"cancelled\":true}").Kind);
+        var failed = NativeBrowserPayloads.ParseDownloadUpdate(23, 2, "{\"received\":3,\"cancelled\":false,\"domain\":\"NSURLErrorDomain\",\"code\":-1005,\"message\":\"lost\"}");
+        Assert.AreEqual(BrowserDownloadEventKind.Failed, failed.Kind); Assert.AreEqual("NSURLErrorDomain -1005: lost", failed.Error);
+        Assert.AreEqual("cdn.test", NativeBrowserPayloads.ParseDownloadUpdate(24, 2, "{\"url\":\"https://cdn.test/f\"}").Address!.Host);
+        Assert.IsTrue(failed.IsTerminal);
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => NativeBrowserPayloads.ParseDownloadUpdate(20, 2, "{}"));
+    }
+}

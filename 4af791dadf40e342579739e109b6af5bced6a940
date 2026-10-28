@@ -1,0 +1,110 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net462</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Platforms>x86;x64</Platforms>
+    <NuGetAudit>False</NuGetAudit>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <StartupObject>CefFlashBrowser.Program</StartupObject>
+    <ApplicationIcon>Assets\Icons\icon.ico</ApplicationIcon>
+    <Version>1.1.8</Version>
+    <Authors>Mzying2001</Authors>
+    <Copyright>Copyright © 2021-2026</Copyright>
+    <ApplicationManifest>App.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Platform)' == 'x86'">
+    <OutputPath>..\bin\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Platform)' == 'x64'">
+    <OutputPath>..\bin\$(Platform)\$(Configuration)\</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <COMReference Include="IWshRuntimeLibrary">
+      <WrapperTool>tlbimp</WrapperTool>
+      <VersionMinor>0</VersionMinor>
+      <VersionMajor>1</VersionMajor>
+      <Guid>f935dc20-1cf0-11d0-adb9-00c04fd58a0b</Guid>
+      <Lcid>0</Lcid>
+      <Isolated>false</Isolated>
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\Icons\icon.ico" />
+    <Resource Include="Assets\Icons\page.png" />
+    <Resource Include="Assets\Svgs\add.svg" />
+    <Resource Include="Assets\Svgs\back.svg" />
+    <Resource Include="Assets\Svgs\down.svg" />
+    <Resource Include="Assets\Svgs\edit.svg" />
+    <Resource Include="Assets\Svgs\export.svg" />
+    <Resource Include="Assets\Svgs\forward.svg" />
+    <Resource Include="Assets\Svgs\import.svg" />
+    <Resource Include="Assets\Svgs\more.svg" />
+    <Resource Include="Assets\Svgs\page.svg" />
+    <Resource Include="Assets\Svgs\reload.svg" />
+    <Resource Include="Assets\Svgs\search.svg" />
+    <Resource Include="Assets\Svgs\stop.svg" />
+    <Resource Include="Assets\Svgs\sub.svg" />
+    <Resource Include="Assets\Svgs\trash.svg" />
+    <Resource Include="Assets\Svgs\up.svg" />
+    <Resource Include="Assets\Svgs\warning.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CefSharp.WinForms" Version="84.4.10" />
+    <PackageReference Include="Costura.Fody" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="HandyControl" Version="3.5.1" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageReference Include="Mzying2001.SimpleMvvm" Version="1.1.5" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="SharpVectors" Version="1.8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CefFlashBrowser.FlashBrowser\CefFlashBrowser.FlashBrowser.csproj" />
+    <ProjectReference Include="..\CefFlashBrowser.Log\CefFlashBrowser.Log.csproj" />
+    <ProjectReference Include="..\CefFlashBrowser.Singleton\CefFlashBrowser.Singleton.vcxproj" />
+    <ProjectReference Include="..\CefFlashBrowser.Sol\CefFlashBrowser.Sol.vcxproj" />
+    <ProjectReference Include="..\CefFlashBrowser.WinformCefSharp4WPF\CefFlashBrowser.WinformCefSharp4WPF.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Assets\CefSharp\libcef_x64.tar.gz">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\CefSharp\libcef_x86.tar.gz">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Plugins\pepflashplayer_x64.tar.gz">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Plugins\pepflashplayer_x86.tar.gz">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\Plugins\readme.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Assets\SwfPlayer\swfplayer.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="cd &quot;$(TargetDir)&quot;&#xD;&#xA;&#xD;&#xA;set ASSETS_PATH=Assets\&#xD;&#xA;set CEF_PATH=%25ASSETS_PATH%25CefSharp\&#xD;&#xA;set PLUGINS_PATH=%25ASSETS_PATH%25Plugins\&#xD;&#xA;set EMPTYEXE_PATH=%25ASSETS_PATH%25EmptyExe\&#xD;&#xA;&#xD;&#xA;if &quot;$(Configuration)&quot;==&quot;Release&quot; (&#xD;&#xA;    del *.pdb&#xD;&#xA;    del *.xml&#xD;&#xA;)&#xD;&#xA;&#xD;&#xA;rd /s /q %25CEF_PATH%25locales&#xD;&#xA;rd /s /q %25CEF_PATH%25swiftshader&#xD;&#xA;&#xD;&#xA;move CefSharp.* %25CEF_PATH%25&#xD;&#xA;move cef.pak %25CEF_PATH%25&#xD;&#xA;move cef_100_percent.pak %25CEF_PATH%25&#xD;&#xA;move cef_200_percent.pak %25CEF_PATH%25&#xD;&#xA;move cef_extensions.pak %25CEF_PATH%25&#xD;&#xA;move chrome_elf.dll %25CEF_PATH%25&#xD;&#xA;move d3dcompiler_47.dll %25CEF_PATH%25&#xD;&#xA;move devtools_resources.pak %25CEF_PATH%25&#xD;&#xA;move icudtl.dat %25CEF_PATH%25&#xD;&#xA;move libcef.dll %25CEF_PATH%25&#xD;&#xA;move libEGL.dll %25CEF_PATH%25&#xD;&#xA;move libGLESv2.dll %25CEF_PATH%25&#xD;&#xA;move locales %25CEF_PATH%25&#xD;&#xA;move README.txt %25CEF_PATH%25&#xD;&#xA;move snapshot_blob.bin %25CEF_PATH%25&#xD;&#xA;move swiftshader %25CEF_PATH%25&#xD;&#xA;move v8_context_snapshot.bin %25CEF_PATH%25&#xD;&#xA;&#xD;&#xA;tar -xvf %25CEF_PATH%25libcef_$(PlatformName).tar.gz -C %25CEF_PATH%25&#xD;&#xA;del %25CEF_PATH%25libcef_*.tar.gz&#xD;&#xA;&#xD;&#xA;tar -xvf %25PLUGINS_PATH%25pepflashplayer_$(PlatformName).tar.gz -C %25PLUGINS_PATH%25&#xD;&#xA;del %25PLUGINS_PATH%25pepflashplayer_*.tar.gz&#xD;&#xA;&#xD;&#xA;rd /s /q %25EMPTYEXE_PATH%25&#xD;&#xA;mkdir %25EMPTYEXE_PATH%25&#xD;&#xA;move CefFlashBrowser.EmptyExe.* %25EMPTYEXE_PATH%25" />
+  </Target>
+
+</Project>

@@ -1,0 +1,69 @@
+using FlashMacOS.Application.Flash;
+using FlashMacOS.Flash.Ruffle.Runtime;
+
+namespace FlashMacOS.Flash.Ruffle.Runtime;
+
+public sealed class DocumentStartScriptSource : IDisposable
+{
+    private readonly ILocalContentHost _contentHost;
+    private readonly string _ruffleJavaScriptPath;
+    private readonly SemaphoreSlim _mutex = new(1, 1);
+    private string? _script;
+    private bool _disposed;
+
+    public DocumentStartScriptSource(ILocalContentHost contentHost, string ruffleJavaScriptPath)
+    {
+        ArgumentNullException.ThrowIfNull(contentHost);
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruffleJavaScriptPath);
+        _contentHost = contentHost;
+        _ruffleJavaScriptPath = Path.GetFullPath(ruffleJavaScriptPath);
+    }
+
+    public async ValueTask PrepareAsync(CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_script is not null)
+        {
+            return;
+        }
+
+        await _mutex.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_script is not null)
+            {
+                return;
+            }
+
+            await _contentHost.StartAsync(cancellationToken).ConfigureAwait(false);
+            var publicPath = _contentHost.RufflePublicPath
+                ?? throw new InvalidOperationException("The Ruffle public path was not initialized.");
+            var ruffleJavaScript = await File.ReadAllTextAsync(_ruffleJavaScriptPath, cancellationToken)
+                .ConfigureAwait(false);
+            _script = RuffleDocumentStartScriptBuilder.Build(ruffleJavaScript, publicPath, FlashMacOS.Application.Browser.WebBridgeNames.NativeHandler);
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+    }
+
+    public string GetRequiredScript()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _script
+            ?? throw new InvalidOperationException("The document-start script has not been prepared.");
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _mutex.Dispose();
+        GC.SuppressFinalize(this);
+    }
+}

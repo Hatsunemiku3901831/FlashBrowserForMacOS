@@ -1,0 +1,149 @@
+using FlashMacOS.Application.Configuration;
+using FlashMacOS.Application.Navigation;
+using FlashMacOS.Domain.Configuration;
+using FlashMacOS.Infrastructure.Configuration;
+using FlashMacOS.Infrastructure.Persistence;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class ConfigurationUseCaseTests
+{
+    [TestMethod]
+    public async Task FavoriteOperationsKeepDuplicateIdentitiesOrderAndUnknownMetadata()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("favorites.json");
+        await File.WriteAllTextAsync(path, "{\"schemaVersion\":2,\"favorites\":[{\"id\":\"11111111-1111-1111-1111-111111111111\",\"name\":\"seed\",\"url\":\"https://example.test/\",\"futureFavorite\":{\"priority\":7}}],\"futureEnvelope\":{\"keep\":true}}");
+        using var repository = new JsonFavoritesRepository(path);
+        using var service = new FavoritesService(repository);
+        await service.LoadAsync();
+        var first = await service.AddAsync("摩尔庄园", "http://mole.61.com/");
+        var id = first.Value[1].Id;
+        var second = await service.AddAsync("重复入口", "http://mole.61.com/");
+        var duplicate = second.Value[2].Id;
+        Assert.AreNotEqual(id, duplicate);
+        await service.MoveAsync(id, 2);
+        Assert.AreEqual(id, service.Current!.Value[2].Id);
+        await service.UpdateAsync(id, "已改名", "http://mole.61.com/");
+        await service.RemoveAsync(duplicate);
+        using var restarted = new JsonFavoritesRepository(path);
+        var actual = await restarted.LoadAsync();
+        Assert.HasCount(2, actual.Value);
+        Assert.AreEqual(id, actual.Value[1].Id);
+        Assert.AreEqual("已改名", actual.Value[1].Name);
+        var json = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+        Assert.IsTrue(json["futureEnvelope"]!["keep"]!.GetValue<bool>());
+        Assert.AreEqual(7, json["favorites"]![0]!["futureFavorite"]!["priority"]!.GetValue<int>());
+    }
+
+    [TestMethod]
+    public async Task FavoriteSaveFailureKeepsTheOldVisibleCollectionAndCanRetry()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("favorites.json");
+        var fail = false;
+        using var repository = new JsonFavoritesRepository(path, (stage, _) => fail && stage == AtomicWriteStage.ContentFlushed
+            ? ValueTask.FromException(new IOException("Injected favorite disk failure.")) : ValueTask.CompletedTask);
+        using var service = new FavoritesService(repository);
+        await service.LoadAsync();
+        var first = await service.AddAsync("one", "https://example.test/");
+        var original = await File.ReadAllBytesAsync(path);
+        fail = true;
+        await Assert.ThrowsExactlyAsync<IOException>(async () => await service.RemoveAsync(first.Value[0].Id));
+        Assert.AreSame(first, service.Current);
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(path));
+        fail = false;
+        Assert.IsEmpty((await service.RemoveAsync(first.Value[0].Id)).Value);
+    }
+
+    [TestMethod]
+    public async Task ParallelFavoriteCommandsSerializeWithoutDeduplicatingUrls()
+    {
+        using var directory = new TemporaryDirectory();
+        using var repository = new JsonFavoritesRepository(directory.GetPath("favorites.json"));
+        using var service = new FavoritesService(repository);
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(index => service.AddAsync("item-" + index, "https://example.test/").AsTask()));
+        Assert.HasCount(20, service.Current!.Value);
+        Assert.AreEqual(20, service.Current.Value.Select(x => x.Id).Distinct().Count());
+    }
+
+    [TestMethod]
+    [DataRow(AtomicWriteStage.TemporaryCreated)]
+    [DataRow(AtomicWriteStage.ContentFlushed)]
+    [DataRow(AtomicWriteStage.BeforeCommit)]
+    public async Task ConfigurationCancellationNeverPublishesItsCandidate(AtomicWriteStage cancelAt)
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+        var armed = false;
+        using var cancellation = new CancellationTokenSource();
+        using var repository = new JsonSettingsRepository(path, (stage, _) =>
+        {
+            if (armed && stage == cancelAt) cancellation.Cancel();
+            return ValueTask.CompletedTask;
+        });
+        var initial = await repository.LoadAsync();
+        var saved = await repository.SaveAsync(initial.Value, initial.Revision);
+        var original = await File.ReadAllBytesAsync(path);
+        armed = true;
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await repository.SaveAsync(saved.Value with { Language = "en-US" }, saved.Revision, cancellation.Token));
+        Assert.AreSame(saved, await repository.LoadAsync());
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(path));
+    }
+
+    [TestMethod]
+    [DataRow(SearchEngine.Baidu, "https://www.baidu.com/s?wd=flash+game")]
+    [DataRow(SearchEngine.Google, "https://www.google.com/search?q=flash+game")]
+    [DataRow(SearchEngine.Bing, "https://www.bing.com/search?q=flash+game")]
+    [DataRow(SearchEngine.Sogou, "https://www.sogou.com/web?query=flash+game")]
+    [DataRow(SearchEngine.So360, "https://www.so.com/s?&q=flash+game")]
+    [DataRow(SearchEngine.DuckDuckGo, "https://duckduckgo.com/?q=flash+game")]
+    [DataRow(SearchEngine.Yandex, "https://yandex.com/search/?text=flash+game")]
+    [DataRow(SearchEngine.Bilibili, "https://search.bilibili.com/all?keyword=flash+game")]
+    [DataRow(SearchEngine.Game4399, "https://so2.4399.com/search/search.php?k=flash+game")]
+    public void EveryStoredSearchProviderPreservesItsLegacyEncoding(SearchEngine engine, string expected)
+    {
+        Assert.AreEqual(expected, SettingsService.ResolveAddress("flash game", AppSettings.Default with { SearchEngine = engine }).AbsoluteUri);
+    }
+
+    [TestMethod]
+    public void NavigationPolicyAndUnavailableSettingsAreExplicit()
+    {
+        Assert.AreEqual("https://www.bing.com/search?q=mole.61.com", SettingsService.ResolveAddress("mole.61.com", AppSettings.Default with { NavigationType = NavigationType.SearchOnly }).AbsoluteUri);
+        Assert.AreEqual("http://mole.61.com/", SettingsService.ResolveAddress("mole.61.com", AppSettings.Default with { NavigationType = NavigationType.NavigateOnly }).AbsoluteUri);
+        Assert.IsTrue(SettingsCapabilities.Current.Any(x => x.Field == "ProxySettings" && x.Availability == SettingAvailability.UnsupportedOnMacOS));
+        Assert.IsTrue(SettingsCapabilities.Current.Any(x => x.Field == "FakeFlashVersionSetting" && x.Availability == SettingAvailability.UnsupportedOnMacOS));
+        Assert.IsTrue(SettingsCapabilities.Current.Any(x => x.Field == "UserAgentSetting" && x.Availability == SettingAvailability.StoredPendingIntegration));
+    }
+
+    [TestMethod]
+    public async Task NonFiniteLegacyWindowCoordinatesNormalizeButRawValuesRemain()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("settings.json");
+        await File.WriteAllTextAsync(path, "{\"MainWindowSizeInfo\":{\"Left\":\"NaN\",\"Top\":\"Infinity\",\"Width\":800,\"Height\":600}}");
+        using var repository = new JsonSettingsRepository(path);
+        var settings = await repository.LoadAsync();
+        Assert.IsNull(settings.Value.MainWindowSizeInfo!.Left);
+        Assert.IsNull(settings.Value.MainWindowSizeInfo.Top);
+        await repository.UpgradeAsync();
+        var raw = System.Text.Json.Nodes.JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+        Assert.AreEqual("NaN", raw["legacy"]!["sourceSettings"]!["MainWindowSizeInfo"]!["Left"]!.GetValue<string>());
+    }
+
+    [TestMethod]
+    public void RemainingLegacyAddressClassificationCasesStillMatch()
+    {
+        Assert.IsFalse(NavigationResolver.LooksLikeWebAddress(null));
+        Assert.IsFalse(NavigationResolver.LooksLikeWebAddress(""));
+        Assert.IsFalse(NavigationResolver.LooksLikeWebAddress("   "));
+        Assert.IsTrue(NavigationResolver.LooksLikeWebAddress("localhost"));
+        Assert.IsTrue(NavigationResolver.LooksLikeWebAddress("192.168.1.1"));
+        Assert.IsTrue(NavigationResolver.LooksLikeWebAddress("example.com"));
+        Assert.IsTrue(NavigationResolver.LooksLikeWebAddress("www.example.com"));
+        Assert.IsTrue(NavigationResolver.LooksLikeWebAddress("https://example.com"));
+        Assert.IsTrue(NavigationResolver.LooksLikeWebAddress("example.com/path/to/page"));
+        Assert.IsTrue(NavigationResolver.LooksLikeWebAddress("example.com?q=test"));
+    }
+}

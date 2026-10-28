@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+"""Create the initial formal foundation from the accepted P03 copy; never overwrites a different file."""
+from pathlib import Path
+import hashlib
+import json
+
+ROOT=Path(__file__).resolve().parents[1]
+BOOT=ROOT/'bootstrap/legacy/spike/macos-host'
+entries=[]
+
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+def write(relative,content,source=None,reason='A01 project-authored formal boundary'):
+    p=ROOT/relative
+    data=content.encode() if isinstance(content,str) else content
+    if p.exists() and p.read_bytes()!=data:raise ValueError('Preserving conflicting file: '+str(p))
+    p.parent.mkdir(parents=True,exist_ok=True)
+    if not p.exists():
+        with p.open('xb') as stream:stream.write(data)
+    original=None
+    if source and source.is_relative_to(BOOT):
+        original=ROOT/'reference/legacy/spike/macos-host'/source.relative_to(BOOT)
+    entries.append({'bootstrapSourcePath':str(source.relative_to(ROOT)) if source else None,'bootstrapSourceSha256':sha(source) if source else None,
+        'originalSourcePath':str(original.relative_to(ROOT/'reference/legacy')) if original and original.is_file() else None,
+        'originalSourceSha256':sha(original) if original and original.is_file() else None,
+        'targetPath':relative,'targetSha256':sha(p),'reason':reason})
+
+def copy(relative,source,transforms=()):
+    data=source.read_bytes()
+    if transforms:
+        value=data.decode()
+        for a,b in transforms:value=value.replace(a,b)
+        data=value.encode()
+    write(relative,data,source,'A01 relocate accepted code/asset; preserve behavior, namespace and boundary adaptation only')
+
+for name in ('global.json','Directory.Build.props','Directory.Packages.props'):copy(name,BOOT/name)
+copy('LICENSE',ROOT/'reference/legacy/LICENSE')
+write('Directory.Build.targets','''<Project>
+  <Target Name="ValidateFlashMacOSArchitecture" BeforeTargets="Restore;PrepareForBuild;Publish"
+          Condition="'$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' != 'osx-arm64'">
+    <Error Code="FM0001" Text="FlashMacOS only supports osx-arm64." />
+  </Target>
+</Project>
+''')
+for name,refs in [('Domain',[]),('Application',['Domain']),('Sol.Managed',['Domain','Application'])]:
+    items='\n'.join(f'    <ProjectReference Include="../FlashMacOS.{r}/FlashMacOS.{r}.csproj" />' for r in refs)
+    write(f'src/FlashMacOS.{name}/FlashMacOS.{name}.csproj','<Project Sdk="Microsoft.NET.Sdk">\n  <ItemGroup>\n'+items+'\n  </ItemGroup>\n</Project>\n')
+    if name!='Domain':write(f'src/FlashMacOS.{name}/GlobalUsings.cs','global using FlashMacOS.Domain.Browser;\nglobal using FlashMacOS.Domain.Flash;\nglobal using FlashMacOS.Domain.Sol;\n')
+core=BOOT/'src/CefFlashBrowser.MacOS.Spike.Core'
+s=(core/'Application/Browser/BrowserContracts.cs').read_text();models,interface=s.split('public interface IBrowserSession',1)
+write('src/FlashMacOS.Domain/Browser/BrowserModels.cs',models.replace('CefFlashBrowser.MacOS.Spike.Core.Application.Browser','FlashMacOS.Domain.Browser'),core/'Application/Browser/BrowserContracts.cs','A01 split pure browser models into Domain; no UI or file-system implementation')
+write('src/FlashMacOS.Application/Browser/IBrowserSession.cs','namespace FlashMacOS.Application.Browser;\n\npublic interface IBrowserSession'+interface,core/'Application/Browser/BrowserContracts.cs','A01 move browser port to Application; models owned by Domain')
+s=(core/'Flash/Hosting/LocalContentContracts.cs').read_text();models,interface=s.split('public interface ILocalContentHost',1)
+write('src/FlashMacOS.Domain/Flash/LocalSwfSource.cs',models.replace('CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting','FlashMacOS.Domain.Flash'),core/'Flash/Hosting/LocalContentContracts.cs','A01 pure source model')
+interface=interface.replace('    Uri? BaseUri { get; }','    string RuntimeVersion { get; }\n\n    Uri? BaseUri { get; }')
+write('src/FlashMacOS.Application/Flash/ILocalContentHost.cs','namespace FlashMacOS.Application.Flash;\n\npublic interface ILocalContentHost'+interface,core/'Flash/Hosting/LocalContentContracts.cs','A01 host port plus runtime metadata; no concrete Ruffle dependency in use cases')
+s=(core/'Sol/SolFileHeader.cs').read_text();models=s[s.index('public enum SolEncoding'):s.index('public static class SolFileInspector')]
+write('src/FlashMacOS.Domain/Sol/SolFileHeader.cs','namespace FlashMacOS.Domain.Sol;\n\n'+models,core/'Sol/SolFileHeader.cs','A01 pure SOL metadata; full AMF graph remains S01')
+implementation=s[:s.index('public enum SolEncoding')]+s[s.index('public static class SolFileInspector'):]
+write('src/FlashMacOS.Sol.Managed/SolFileInspector.cs',implementation.replace('CefFlashBrowser.MacOS.Spike.Core.Sol','FlashMacOS.Sol.Managed'),core/'Sol/SolFileHeader.cs','A01 retain bounded header inspector in codec adapter; no full codec claim')
+write('src/FlashMacOS.Application/Sol/ISolHeaderInspector.cs','''namespace FlashMacOS.Application.Sol;
+
+public interface ISolHeaderInspector
+{
+    SolFileHeader ReadHeader(ReadOnlySpan<byte> source);
+}
+''')
+write('src/FlashMacOS.Sol.Managed/SolHeaderInspector.cs','''using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Sol.Managed;
+
+public sealed class SolHeaderInspector : ISolHeaderInspector
+{
+    public SolFileHeader ReadHeader(ReadOnlySpan<byte> source) => SolFileInspector.ReadHeader(source);
+}
+''')
+write('src/FlashMacOS.Application/Files/IFileAccess.cs','''namespace FlashMacOS.Application.Files;
+
+public interface IFileAccess
+{
+    ValueTask<bool> ExistsAsync(string path, CancellationToken cancellationToken = default);
+    ValueTask<byte[]> ReadBoundedAsync(string path, int maximumBytes, CancellationToken cancellationToken = default);
+    ValueTask WriteAtomicAsync(string path, Func<Stream, CancellationToken, ValueTask> write, CancellationToken cancellationToken = default);
+}
+''')
+write('src/FlashMacOS.Application/Files/IFileDialogs.cs','''namespace FlashMacOS.Application.Files;
+
+public enum NativeFileKind { Any, FlashMovie, SharedObject }
+
+public interface IFileDialogs
+{
+    ValueTask<string?> OpenAsync(NativeFileKind kind, string title, CancellationToken cancellationToken = default);
+    ValueTask<string?> SaveAsync(NativeFileKind kind, string title, string suggestedName, string? defaultExtension = null, CancellationToken cancellationToken = default);
+}
+''')
+write('src/FlashMacOS.Application/Browser/WebBridgeNames.cs','''namespace FlashMacOS.Application.Browser;
+
+public static class WebBridgeNames
+{
+    public const string DefaultHandler = "cefFlashBrowserBridge";
+}
+''')
+# Save DTO and store contract are ports/models, not Infrastructure implementation.
+s=(core/'Flash/Storage/RuffleSaveStore.cs').read_text();model=s[s.index('public sealed record RuffleSaveEntry'):s.index('public interface IRuffleSaveStore')];contract=s[s.index('public interface IRuffleSaveStore'):s.index('public sealed class JsonRuffleSaveStore')]
+write('src/FlashMacOS.Domain/Flash/RuffleSaveEntry.cs','namespace FlashMacOS.Domain.Flash;\nusing FlashMacOS.Domain.Sol;\n\n'+model,core/'Flash/Storage/RuffleSaveStore.cs','A01 move immutable save model to Domain')
+write('src/FlashMacOS.Application/Flash/IRuffleSaveStore.cs','namespace FlashMacOS.Application.Flash;\n\n'+contract,core/'Flash/Storage/RuffleSaveStore.cs','A01 move persistence port to Application')
+write('FlashMacOS.slnx','''<Solution>
+  <Project Path="src/FlashMacOS.Domain/FlashMacOS.Domain.csproj" />
+  <Project Path="src/FlashMacOS.Application/FlashMacOS.Application.csproj" />
+  <Project Path="src/FlashMacOS.Sol.Managed/FlashMacOS.Sol.Managed.csproj" />
+</Solution>
+''')
+write('docs/provenance/A01-foundation-import.json',json.dumps({'schemaVersion':1,'stage':'foundation','files':entries},ensure_ascii=False,indent=2)+'\n')
+print('Formal foundation created; files:',len(entries))

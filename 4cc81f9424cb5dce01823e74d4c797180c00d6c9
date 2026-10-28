@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Build a fresh formal self-contained ARM64 development app for native task evidence.
+
+Contains diagnostics and development entitlements. It is not a Q03/Q04 release package.
+"""
+import argparse
+import importlib.util
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import plistlib
+import shutil
+import subprocess
+import sys
+import uuid
+from product_identity import read_identity, render_bundle_info
+
+ROOT = Path(__file__).resolve().parents[1]
+def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+def now(): return datetime.now(timezone.utc).isoformat()
+def name(value): return bool(value) and all(c in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in value)
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--run-id', required=True)
+    parser.add_argument('--task', default='A02')
+    parser.add_argument('--rid', default='osx-arm64')
+    parser.add_argument('--product-resources', action='store_true', help='Package only product runtime resources, without test fixtures or diagnostic corpus')
+    parser.add_argument('--deny-read', type=Path, action='append', default=[])
+    args = parser.parse_args()
+    if args.rid != 'osx-arm64': parser.error('Only osx-arm64 is supported')
+    if not name(args.run_id) or not name(args.task): parser.error('Use simple task/run names')
+    if platform.system() != 'Darwin' or platform.machine() != 'arm64':
+        print('BLOCKED: this development package requires Apple Silicon macOS', file=sys.stderr); return 3
+    output = ROOT / 'artifacts/evidence' / args.task / args.run_id
+    build = ROOT / 'artifacts/dev-packages' / args.run_id
+    if output.exists() or build.exists(): parser.error('Use a fresh run-id; existing files are preserved')
+    output.mkdir(parents=True); build.mkdir(parents=True)
+    app = build / 'FlashMacOS.app'
+    publish = build / 'publish'
+    archive = output / 'FlashMacOS-development.zip'
+    locks = {str(p.relative_to(ROOT)): sha(p) for base in ('src', 'tests') for p in (ROOT / base).glob('*/packages.lock.json')}
+    denied = [ROOT / 'reference', ROOT / 'bootstrap', *[p.resolve() for p in args.deny_read]]
+    if any(p == ROOT or p in ROOT.parents for p in denied): parser.error('Cannot deny the package source root or its parent')
+    sandbox = '(version 1) (allow default) ' + ' '.join('(deny file-read* (subpath ' + json.dumps(str(p)) + '))' for p in denied)
+    (output / 'build-denied-reads.sb').write_text(sandbox + '\n')
+    environment = {**os.environ, 'DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER': '1', 'MSBUILDDISABLENODEREUSE': '1',
+                   'MSBUILDNODEHANDSHAKESALT': 'FlashMacOS-package-' + str(uuid.uuid4())}
+    phases = []
+    def run(phase, command, isolated=False):
+        actual = ['sandbox-exec', '-p', sandbox, *command] if isolated else command
+        with (output / (phase + '.log')).open('wb') as log:
+            code = subprocess.run(actual, cwd=ROOT, env=environment, stdout=log, stderr=subprocess.STDOUT).returncode
+        phases.append({'phase': phase, 'command': actual, 'exitCode': code})
+        if code: raise subprocess.CalledProcessError(code, command)
+    result = {'taskId': args.task, 'caseId': 'formal-development-arm64-package', 'runId': args.run_id,
+        'profileId': 'not-launched', 'startedAt': now(), 'status': 'FAIL',
+        'expected': 'Self-contained ARM64 development package, unchanged locks and strict ad-hoc signature',
+        'environment': {'architecture': platform.machine(), 'macOS': platform.mac_ver()[0], 'configuration': 'Release, self-contained'},
+        'scope': 'Development native-session evidence with diagnostics; no release/notarization claim'}
+    code = 1
+    spec = importlib.util.spec_from_file_location('formal_verification_inputs', ROOT / 'scripts/verify-formal.py')
+    verifier = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(verifier)
+    before = verifier.inputs()
+    try:
+        run('boundaries', [sys.executable, str(ROOT / 'scripts/check-build-boundaries.py')], True)
+        project = ROOT / 'src/FlashMacOS.Desktop/FlashMacOS.Desktop.csproj'
+        run('restore', ['dotnet', 'restore', str(project), '--locked-mode', '--disable-build-servers'], True)
+        run('publish', ['dotnet', 'publish', str(project), '--configuration', 'Release', '--runtime', args.rid,
+            '--self-contained', 'true', '--no-restore', '--disable-build-servers', '-m:1', '--output', str(publish),
+            '-p:PublishReadyToRun=true', '-p:PublishSingleFile=false', '-p:PublishTrimmed=false'], True)
+        contents = app / 'Contents'; resources = contents / 'Resources'
+        resources.mkdir(parents=True)
+        run('copy-arm64', ['ditto', '--arch', 'arm64', str(publish), str(contents / 'MacOS')])
+        for folder in ('Assets', 'CompatibilityFixtures'):
+            shutil.move(str(contents / 'MacOS' / folder), str(resources / folder))
+        if args.product_resources:
+            shutil.rmtree(resources / 'Assets' / 'Fixtures')
+            shutil.rmtree(resources / 'CompatibilityFixtures')
+        for p in (contents / 'MacOS').rglob('*.pdb'): p.unlink()
+        shutil.copyfile(ROOT / 'LICENSE', resources / 'LICENSE')
+        identity = read_identity(ROOT)
+        info = render_bundle_info(ROOT)
+        (contents / 'Info.plist').write_bytes(plistlib.dumps(info, sort_keys=False))
+        (output / 'product-identity.json').write_text(json.dumps({'source': 'Product.props', 'sha256': sha(ROOT / 'Product.props'), 'values': identity}, indent=2) + '\n')
+        run('plist', ['plutil', '-lint', str(contents / 'Info.plist')])
+        executable = contents / 'MacOS/FlashMacOS.Desktop'
+        executable.chmod(executable.stat().st_mode | 0o111)
+        machos = []
+        managed = []
+        runtime_metadata = []
+        for p in sorted(contents.rglob('*')):
+            if p.is_symlink(): raise ValueError('Unexpected bundle symbolic link: ' + str(p))
+            if not p.is_file(): continue
+            description = subprocess.check_output(['file', '-b', str(p)], text=True).strip()
+            if 'Mach-O' in description:
+                if 'arm64' not in description or 'x86_64' in description: raise ValueError('Non-ARM64 Mach-O: ' + str(p))
+                machos.append({'path': str(p.relative_to(app)), 'description': description})
+                if p != executable:
+                    run('sign-inner-' + str(len(machos)), ['codesign', '--force', '--sign', '-', '--timestamp=none', str(p)])
+            elif p.suffix.lower() == '.dll' and 'PE32' in description and 'Mono/.Net assembly' in description:
+                managed.append({'path': str(p.relative_to(app)), 'description': description})
+                run('sign-managed-' + str(len(managed)), ['codesign', '--force', '--sign', '-', '--timestamp=none', str(p)])
+            elif p.parent == contents / 'MacOS' and p.name in ('FlashMacOS.Desktop.deps.json', 'FlashMacOS.Desktop.runtimeconfig.json'):
+                # The development layout keeps .NET lookup metadata beside the apphost.
+                # macOS treats files in this directory as nested code. Sign only these
+                # explicitly identified metadata files; release layout review remains Q03.
+                runtime_metadata.append(str(p.relative_to(app)))
+                run('sign-runtime-metadata-' + str(len(runtime_metadata)), ['codesign', '--force', '--sign', '-', '--timestamp=none', str(p)])
+        if not machos: raise ValueError('Missing Mach-O code')
+        run('sign-app', ['codesign', '--force', '--sign', '-', '--timestamp=none', '--options', 'runtime',
+            '--entitlements', str(ROOT / 'packaging/macos/FlashMacOS.development.entitlements'), str(app)])
+        run('codesign', ['codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app)])
+        if any(sha(ROOT / p) != h for p, h in locks.items()): raise ValueError('NuGet lock changed')
+        if verifier.inputs() != before: raise ValueError('Formal inputs changed during packaging')
+        bundle = {str(p.relative_to(app)): sha(p) for p in sorted(app.rglob('*')) if p.is_file()}
+        run('archive', ['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app), str(archive)])
+        result.update({'status': 'PASS', 'app': str(app.relative_to(ROOT)), 'archive': str(archive.relative_to(ROOT)),
+            'machO': [{**entry, 'sha256': sha(app / entry['path'])} for entry in machos],
+            'managedCode': [{**entry, 'sha256': sha(app / entry['path'])} for entry in managed], 'bundleFiles': bundle,
+            'developmentRuntimeMetadataSignatures': runtime_metadata,
+            'resourceMode': 'product-runtime-only' if args.product_resources else 'development-with-diagnostics',
+            'locksUnchanged': True, 'artifactHashes': {'archive': sha(archive), 'locks': locks}})
+        code = 0
+    except Exception as exception:
+        result['error'] = {'type': type(exception).__name__, 'message': str(exception)}
+    (output / 'code-inputs.json').write_text(json.dumps({'before': before, 'unchanged': before == verifier.inputs()}, indent=2) + '\n')
+    result.update({'finishedAt': now(), 'actual': {'phases': phases}, 'evidencePaths': [str(output.relative_to(ROOT))]})
+    (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+    print(json.dumps({'status': result['status'], 'app': result.get('app'), 'output': str(output.relative_to(ROOT)), 'error': result.get('error')}, ensure_ascii=False))
+    return code
+
+if __name__ == '__main__': sys.exit(main())

@@ -1,0 +1,450 @@
+using System.Text.Json;
+using FlashMacOS.Application.Browser;
+using FlashMacOS.Application.Flash;
+using FlashMacOS.Application.Files;
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Application.Flash;
+
+public sealed class RufflePlayerCoordinator : IFlashPlayer
+{
+    private const int MaxSaveBytes = 64 * 1024 * 1024;
+
+    private readonly IBrowserSession _browser;
+    private readonly ILocalContentHost _contentHost;
+    private readonly IRuffleSaveStore _saveStore;
+    private readonly IRuffleScriptBuilder _scripts;
+    private readonly ISolHeaderInspector _inspector;
+    private readonly IFileAccess _files;
+    private readonly TimeProvider _clock;
+    private readonly TimeSpan _drainTimeout;
+    private readonly CancellationTokenSource _bridgeCancellation = new();
+    private readonly List<Exception> _observerFailures = [];
+    private readonly object _bridgeWorkLock = new();
+    private int _pendingMessages;
+    private long _pendingCharacters;
+    private Task _bridgeTail = Task.CompletedTask;
+    private Task? _disposeTask;
+    private volatile bool _disposed;
+    private string? _currentRunId;
+    private long _openSequence;
+    private readonly SemaphoreSlim _commands = new(1, 1);
+    private readonly Dictionary<string, (string RunId, TaskCompletionSource Completion)> _pendingCommands = [];
+    private readonly CancellationTokenSource _commandLifetime = new();
+    private FlashPlayerState _state = FlashPlayerState.Empty;
+    public FlashPlayerState State => Volatile.Read(ref _state);
+
+
+    public RufflePlayerCoordinator(
+        IBrowserSession browser,
+        ILocalContentHost contentHost,
+        IRuffleSaveStore saveStore,
+        IRuffleScriptBuilder scripts,
+        ISolHeaderInspector inspector,
+        IFileAccess files,
+        TimeProvider? clock = null,
+        TimeSpan? drainTimeout = null)
+    {
+        ArgumentNullException.ThrowIfNull(browser);
+        ArgumentNullException.ThrowIfNull(contentHost);
+        ArgumentNullException.ThrowIfNull(saveStore);
+
+        _browser = browser;
+        _contentHost = contentHost;
+        _saveStore = saveStore;
+        _scripts = scripts ?? throw new ArgumentNullException(nameof(scripts));
+        _inspector = inspector ?? throw new ArgumentNullException(nameof(inspector));
+        _files = files ?? throw new ArgumentNullException(nameof(files));
+        _clock = clock ?? TimeProvider.System;
+        _drainTimeout = drainTimeout ?? TimeSpan.FromSeconds(10);
+        if (_drainTimeout <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(drainTimeout));
+        _browser.BridgeMessageReceived += OnBridgeMessageReceived;
+        _browser.StateChanged += OnBrowserStateChanged;
+    }
+
+    public LocalSwfSource? CurrentSource { get; private set; }
+    public string? CurrentRunId => Volatile.Read(ref _currentRunId);
+
+    public event Action<RuffleSaveEntry>? SaveChanged;
+
+    public event Action<string>? SaveDeleted;
+
+    public event Action<string>? TraceReceived;
+
+    public event Action<string>? StatusChanged;
+
+    public event Action<Exception>? Faulted;
+
+    public async ValueTask<LocalSwfSource> OpenSwfAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
+    {
+        return await OpenSwfAsync(filePath, RuffleGameConfiguration.Default, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask<LocalSwfSource> OpenSwfAsync(string filePath, RuffleGameConfiguration configuration,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        var request = Interlocked.Increment(ref _openSequence);
+        var navigation = _browser.State.NavigationSequence;
+        var source = await _contentHost.RegisterSwfAsync(filePath, configuration, cancellationToken).ConfigureAwait(false);
+        ThrowIfDisposed();
+        if (request != Volatile.Read(ref _openSequence) || navigation != _browser.State.NavigationSequence) return source;
+        CurrentSource = source;
+        await _browser.NavigateAsync(source.PlayerUri, cancellationToken).ConfigureAwait(false);
+        if (request == Volatile.Read(ref _openSequence))
+            StatusChanged?.Invoke($"Loading {Path.GetFileName(source.FilePath)} with Ruffle {_contentHost.RuntimeVersion}.");
+        return source;
+    }
+
+    public ValueTask<IReadOnlyList<RuffleSaveEntry>> GetSavesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        return _saveStore.GetAllAsync(cancellationToken);
+    }
+
+    public async ValueTask CapturePageSavesAsync(CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        var script = _scripts.CaptureSaves();
+        _ = await _browser.ExecuteScriptAsync(script, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask<RuffleSaveEntry> ImportAsync(
+        string sourcePath,
+        string? replaceKey = null,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
+
+        var bytes = await _files.ReadBoundedAsync(sourcePath, MaxSaveBytes, cancellationToken).ConfigureAwait(false);
+        var header = _inspector.ReadHeader(bytes);
+        var key = replaceKey;
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            key = CurrentSource is null
+                ? throw new InvalidOperationException(
+                    "Select an existing save when importing outside the local SWF player.")
+                : $"{CurrentSource.StoragePrefix}/{header.Name}";
+        }
+
+        var base64 = Convert.ToBase64String(bytes);
+        var entry = await _saveStore.UpsertAsync(key, base64, cancellationToken).ConfigureAwait(false);
+        var script = _scripts.ReplaceSave(key, base64);
+        _ = await _browser.ExecuteScriptAsync(script, cancellationToken).ConfigureAwait(false);
+        SaveChanged?.Invoke(entry);
+        StatusChanged?.Invoke($"Imported {entry.SolName}.sol into {entry.Key}.");
+        return entry;
+    }
+
+    public async ValueTask ExportAsync(
+        RuffleSaveEntry entry,
+        string destinationPath,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+
+        var bytes = Convert.FromBase64String(entry.Base64Data);
+        _ = _inspector.ReadHeader(bytes);
+        await _files.WriteAtomicAsync(
+                destinationPath,
+                async (stream, token) =>
+                {
+                    await stream.WriteAsync(bytes, token).ConfigureAwait(false);
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+        StatusChanged?.Invoke($"Exported {entry.SolName}.sol.");
+    }
+
+    public async ValueTask DeleteAsync(
+        RuffleSaveEntry entry,
+        CancellationToken cancellationToken = default)
+    {
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (!await _saveStore.RemoveAsync(entry.Key, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var script = _scripts.DeleteSave(entry.Key);
+        _ = await _browser.ExecuteScriptAsync(script, cancellationToken).ConfigureAwait(false);
+        SaveDeleted?.Invoke(entry.Key);
+        StatusChanged?.Invoke($"Deleted {entry.SolName}.sol.");
+    }
+
+    public ValueTask PauseAsync(CancellationToken cancellationToken = default)
+        => ExecutePlayerCommandAsync(PlayerCommand.Pause, cancellationToken);
+
+    public ValueTask ResumeAsync(CancellationToken cancellationToken = default)
+        => ExecutePlayerCommandAsync(PlayerCommand.Resume, cancellationToken);
+
+    public ValueTask ReloadAsync(CancellationToken cancellationToken = default)
+        => ExecutePlayerCommandAsync(PlayerCommand.Reload, cancellationToken);
+
+    public ValueTask RequestFullscreenAsync(CancellationToken cancellationToken = default)
+        => ExecutePlayerCommandAsync(PlayerCommand.Fullscreen, cancellationToken);
+
+    public ValueTask SetVolumeAsync(double volume, CancellationToken cancellationToken = default)
+    {
+        if (!double.IsFinite(volume)) throw new ArgumentOutOfRangeException(nameof(volume));
+        return ExecutePlayerCommandAsync(PlayerCommand.Volume, cancellationToken, Math.Clamp(volume, 0d, 1d));
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_bridgeWorkLock)
+        {
+            if (_disposeTask is not null)
+            {
+                return new ValueTask(_disposeTask);
+            }
+
+            _disposed = true;
+            _commandLifetime.Cancel();
+            CancelPendingCommands("The player closed.");
+            Volatile.Write(ref _state, new FlashPlayerState(FlashPlayerPhase.Closed));
+            _browser.BridgeMessageReceived -= OnBridgeMessageReceived;
+            _browser.StateChanged -= OnBrowserStateChanged;
+            _disposeTask = DrainBridgeAsync(_bridgeTail);
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async ValueTask ExecutePlayerCommandAsync(
+        PlayerCommand command, CancellationToken cancellationToken, double volume = 1)
+    {
+        ThrowIfDisposed();
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _commandLifetime.Token);
+        await _commands.WaitAsync(linked.Token).ConfigureAwait(false);
+        string? id = null;
+        var previousPhase = State.Phase;
+        try
+        {
+            var run = CurrentRunId ?? throw new InvalidOperationException("The player is not ready.");
+            if (State.Phase is not (FlashPlayerPhase.Ready or FlashPlayerPhase.Paused))
+                throw new InvalidOperationException("The player is not ready.");
+            id = Guid.NewGuid().ToString("N");
+            var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            lock (_bridgeWorkLock) _pendingCommands.Add(id, (run, completion));
+            var dispatch = await _browser.ExecuteScriptAsync(_scripts.Control(command, volume, id, run), linked.Token).ConfigureAwait(false);
+            using var acknowledgement = JsonDocument.Parse(dispatch ?? "null");
+            if (acknowledgement.RootElement.ValueKind != JsonValueKind.Object || !acknowledgement.RootElement.GetProperty("accepted").GetBoolean())
+                throw new InvalidOperationException("The active player refused the command.");
+            if (command == PlayerCommand.Reload) Volatile.Write(ref _state, new FlashPlayerState(FlashPlayerPhase.Reloading, run));
+            await completion.Task.WaitAsync(TimeSpan.FromSeconds(30), _clock, linked.Token).ConfigureAwait(false);
+            var phase = command switch { PlayerCommand.Pause => FlashPlayerPhase.Paused, PlayerCommand.Resume => FlashPlayerPhase.Ready, PlayerCommand.Reload => previousPhase, _ => State.Phase };
+            Volatile.Write(ref _state, new FlashPlayerState(phase, CurrentRunId));
+            StatusChanged?.Invoke($"{command} completed.");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Volatile.Write(ref _state, new FlashPlayerState(command == PlayerCommand.Reload ? FlashPlayerPhase.Faulted : previousPhase, CurrentRunId, exception.Message));
+            throw;
+        }
+        finally
+        {
+            if (id is not null)
+            {
+                lock (_bridgeWorkLock) _pendingCommands.Remove(id);
+                if (!_disposed)
+                    await _browser.ExecuteScriptAsync($"globalThis.__flashMacOSCancelControl?.({JsonSerializer.Serialize(id)});true", _commandLifetime.Token).ConfigureAwait(false);
+            }
+            _commands.Release();
+        }
+    }
+
+    private void CancelPendingCommands(string reason)
+    {
+        lock (_bridgeWorkLock)
+            foreach (var pending in _pendingCommands.Values) pending.Completion.TrySetException(new OperationCanceledException(reason));
+    }
+
+    private void OnBridgeMessageReceived(WebBridgeMessage message)
+    {
+        var rejected = false;
+        lock (_bridgeWorkLock)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            var characters = BridgeLimits.EstimateCharacters(message);
+            if (_pendingMessages >= BridgeLimits.MaximumPendingMessages
+                || characters > BridgeLimits.MaximumBodyCharacters
+                || _pendingCharacters + characters > BridgeLimits.MaximumQueuedCharacters)
+            {
+                rejected = true;
+            }
+            else
+            {
+                var navigation = _browser.State;
+                var preceding = _bridgeTail;
+                _pendingMessages++;
+                _pendingCharacters += characters;
+                _bridgeTail = Task.Run(() => ProcessBridgeMessageAfterAsync(preceding, message, navigation, characters));
+            }
+        }
+        if (rejected) ReportFault(new InvalidDataException("The bounded bridge queue rejected a message."));
+    }
+
+    private async Task ProcessBridgeMessageAfterAsync(Task precedingWork, WebBridgeMessage message,
+        BrowserState navigation, long characters)
+    {
+        await precedingWork.ConfigureAwait(false);
+        try
+        {
+            if (!IsCurrentNavigation(navigation, message)) return;
+            if (message.ProtocolVersion == 1)
+            {
+                if (message.Type == "playerRunStarted") Volatile.Write(ref _currentRunId, message.RunId);
+                else if (message.Type is "trace" or "playerReady")
+                {
+                    var current = CurrentRunId;
+                    if (current is not null && current != message.RunId) return;
+                    Volatile.Write(ref _currentRunId, message.RunId);
+                }
+            }
+            switch (message.Type)
+            {
+                case "playerCommandResult" when message.Key is not null:
+                    lock (_bridgeWorkLock)
+                        if (_pendingCommands.TryGetValue(message.Key, out var pending) && pending.RunId == message.RunId)
+                        {
+                            if (message.Message == "completed") pending.Completion.TrySetResult();
+                            else pending.Completion.TrySetException(new InvalidOperationException(message.Data ?? "Player command failed."));
+                        }
+                    break;
+                case "saveChanged" when message.Key is not null && message.Data is not null:
+                    {
+                        var entry = await _saveStore.UpsertAsync(message.Key, message.Data, _bridgeCancellation.Token).ConfigureAwait(false);
+                        if (IsCurrentNavigation(navigation, message)) SaveChanged?.Invoke(entry);
+                        break;
+                    }
+                case "saveDeleted" when message.Key is not null:
+                    {
+                        if (await _saveStore.RemoveAsync(message.Key, _bridgeCancellation.Token).ConfigureAwait(false)
+                            && IsCurrentNavigation(navigation, message))
+                        {
+                            SaveDeleted?.Invoke(message.Key);
+                        }
+
+                        break;
+                    }
+                case "savesSnapshot" when message.Data is not null:
+                    {
+                        var saves = JsonSerializer.Deserialize<Dictionary<string, string>>(message.Data)
+                            ?? [];
+                        if (saves.Count > BridgeLimits.MaximumSnapshotEntries)
+                            throw new InvalidDataException("The save snapshot has too many entries.");
+                        foreach (var save in saves)
+                        {
+                            if (!IsCurrentNavigation(navigation, message)) break;
+                            var entry = await _saveStore.UpsertAsync(save.Key, save.Value, _bridgeCancellation.Token).ConfigureAwait(false);
+                            if (IsCurrentNavigation(navigation, message)) SaveChanged?.Invoke(entry);
+                        }
+
+                        break;
+                    }
+                case "trace" when message.Message is not null:
+                    TraceReceived?.Invoke(message.Message);
+                    break;
+                case "playerReady":
+                    Volatile.Write(ref _state, new FlashPlayerState(FlashPlayerPhase.Ready, CurrentRunId));
+                    StatusChanged?.Invoke($"Ruffle player ready: {message.Message}");
+                    break;
+                case "playerRunStarted":
+                    Volatile.Write(ref _state, new FlashPlayerState(FlashPlayerPhase.Loading, CurrentRunId));
+                    StatusChanged?.Invoke("Ruffle player loading.");
+                    break;
+                case "diagnostics":
+                    StatusChanged?.Invoke(
+                        $"Document-start: {message.DocumentStartMilliseconds:0.0} ms; " +
+                        $"Ruffle: {(message.RuffleAvailable == true ? "ready" : "missing")}; " +
+                        $"polyfilled elements: {message.FlashElementCount ?? 0}.");
+                    break;
+                case "compatibilityResult" when message.Message is not null:
+                    StatusChanged?.Invoke(message.Message);
+                    break;
+                case "bridgeError" when message.Message is not null:
+                    Volatile.Write(ref _state, new FlashPlayerState(FlashPlayerPhase.Faulted, CurrentRunId, message.Message));
+                    CancelPendingCommands(message.Message);
+                    throw new InvalidOperationException(message.Message);
+            }
+        }
+        catch (Exception exception)
+        {
+            ReportFault(exception);
+        }
+        finally
+        {
+            lock (_bridgeWorkLock)
+            {
+                _pendingMessages--;
+                _pendingCharacters -= characters;
+            }
+        }
+    }
+
+    private bool IsCurrentNavigation(BrowserState accepted, WebBridgeMessage message)
+    {
+        var current = _browser.State;
+        return current.NavigationSequence == accepted.NavigationSequence
+            && current.NavigationId == accepted.NavigationId && current.Address == accepted.Address
+            && (message.ProtocolVersion == 0 || message.NavigationId == current.NavigationId);
+    }
+
+    private void OnBrowserStateChanged(BrowserState state)
+    {
+        if (!state.IsLoading) return;
+        Volatile.Write(ref _currentRunId, null);
+        Volatile.Write(ref _state, FlashPlayerState.Empty);
+        CancelPendingCommands("The player document changed.");
+    }
+
+    private void ReportFault(Exception exception)
+    {
+        try { Faulted?.Invoke(exception); }
+        catch (Exception observerFailure)
+        {
+            lock (_bridgeWorkLock) _observerFailures.Add(observerFailure);
+        }
+    }
+
+    private async Task DrainBridgeAsync(Task tail)
+    {
+        try { await tail.WaitAsync(_drainTimeout, _clock).ConfigureAwait(false); }
+        catch (TimeoutException)
+        {
+            await _bridgeCancellation.CancelAsync().ConfigureAwait(false);
+            // A port that ignores cancellation is a cleanup failure, never a successful drain.
+            await tail.WaitAsync(TimeSpan.FromSeconds(1), _clock).ConfigureAwait(false);
+            throw new TimeoutException("Accepted bridge work exceeded the drain deadline and was canceled.");
+        }
+        finally
+        {
+            if (tail.IsCompleted) _bridgeCancellation.Dispose();
+            await _commands.WaitAsync().WaitAsync(_drainTimeout, _clock).ConfigureAwait(false);
+            _commands.Release();
+            _commandLifetime.Dispose();
+        }
+        lock (_bridgeWorkLock)
+        {
+            if (_observerFailures.Count != 0)
+                throw new AggregateException("Bridge observers failed.", _observerFailures);
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+}

@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-28T00:25:21.666296+00:00",
+  "changes": [
+    {
+      "targetPath": "scripts/run-native.py",
+      "beforeSha256": "be000501516396103a15f071618a70db531abd8f82db761f44a89bde697fd958",
+      "targetSha256": "567724801818ea65975afd32360900f41311622fc75c1a8a44fbc9c0d728cd27",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Configuration/FavoritesService.cs",
+      "beforeSha256": null,
+      "targetSha256": "84017cd4ddcf32f926d3d81bca703c28edf84fb32fb894aea92511fa863a1645",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Configuration/IConfigurationRepository.cs",
+      "beforeSha256": null,
+      "targetSha256": "8b557b4af1dddefd175c4838b8b9030258d87671d02becc795bd25d8979539a9",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Configuration/SettingsCapabilities.cs",
+      "beforeSha256": null,
+      "targetSha256": "fcc8c536965c0a91ab586bf39c24d92b77620a41ded8fa98d89bdf583311933b",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Configuration/SettingsService.cs",
+      "beforeSha256": null,
+      "targetSha256": "c111755943ad4b810f0affb6392844bf124dcded74ec41f86456490a0d9c662f",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Navigation/NavigationResolver.cs",
+      "beforeSha256": "5d45a2298d74908373754327952efd97b915f7398fd6b2eccfd4633725bec0b4",
+      "targetSha256": "11e76b13ba50e5ef7298ca6e0c1a81a4aa609d0d2ed1d9eb2643ad3def973e5d",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Navigation/NavigationResolver.cs",
+      "originalSourceSha256": "d63b625cab0af4cafb3c6f954f142b733d5a14e01f715a99a051ac5c28f1acc4",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Application/Navigation/NavigationResolver.cs",
+      "bootstrapSourceSha256": "d63b625cab0af4cafb3c6f954f142b733d5a14e01f715a99a051ac5c28f1acc4"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Composition/CompositionRoot.cs",
+      "beforeSha256": "3730a7815f40bb1da8a433fcb5456bc6cd642f71d2a01327d8ccdc44088b3486",
+      "targetSha256": "d22a35c3ea3218a0dafbd76851d48e310b906f248ff45c036184e7a5223ed2b5",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "originalSourcePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "originalSourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "bootstrapSourceSha256": "aa583bd1e2c85dbad24f0d4d2a5cd0cfece48099d413954e9d13b6ad616951ac"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Configuration/AppSettings.cs",
+      "beforeSha256": null,
+      "targetSha256": "9c360b59efd93f4b13b7bbeef92fef8e8ff37d57d60cf07eede40ab53879cdc0",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "originalSources": [
+        {
+          "path": "CefFlashBrowser/Models/Settings.cs",
+          "sha256": "87df9d3e61bc28fb0c26510bb6f8e7f1695ca3246837aff9031e189a49c459a1"
+        },
+        {
+          "path": "CefFlashBrowser/Models/ProxySettings.cs",
+          "sha256": "f6ac9916a7bc4bd2ff24db062cee6b5c47be3d1bc9888b45100600173d84b3a6"
+        },
+        {
+          "path": "CefFlashBrowser/Models/UserAgentSetting.cs",
+          "sha256": "a20c34a79ee786761d3999490f1eccc1e2fc13e66d5e799f3ac6afaf3edf85b9"
+        },
+        {
+          "path": "CefFlashBrowser/Models/FakeFlashVersionSetting.cs",
+          "sha256": "d5316dcce827a7083cc280f65273b5e5c42a994654752c994bdbe7ac18a04630"
+        },
+        {
+          "path": "CefFlashBrowser/Models/WindowSizeInfo.cs",
+          "sha256": "62dfe0707957d6e76104d6906d8ffcf64ac2ad213adfb28936c4705c2d2c927b"
+        },
+        {
+          "path": "CefFlashBrowser/Models/Theme.cs",
+          "sha256": "042e616f52d22605ec3563c8ecb1336cce6ae5c03b137ea5809f5e803acff2fc"
+        },
+        {
+          "path": "CefFlashBrowser/Models/SearchEngine.cs",
+          "sha256": "7e8ffb696479bd59e9039e26d01519d884c3965069a6b7de071f18dee68e5b44"
+        },
+        {
+          "path": "CefFlashBrowser/Models/NavigationType.cs",
+          "sha256": "07670ad2fbf6110655c3a59b6954bfa8f4903d76eeba6e1c69ad599aa8f1213b"
+        },
+        {
+          "path": "CefFlashBrowser/Models/NewPageBehavior.cs",
+          "sha256": "7aa6b2161611a023448c43cade60b13f4dac38305d74abb57536e3fc8794fb4f"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Configuration/FavoriteEntry.cs",
+      "beforeSha256": null,
+      "targetSha256": "80a324c0b0e2d3828f06e1ea26e44311a876536c0124c259bbbc8c3ae01bcd9f",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "originalSources": [
+        {
+          "path": "CefFlashBrowser/Models/Website.cs",
+          "sha256": "451fc10044cb989d603bcbc57e78b4e27aa821783cef71c0200441e25c9f31bb"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Configuration/ConfigurationJson.cs",
+      "beforeSha256": null,
+      "targetSha256": "bbfbc38c339fad25935837e43a582e16d328a9481ba7fcb570e1f86ed0a7de9a",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Configuration/JsonConfigurationRepository.cs",
+      "beforeSha256": null,
+      "targetSha256": "57d25186e2252c1ca294c01cbddd54841b7d97a877e3f27d27b1e7997cbaf613",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Configuration/JsonFavoritesRepository.cs",
+      "beforeSha256": null,
+      "targetSha256": "901a52214e5464c2157a8e156d21608087ed2cc0f38f0d762bff979d6460071c",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "originalSources": [
+        {
+          "path": "CefFlashBrowser/Models/FavoritesFile.cs",
+          "sha256": "36df5927ee00336190dab72cd740dffd561c245cca4a316857f2b661bae23ee1"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Configuration/JsonSettingsRepository.cs",
+      "beforeSha256": null,
+      "targetSha256": "bda2e52b19dd23fb0e2f3a021c82e94102c1629a927a31445711bba983c76d47",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "originalSources": [
+        {
+          "path": "CefFlashBrowser/Models/Settings.cs",
+          "sha256": "87df9d3e61bc28fb0c26510bb6f8e7f1695ca3246837aff9031e189a49c459a1"
+        }
+      ]
+    },
+    {
+      "targetPath": "test-assets/configuration/expected-favorites-v2.json",
+      "beforeSha256": null,
+      "targetSha256": "68cd8cbba2e190916e959f5f7b387cb33271cba1f16e54c8ef19367d0e02c0bc",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "test-assets/configuration/expected-settings-v2.json",
+      "beforeSha256": null,
+      "targetSha256": "717d6e988cdabf029f2b891a357671dee191cdd9ef8f3cac74799dcb3848b56c",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "test-assets/configuration/legacy-favorites.json",
+      "beforeSha256": null,
+      "targetSha256": "5066e1da7b88968ea4e9d3ed984cab0edcb99cd8439b971e13f0db3ccdc27ee9",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "test-assets/configuration/legacy-settings-all.json",
+      "beforeSha256": null,
+      "targetSha256": "7e4a37bbada786d028763caf8fb40fdcdecc52d9d3f4bad61aee8ed3848d0f81",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "test-assets/configuration/legacy-settings-nulls.json",
+      "beforeSha256": null,
+      "targetSha256": "2f80e306dedf0d9ec6c66d09ba7b0e85a220337489c3aea5146b18bf0367bae8",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "test-assets/configuration/malformed-settings.json",
+      "beforeSha256": null,
+      "targetSha256": "a6fb08fda1acb957b6116bd37811a1fe41a01611c0631edbf786d6889a27a55c",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "test-assets/configuration/settings-v2-unknown.json",
+      "beforeSha256": null,
+      "targetSha256": "b3d26c5dcca68af60e4a5d6ea916e6e7775c071c0e7d0abb3c1fa4bd0b39e3a3",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Domain.Tests/SettingsModelTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "d6597678c942ab8e662caeb40e85a0300f159ea31bcfbaa08c6109b81a2f6ca0",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/ConfigurationRepositoryTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "3f381851b9023727ead757f09307e3a7d7e2e3979f8451814840f842a2ad778c",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/ConfigurationUseCaseTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "94e537b402d0336f72fc4f5fcccc2a0baa09eb15b4b9769a31a0e5c437f4dfa3",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/FlashMacOS.IntegrationTests.csproj",
+      "beforeSha256": "bfcdfe7b1599b019f025cfab0269b21119ac7b363d38d163020b7d377d4c4921",
+      "targetSha256": "f8f74f3241f3d13be9d0452db2c2b596f9db1b99ddd6557709ded59a284a04b0",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "originalSourcePath": null,
+      "originalSourceSha256": null,
+      "bootstrapSourcePath": null,
+      "bootstrapSourceSha256": null
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/NavigationResolverTests.cs",
+      "beforeSha256": "0cff77cc022e6c84a4d7b67af01cb4165e55dc9637cdff435856ea50d5c8b26c",
+      "targetSha256": "e8aa5c9ba1c71f6bf38434459e912fcd1073b62d7c9583e86eca294cd3239da3",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "originalSourcePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/NavigationResolverTests.cs",
+      "originalSourceSha256": "06b457bcecc11d86b5630ee851530c4cd319a1413b0cb43a46e77c6a6e2b0b55",
+      "bootstrapSourcePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/NavigationResolverTests.cs",
+      "bootstrapSourceSha256": "06b457bcecc11d86b5630ee851530c4cd319a1413b0cb43a46e77c6a6e2b0b55"
+    },
+    {
+      "targetPath": "tests/tooling/test_native_profile_seeding.py",
+      "beforeSha256": null,
+      "targetSha256": "c2e6d45702d559e07b7112046a5dc28167b4cb0c07f3068b64cb5ce18b00c647",
+      "reason": "A04 pure settings/favorites, explicit capabilities, schema v2 migration, atomic repositories/use cases and nearest regressions",
+      "origin": "Project-authored implementation or synthetic fixture; no new external source copy"
+    }
+  ]
+}

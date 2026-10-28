@@ -1,0 +1,52 @@
+namespace FlashMacOS.Application.Browser;
+
+public interface IBrowserSession : IAsyncDisposable, IJavaScriptExecutor
+{
+    BrowserState State { get; }
+
+    Task Ready { get; }
+
+    event Action<BrowserState>? StateChanged;
+
+    /// <summary>A page asked for a new window. The opener purpose is part of the request.</summary>
+    event Action<BrowserPopupRequest>? PopupRequested;
+
+    /// <summary>The page closed its own window (window.close). Only a popup owner acts on it.</summary>
+    event Action? CloseRequested;
+
+    event Action<WebBridgeMessage>? BridgeMessageReceived;
+
+    event Action<Exception>? Faulted;
+
+    ValueTask NavigateAsync(Uri address, CancellationToken cancellationToken = default);
+
+    /// <summary>Loads an exact request, preserving its method, body and content type.</summary>
+    ValueTask NavigateAsync(BrowserRequest request, CancellationToken cancellationToken = default);
+
+    ValueTask GoBackAsync(CancellationToken cancellationToken = default);
+
+    ValueTask GoForwardAsync(CancellationToken cancellationToken = default);
+
+    ValueTask ReloadAsync(CancellationToken cancellationToken = default);
+
+    ValueTask StopAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Native downloads owned by one browser surface. WebKit performs the original request; the host only
+/// supplies a staging file. Events arrive on the UI thread; each download reports exactly one terminal update.
+/// </summary>
+public interface IBrowserDownloads
+{
+    event Action<BrowserDownloadRequest>? DownloadRequested;
+
+    event Action<BrowserDownloadUpdate>? DownloadUpdated;
+
+    /// <summary>Starts a GET download in this surface's data store, for example "save link as".</summary>
+    ValueTask<long> StartDownloadAsync(Uri address, CancellationToken cancellationToken = default);
+
+    /// <summary>Supplies a new, not yet existing staging path, or null to decline the download.</summary>
+    ValueTask SetDownloadDestinationAsync(long downloadId, string? stagingPath, CancellationToken cancellationToken = default);
+
+    ValueTask CancelDownloadAsync(long downloadId, CancellationToken cancellationToken = default);
+}

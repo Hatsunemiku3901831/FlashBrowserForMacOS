@@ -1,0 +1,77 @@
+namespace FlashMacOS.Application.Browser;
+
+/// <summary>Correlates an incoming document ID with metadata read from the current native view.</summary>
+public sealed class NavigationMessageGate
+{
+    private readonly object _gate = new();
+    private readonly List<WebBridgeMessage> _pending = [];
+    private long _pendingCharacters;
+    private long _sequence;
+    private string? _documentId;
+    private Uri? _address;
+    private bool _closed;
+
+    public long BeginNavigation()
+    {
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_closed, this);
+            _documentId = null;
+            _address = null;
+            _pending.Clear();
+            _pendingCharacters = 0;
+            return ++_sequence;
+        }
+    }
+
+    public IReadOnlyList<WebBridgeMessage> Commit(long sequence, string documentId, Uri address)
+    {
+        lock (_gate)
+        {
+            if (_closed || sequence != _sequence) return [];
+            if (!Guid.TryParse(documentId, out _)) throw new InvalidDataException("Invalid native document identity.");
+            _documentId = documentId;
+            _address = address;
+            var accepted = _pending.Where(MatchesCurrent).ToArray();
+            _pending.Clear();
+            _pendingCharacters = 0;
+            return accepted;
+        }
+    }
+
+    public bool AcceptOrBuffer(WebBridgeMessage message)
+    {
+        lock (_gate)
+        {
+            if (_closed || message.ProtocolVersion != 1 || !message.IsMainFrame) return false;
+            if (_documentId is not null) return MatchesCurrent(message);
+            var size = BridgeLimits.EstimateCharacters(message);
+            if (_pending.Count >= BridgeLimits.MaximumPendingMessages
+                || _pendingCharacters + size > BridgeLimits.MaximumQueuedCharacters)
+                throw new InvalidDataException("The navigation bridge buffer is full.");
+            _pending.Add(message);
+            _pendingCharacters += size;
+            return false;
+        }
+    }
+
+    public void Close()
+    {
+        lock (_gate)
+        {
+            _closed = true;
+            _pending.Clear();
+            _pendingCharacters = 0;
+        }
+    }
+
+    private bool MatchesCurrent(WebBridgeMessage message)
+    {
+        if (message.NavigationId != _documentId || _address is null
+            || !Uri.TryCreate(message.Href, UriKind.Absolute, out var href)) return false;
+        var origin = _address.Scheme is "http" or "https" ? _address.GetLeftPart(UriPartial.Authority) : "null";
+        var hrefOrigin = href.Scheme is "http" or "https" ? href.GetLeftPart(UriPartial.Authority) : "null";
+        return string.Equals(message.Origin, origin, StringComparison.Ordinal)
+            && string.Equals(hrefOrigin, origin, StringComparison.Ordinal);
+    }
+}

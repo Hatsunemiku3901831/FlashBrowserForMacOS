@@ -1,0 +1,30 @@
+using System.Text.Json;
+using FlashMacOS.Infrastructure.Diagnostics;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class NativeEvidenceRecorderTests
+{
+    [TestMethod]
+    public async Task ExplicitNativeEvidencePreservesCompletePayloadAndMetadata()
+    {
+        using var directory = new TemporaryDirectory();
+        var payload = JsonSerializer.Serialize(new { Kind=4, Generation=7, Payload="原始\"frame\"\nW01_FORGED_SUBFRAME", Origin="http://127.0.0.1:3210", IsMainFrame=false });
+        var recorder = new CompatibilityEvidenceRecorder(directory.RootPath, (_,_)=>{});
+        recorder.RecordNative(payload); await recorder.DisposeAsync();
+        var lines=await File.ReadAllLinesAsync(recorder.FilePath); Assert.HasCount(1,lines);
+        using var document=JsonDocument.Parse(lines[0]);
+        Assert.AreEqual("W01",document.RootElement.GetProperty("taskId").GetString());
+        Assert.AreEqual(payload,document.RootElement.GetProperty("nativeEvent").GetString());
+        Assert.ThrowsExactly<ObjectDisposedException>(() => recorder.RecordNative(payload));
+    }
+
+    [TestMethod]
+    public async Task OversizedExplicitEvidenceFailsRatherThanTruncatingToAPass()
+    {
+        using var directory = new TemporaryDirectory();
+        await using var recorder = new CompatibilityEvidenceRecorder(directory.RootPath, (_,_)=>{});
+        Assert.ThrowsExactly<InvalidDataException>(() => recorder.RecordNative(new string('x',2*1024*1024+1)));
+    }
+}

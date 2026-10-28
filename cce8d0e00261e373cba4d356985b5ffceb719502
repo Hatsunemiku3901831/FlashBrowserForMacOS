@@ -1,0 +1,17 @@
+using System.Runtime.InteropServices;
+using System.Text.Json;
+using Avalonia.Threading;
+
+namespace FlashMacOS.Browser.WebKit.Diagnostics;
+
+internal static partial class NativeWindowDiagnostics
+{
+    public static Task<JsonElement> SnapshotAsync() => Dispatcher.UIThread.InvokeAsync(() =>
+    {
+        using var document = JsonDocument.Parse(Marshal.PtrToStringUTF8(Snapshot())!);
+        return document.RootElement.Clone();
+    }).GetTask();
+
+    [LibraryImport("FlashMacOSWebKit", EntryPoint = "fm_window_snapshot")]
+    private static partial nint Snapshot();
+}

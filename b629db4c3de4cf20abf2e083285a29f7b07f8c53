@@ -1,0 +1,35 @@
+{
+  "files": [
+    {
+      "path": "test-assets/sol-golden/legacy-content/settings.sol.json",
+      "sha256": "d1121bd4a3ad792b120233606ff4581da5910cf953a7450b8e8edf910796f3dc",
+      "oracleRun": "artifacts/evidence/S01/legacy-oracle-20261028-01",
+      "status": "REFERENCE_EXPECTATION_NOT_NEW_CODEC_PASS"
+    },
+    {
+      "path": "test-assets/sol-golden/legacy-content/mao.sol.json",
+      "sha256": "644bd7966839d1a39307d032e129eff80741797735a32a234ade0ebe8bdb6398",
+      "oracleRun": "artifacts/evidence/S01/legacy-oracle-20261028-01",
+      "status": "REFERENCE_EXPECTATION_NOT_NEW_CODEC_PASS"
+    },
+    {
+      "path": "test-assets/sol-golden/legacy-content/pvz.sol.json",
+      "sha256": "18d35c0e23e549ba07387945f24672ac3661c4a15fa8d77d642beff4e80deaa4",
+      "oracleRun": "artifacts/evidence/S01/legacy-oracle-20261028-01",
+      "status": "REFERENCE_EXPECTATION_NOT_NEW_CODEC_PASS"
+    },
+    {
+      "path": "test-assets/sol-golden/legacy-content/FBCookie.sol.json",
+      "sha256": "98ab4ed65e64c70b1b2c1600c9db6a441ff51efb91293a2bd9f5ac4fb245d5d6",
+      "oracleRun": "artifacts/evidence/S01/legacy-oracle-20261028-01",
+      "status": "REFERENCE_EXPECTATION_NOT_NEW_CODEC_PASS"
+    },
+    {
+      "path": "test-assets/sol-golden/legacy-content/RuffleTest.sol.json",
+      "sha256": "7c29f4340fd4b726e118b297a6b62a871609d3e79312e064af49f80cebd348b4",
+      "origin": "Project-authored manual byte transcription, independent of any new codec",
+      "status": "REFERENCE_EXPECTATION_NOT_NEW_CODEC_PASS"
+    }
+  ],
+  "RuffleTest": "Manual complete content transcribed from frozen byte offsets 0x20..0x116; Legacy oracle exit 1 retained because ECMA count 5 has four actual properties"
+}

@@ -1,0 +1,886 @@
+using System.Collections.Concurrent;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle;
+using CefFlashBrowser.MacOS.Spike.Core.Flash.Storage;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Net.Http.Headers;
+
+namespace CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting;
+
+public sealed class LoopbackContentHost : ILocalContentHost
+{
+    private const string SessionCookieName = "CefFlashBrowser-Loopback-Session";
+    private const string GateZeroCookieName = "CefFlashBrowser-Gate0";
+    private const string ExternalInterfaceSwfFileName = "test.swf";
+
+    private static readonly string[] ExternalInterfaceFixtureFiles =
+        ["Test.as", "index.html", "test.fla", ExternalInterfaceSwfFileName, "test.ts"];
+
+    private static readonly JsonSerializerOptions HtmlJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Encoder = JavaScriptEncoder.Default,
+    };
+
+    private readonly string _ruffleAssetDirectory;
+    private readonly string _solFixturePath;
+    private readonly string _externalInterfaceFixtureDirectory;
+    private readonly IRuffleSaveStore _saveStore;
+    private readonly ConcurrentDictionary<string, Registration> _registrations = new(StringComparer.Ordinal);
+    private readonly SemaphoreSlim _lifecycleGate = new(1, 1);
+    private readonly string _sessionToken = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
+    private WebApplication? _application;
+    private bool _disposed;
+
+    public LoopbackContentHost(
+        string ruffleAssetDirectory,
+        string solFixturePath,
+        string externalInterfaceFixtureDirectory,
+        IRuffleSaveStore saveStore)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruffleAssetDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(solFixturePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(externalInterfaceFixtureDirectory);
+        ArgumentNullException.ThrowIfNull(saveStore);
+
+        _ruffleAssetDirectory = Path.GetFullPath(ruffleAssetDirectory);
+        _solFixturePath = Path.GetFullPath(solFixturePath);
+        _externalInterfaceFixtureDirectory = Path.GetFullPath(externalInterfaceFixtureDirectory);
+        _saveStore = saveStore;
+    }
+
+    public Uri? BaseUri { get; private set; }
+
+    public Uri? DiagnosticsUri => BaseUri is null
+        ? null
+        : new Uri(BaseUri, $"{_sessionToken}/diagnostics");
+
+    public Uri? RufflePublicPath => BaseUri is null
+        ? null
+        : new Uri(BaseUri, $"{_sessionToken}/assets/ruffle/");
+
+    public async ValueTask StartAsync(CancellationToken cancellationToken = default)
+    {
+        await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ThrowIfDisposed();
+            await StartCoreAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+    }
+
+    public async ValueTask<LocalSwfSource> RegisterSwfAsync(
+        string filePath,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        await _lifecycleGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ThrowIfDisposed();
+            await StartCoreAsync(cancellationToken).ConfigureAwait(false);
+
+            var fullPath = Path.GetFullPath(filePath);
+            if (!File.Exists(fullPath))
+            {
+                throw new FileNotFoundException("The selected SWF file does not exist.", fullPath);
+            }
+
+            if (!Path.GetExtension(fullPath).Equals(".swf", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("Only .swf files can be registered with the local player.");
+            }
+
+            var pathHash = SHA256.HashData(Encoding.UTF8.GetBytes(fullPath));
+            var id = Convert.ToHexStringLower(pathHash.AsSpan(0, 16));
+            var root = Path.GetDirectoryName(fullPath)
+                ?? throw new InvalidOperationException("The SWF parent directory could not be resolved.");
+            var fileName = Path.GetFileName(fullPath);
+            var registration = new Registration(id, root, fileName, fullPath);
+            _registrations[id] = registration;
+
+            var escapedFileName = Uri.EscapeDataString(fileName);
+            var swfUri = new Uri(BaseUri!, $"content/{id}/{escapedFileName}?session={_sessionToken}");
+            var playerUri = new Uri(BaseUri!, $"{_sessionToken}/player/{id}");
+            var storagePrefix = $"127.0.0.1{swfUri.AbsolutePath}";
+            return new LocalSwfSource(id, fullPath, playerUri, swfUri, storagePrefix);
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _lifecycleGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            var application = _application;
+            if (application is null)
+            {
+                ClearRuntimeState();
+                return;
+            }
+
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+                await application.StopAsync(timeout.Token).ConfigureAwait(false);
+            }
+            finally
+            {
+                try
+                {
+                    await application.DisposeAsync().ConfigureAwait(false);
+                }
+                finally
+                {
+                    ClearRuntimeState();
+                }
+            }
+        }
+        finally
+        {
+            _lifecycleGate.Release();
+            // No caller accesses AvailableWaitHandle, so retaining this gate does not retain an
+            // independent native handle. Disposing it would race concurrent lifecycle waiters.
+        }
+    }
+
+    private async ValueTask StartCoreAsync(CancellationToken cancellationToken)
+    {
+        if (_application is not null)
+        {
+            return;
+        }
+
+        await RuffleAssetManifest.ValidateAsync(_ruffleAssetDirectory, cancellationToken)
+            .ConfigureAwait(false);
+        if (!File.Exists(_solFixturePath))
+        {
+            throw new FileNotFoundException("The Gate 0 SOL fixture is missing.", _solFixturePath);
+        }
+
+        foreach (var fileName in ExternalInterfaceFixtureFiles)
+        {
+            var fixturePath = Path.Combine(_externalInterfaceFixtureDirectory, fileName);
+            if (!File.Exists(fixturePath))
+            {
+                throw new FileNotFoundException(
+                    "The pinned ExternalInterface fixture is missing.",
+                    fixturePath);
+            }
+        }
+
+        var builder = WebApplication.CreateSlimBuilder(new WebApplicationOptions
+        {
+            ApplicationName = typeof(LoopbackContentHost).Assembly.FullName,
+            ContentRootPath = AppContext.BaseDirectory,
+        });
+        builder.Logging.ClearProviders();
+        builder.WebHost.ConfigureKestrel(options =>
+        {
+            options.Listen(IPAddress.Loopback, 0, listen => listen.Protocols = HttpProtocols.Http1);
+            options.AddServerHeader = false;
+        });
+
+        var application = builder.Build();
+        try
+        {
+            MapRoutes(application);
+            await application.StartAsync(cancellationToken).ConfigureAwait(false);
+
+            var addresses = application.Services
+                .GetRequiredService<IServer>()
+                .Features
+                .Get<IServerAddressesFeature>()
+                ?.Addresses;
+            var address = addresses?.SingleOrDefault()
+                ?? throw new InvalidOperationException("Kestrel did not publish a loopback address.");
+            BaseUri = new Uri(address.EndsWith('/') ? address : address + '/', UriKind.Absolute);
+            _application = application;
+        }
+        catch
+        {
+            await application.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    private void ClearRuntimeState()
+    {
+        _application = null;
+        BaseUri = null;
+        _registrations.Clear();
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+
+    private void MapRoutes(WebApplication app)
+    {
+        app.Use(async (context, next) =>
+        {
+            if (!IsLoopbackRequest(context))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            context.Response.Headers[HeaderNames.XContentTypeOptions] = "nosniff";
+            context.Response.Headers["Referrer-Policy"] = "no-referrer";
+            await next(context).ConfigureAwait(false);
+        });
+
+        app.MapGet($"/{_sessionToken}/health", () => Results.Json(new
+        {
+            status = "ok",
+            ruffleVersion = RuffleAssetManifest.Version,
+        }));
+
+        app.MapGet($"/{_sessionToken}/assets/ruffle/{{fileName}}", (string fileName, HttpContext context) =>
+        {
+            if (!RuffleAssetManifest.RuntimeFiles.ContainsKey(fileName))
+            {
+                return Results.NotFound();
+            }
+
+            AddCrossOriginAssetHeaders(context.Response);
+            var path = Path.Combine(_ruffleAssetDirectory, fileName);
+            return Results.File(
+                path,
+                GetContentType(path),
+                enableRangeProcessing: true,
+                lastModified: File.GetLastWriteTimeUtc(path));
+        });
+
+        app.MapGet($"/{_sessionToken}/player/{{id}}", async (string id, HttpContext context) =>
+        {
+            if (!_registrations.TryGetValue(id, out var registration))
+            {
+                return Results.NotFound();
+            }
+
+            SetSessionCookie(context.Response);
+            AddHtmlSecurityHeaders(context.Response);
+            var saves = await _saveStore.GetAllAsync(context.RequestAborted).ConfigureAwait(false);
+            return Results.Content(BuildPlayerPage(registration, saves), "text/html; charset=utf-8");
+        });
+
+        app.MapGet($"/{_sessionToken}/diagnostics", async (HttpContext context) =>
+        {
+            var persistentCookieWasPresent = context.Request.Cookies.TryGetValue(
+                GateZeroCookieName,
+                out var cookieValue)
+                && cookieValue.Equals("present", StringComparison.Ordinal);
+            SetSessionCookie(context.Response);
+            context.Response.Cookies.Append(GateZeroCookieName, "present", new CookieOptions
+            {
+                Expires = DateTimeOffset.UtcNow.AddDays(30),
+                HttpOnly = false,
+                IsEssential = true,
+                MaxAge = TimeSpan.FromDays(30),
+                SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
+                Path = "/",
+            });
+            AddHtmlSecurityHeaders(context.Response);
+            var fixture = Convert.ToBase64String(
+                await File.ReadAllBytesAsync(_solFixturePath, context.RequestAborted).ConfigureAwait(false));
+            return Results.Content(
+                BuildDiagnosticsPage(fixture, persistentCookieWasPresent),
+                "text/html; charset=utf-8");
+        });
+
+        app.MapGet($"/{_sessionToken}/fixtures/external-interface", (HttpContext context) =>
+        {
+            SetSessionCookie(context.Response);
+            AddHtmlSecurityHeaders(context.Response);
+            return Results.Content(
+                BuildExternalInterfacePage(),
+                "text/html; charset=utf-8");
+        });
+
+        app.MapGet(
+            $"/{_sessionToken}/fixtures/external-interface/{ExternalInterfaceSwfFileName}",
+            (HttpContext context) =>
+            {
+                if (!IsAuthorizedContentRequest(context))
+                {
+                    return Results.NotFound();
+                }
+
+                context.Response.Headers[HeaderNames.CacheControl] = "no-store";
+                var path = Path.Combine(
+                    _externalInterfaceFixtureDirectory,
+                    ExternalInterfaceSwfFileName);
+                return Results.File(
+                    path,
+                    GetContentType(path),
+                    enableRangeProcessing: true,
+                    lastModified: File.GetLastWriteTimeUtc(path));
+            });
+
+        app.MapGet($"/{_sessionToken}/fixtures/popup", (HttpContext context) =>
+        {
+            AddHtmlSecurityHeaders(context.Response);
+            return Results.Content(
+                "<!doctype html><meta charset=\"utf-8\"><title>Popup passed</title>" +
+                "<style>body{font:16px system-ui;padding:32px;background:#171a21;color:#f5f7fa}</style>" +
+                "<h1>Popup routing passed</h1>",
+                "text/html; charset=utf-8");
+        });
+
+        app.MapGet($"/{_sessionToken}/fixtures/download.txt", () => Results.Text(
+            "CefFlashBrowser Gate 0 download fixture.\n",
+            "text/plain; charset=utf-8"));
+
+        app.MapGet("/content/{id}/{**relativePath}", (string id, string relativePath, HttpContext context) =>
+        {
+            if (!IsAuthorizedContentRequest(context)
+                || !_registrations.TryGetValue(id, out var registration))
+            {
+                return Results.NotFound();
+            }
+
+            var path = PathSafety.ResolveRegularFile(registration.RootDirectory, relativePath);
+            if (path is null)
+            {
+                return Results.NotFound();
+            }
+
+            context.Response.Headers[HeaderNames.CacheControl] = "private, max-age=3600";
+            return Results.File(
+                path,
+                GetContentType(path),
+                enableRangeProcessing: true,
+                lastModified: File.GetLastWriteTimeUtc(path));
+        });
+    }
+
+    private string BuildPlayerPage(Registration registration, IReadOnlyList<RuffleSaveEntry> saves)
+    {
+        var publicPath = RufflePublicPath
+            ?? throw new InvalidOperationException("The local content host has not started.");
+        var escapedFileName = Uri.EscapeDataString(registration.FileName);
+        var swfUrl = new Uri(BaseUri!, $"content/{registration.Id}/{escapedFileName}?session={_sessionToken}");
+        var baseUrl = new Uri(swfUrl, "./");
+        var saveValues = saves.ToDictionary(save => save.Key, save => save.Base64Data, StringComparer.Ordinal);
+
+        return $$"""
+            <!doctype html>
+            <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width,initial-scale=1">
+              <title>{{WebUtility.HtmlEncode(registration.FileName)}} — CefFlashBrowser</title>
+              <style>
+                html, body, #player { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #11151d; }
+                ruffle-player { width: 100%; height: 100%; display: block; }
+              </style>
+              <script>
+                {{RuffleDocumentStartScriptBuilder.BuildPageBootstrap(publicPath)}}
+                const restoredSaves = {{JsonSerializer.Serialize(saveValues, HtmlJsonOptions)}};
+                for (const [key, value] of Object.entries(restoredSaves)) localStorage.setItem(key, value);
+
+                window.__cefFlashBrowserEnsureRuffle = () => {
+                  if (window.RufflePlayer?.newest) return Promise.resolve();
+                  return new Promise((resolve, reject) => {
+                    const script = document.createElement("script");
+                    script.src = {{JsonSerializer.Serialize(new Uri(publicPath, "ruffle.js").AbsoluteUri)}};
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error("Failed to load the bundled Ruffle runtime."));
+                    document.head.appendChild(script);
+                  });
+                };
+              </script>
+            </head>
+            <body>
+              <div id="player"></div>
+              <script>
+                (async () => {
+                  try {
+                    await window.__cefFlashBrowserEnsureRuffle();
+                    const player = window.RufflePlayer.newest().createPlayer();
+                    player.id = "cfb-player";
+                    document.getElementById("player").appendChild(player);
+                    const api = player.ruffle(1);
+                    window.__cefFlashBrowserPlayer = player;
+                    let traceObserverActive = true;
+                    const observeTrace = message => {
+                      if (traceObserverActive) {
+                        window.__cefFlashBrowserPost({ type: "trace", message });
+                      }
+                    };
+                    const installTraceObserver = () => {
+                      player.traceObserver = observeTrace;
+                      api.traceObserver = observeTrace;
+                    };
+                    const runWithTraceObserver = async operation => {
+                      player.addEventListener("loadedmetadata", installTraceObserver, { once: true });
+                      await operation();
+                      installTraceObserver();
+                    };
+                    window.addEventListener("pagehide", () => {
+                      traceObserverActive = false;
+                      player.traceObserver = null;
+                      api.traceObserver = null;
+                    }, { once: true });
+                    window.__cefFlashBrowserPlayerApi = {
+                      suspend: () => api.suspend(),
+                      resume: () => api.resume(),
+                      reload: () => runWithTraceObserver(() => api.reload()),
+                      requestFullscreen: () => api.requestFullscreen(),
+                      get volume() { return api.volume; },
+                      set volume(value) { api.volume = value; }
+                    };
+                    await runWithTraceObserver(() => api.load({
+                      url: {{JsonSerializer.Serialize(swfUrl.AbsoluteUri)}},
+                      base: {{JsonSerializer.Serialize(baseUrl.AbsoluteUri)}},
+                      autoplay: "on",
+                      unmuteOverlay: "visible",
+                      allowScriptAccess: true,
+                      allowFullscreen: true,
+                      warnOnUnsupportedContent: true
+                    }));
+                    window.__cefFlashBrowserPost({ type: "playerReady", message: {{JsonSerializer.Serialize(registration.FileName)}} });
+                  } catch (error) {
+                    const description = `${error?.name || "Error"}: ${error?.message || String(error)}`;
+                    window.__cefFlashBrowserPost({
+                      type: "bridgeError",
+                      message: `${description}\n${error?.stack || ""}`
+                    });
+                  }
+                })();
+              </script>
+            </body>
+            </html>
+            """;
+    }
+
+    private string BuildExternalInterfacePage()
+    {
+        var publicPath = RufflePublicPath
+            ?? throw new InvalidOperationException("The local content host has not started.");
+        var swfUrl = new Uri(
+            BaseUri!,
+            $"{_sessionToken}/fixtures/external-interface/{ExternalInterfaceSwfFileName}");
+
+        return $$"""
+            <!doctype html>
+            <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width,initial-scale=1">
+              <title>ExternalInterface — CefFlashBrowser</title>
+              <style>
+                :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+                body { margin: 0; padding: 24px; background: #11151d; color: #eef2f8; }
+                main { max-width: 860px; margin: auto; }
+                #player { width: 550px; max-width: 100%; height: 400px; margin: 18px 0; background: #fff; }
+                ruffle-player { width: 100%; height: 100%; display: block; }
+                #result { display: block; padding: 12px; border-radius: 8px; background: #1a202b; color: #8fd3ff; }
+                #details { color: #ffb4ab; white-space: pre-wrap; }
+              </style>
+              <script>
+                {{RuffleDocumentStartScriptBuilder.BuildPageBootstrap(publicPath)}}
+                window.__cefFlashBrowserEnsureRuffle = () => {
+                  if (window.RufflePlayer?.newest) return Promise.resolve();
+                  return new Promise((resolve, reject) => {
+                    const script = document.createElement("script");
+                    script.src = {{JsonSerializer.Serialize(new Uri(publicPath, "ruffle.js").AbsoluteUri)}};
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error("Failed to load the bundled Ruffle runtime."));
+                    document.head.appendChild(script);
+                  });
+                };
+              </script>
+            </head>
+            <body>
+              <main>
+                <h1>ExternalInterface bidirectional gate</h1>
+                <p>This runner checks the pinned Ruffle v0.4.1 fixture without network access.</p>
+                <code id="result">RUNNING</code>
+                <pre id="details"></pre>
+                <div id="player"></div>
+              </main>
+              <script>
+                (async () => {
+                  let resultPosted = false;
+                  let checksCompleted = false;
+                  const result = {
+                    available: false,
+                    jsToAs: null,
+                    asToJs: false,
+                    structured: false
+                  };
+                  const traces = [];
+                  let player = null;
+                  let api = null;
+
+                  const canonicalize = value => {
+                    if (Array.isArray(value)) return value.map(canonicalize);
+                    if (value !== null && typeof value === "object") {
+                      return Object.keys(value)
+                        .sort()
+                        .reduce((normalized, key) => {
+                          normalized[key] = canonicalize(value[key]);
+                          return normalized;
+                        }, {});
+                    }
+                    return value;
+                  };
+                  const waitFor = (condition, label, timeoutMilliseconds = 5000) =>
+                    new Promise((resolve, reject) => {
+                      const started = performance.now();
+                      const poll = () => {
+                        try {
+                          if (condition()) {
+                            resolve();
+                          } else if (performance.now() - started >= timeoutMilliseconds) {
+                            reject(new Error("Timed out waiting for " + label + "."));
+                          } else {
+                            setTimeout(poll, 25);
+                          }
+                        } catch (error) {
+                          reject(error);
+                        }
+                      };
+                      poll();
+                    });
+                  const withTimeout = (promise, label, timeoutMilliseconds = 5000) =>
+                    new Promise((resolve, reject) => {
+                      const timer = setTimeout(
+                        () => reject(new Error("Timed out waiting for " + label + ".")),
+                        timeoutMilliseconds);
+                      promise.then(
+                        value => {
+                          clearTimeout(timer);
+                          resolve(value);
+                        },
+                        error => {
+                          clearTimeout(timer);
+                          reject(error);
+                        });
+                    });
+                  const publishResult = () => {
+                    if (resultPosted) return;
+                    resultPosted = true;
+                    const passed = checksCompleted
+                      && result.available === true
+                      && result.jsToAs === 123.4
+                      && result.asToJs === true
+                      && result.structured === true;
+                    const summary = "available=" + result.available
+                      + " jsToAs=" + result.jsToAs
+                      + " asToJs=" + result.asToJs
+                      + " structured=" + result.structured;
+                    const message = (passed ? "PASS " : "FAIL ") + summary;
+                    const data = JSON.stringify({
+                      available: result.available,
+                      jsToAs: result.jsToAs,
+                      asToJs: result.asToJs,
+                      structured: result.structured
+                    });
+                    document.getElementById("result").textContent = message;
+                    window.__cefFlashBrowserPost({
+                      type: "compatibilityResult",
+                      key: "external-interface/v1",
+                      message,
+                      data
+                    });
+                  };
+
+                  try {
+                    await window.__cefFlashBrowserEnsureRuffle();
+                    player = window.RufflePlayer.newest().createPlayer();
+                    player.id = "flash_id";
+                    player.setAttribute("name", "flash_name");
+                    document.getElementById("player").appendChild(player);
+                    api = player.ruffle(1);
+
+                    const observeTrace = message => traces.push(String(message));
+                    const installTraceObserver = () => {
+                      player.traceObserver = observeTrace;
+                      api.traceObserver = observeTrace;
+                    };
+                    player.addEventListener("loadedmetadata", installTraceObserver, { once: true });
+                    window.addEventListener("pagehide", () => {
+                      player.traceObserver = null;
+                      api.traceObserver = null;
+                      delete window.CefFlashBrowserExternalInterface;
+                    }, { once: true });
+
+                    await api.load({
+                      url: {{JsonSerializer.Serialize(swfUrl.AbsoluteUri)}},
+                      autoplay: "on",
+                      unmuteOverlay: "visible",
+                      allowScriptAccess: true,
+                      warnOnUnsupportedContent: true
+                    });
+                    installTraceObserver();
+                    await waitFor(
+                      () => traces.includes("ExternalInterface.available: true")
+                        && typeof player.returnAValue === "function"
+                        && typeof player.callMethodWithDelay === "function",
+                      "ExternalInterface callbacks");
+                    result.available = true;
+
+                    result.jsToAs = await Promise.resolve(
+                      api.callExternalInterface("returnAValue", 123.4));
+
+                    const structuredInput = {
+                      string: "roundtrip",
+                      number: 123.4,
+                      boolean: true,
+                      nullValue: null,
+                      array: ["item", 7, false, null],
+                      object: { nested: "value" }
+                    };
+                    const structuredOutput = await Promise.resolve(
+                      api.callExternalInterface("returnAValue", structuredInput));
+                    result.structured = JSON.stringify(canonicalize(structuredOutput))
+                      === JSON.stringify(canonicalize(structuredInput));
+
+                    let resolveAsToJs;
+                    const asToJsCallback = new Promise(resolve => {
+                      resolveAsToJs = resolve;
+                    });
+                    window.CefFlashBrowserExternalInterface = {
+                      set(value) {
+                        resolveAsToJs(value === true);
+                        return true;
+                      }
+                    };
+                    const callbackName = "window.CefFlashBrowserExternalInterface.set";
+                    await Promise.resolve(
+                      api.callExternalInterface("callMethodWithDelay", callbackName, true));
+                    result.asToJs = await withTimeout(asToJsCallback, "delayed AS3 to JS callback");
+                    await waitFor(
+                      () => traces.some(
+                        message => message.includes(
+                          "call(" + callbackName + ", ...) = true")),
+                      "the true callback return trace");
+
+                    checksCompleted = true;
+                    publishResult();
+                  } catch (error) {
+                    publishResult();
+                    const description = (error?.name || "Error") + ": "
+                      + (error?.message || String(error));
+                    document.getElementById("details").textContent = description;
+                    window.__cefFlashBrowserPost({
+                      type: "bridgeError",
+                      message: description
+                    });
+                  }
+                })();
+              </script>
+            </body>
+            </html>
+            """;
+    }
+
+    private string BuildDiagnosticsPage(string fixtureBase64, bool persistentCookieWasPresent)
+    {
+        var publicPath = RufflePublicPath
+            ?? throw new InvalidOperationException("The local content host has not started.");
+        var popupUrl = new Uri(BaseUri!, $"{_sessionToken}/fixtures/popup");
+        var downloadUrl = new Uri(BaseUri!, $"{_sessionToken}/fixtures/download.txt");
+        var externalInterfaceUrl = new Uri(
+            BaseUri!,
+            $"{_sessionToken}/fixtures/external-interface");
+
+        return $$"""
+            <!doctype html>
+            <html lang="en">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width,initial-scale=1">
+              <title>CefFlashBrowser Gate 0</title>
+              <style>
+                :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+                body { margin: 0; padding: 36px; background: #11151d; color: #eef2f8; }
+                main { max-width: 860px; margin: auto; }
+                section { padding: 20px; margin: 16px 0; border: 1px solid #343b4a; border-radius: 14px; background: #1a202b; }
+                button, a { color: #dbeaff; background: #294f82; border: 0; border-radius: 8px; padding: 9px 13px; margin: 4px; text-decoration: none; cursor: pointer; }
+                code { color: #8fd3ff; }
+                object, embed { width: 1px; height: 1px; opacity: .01; }
+              </style>
+              <script>{{RuffleDocumentStartScriptBuilder.BuildPageBootstrap(publicPath)}}</script>
+            </head>
+            <body>
+              <main>
+                <h1>macOS Gate 0 diagnostics</h1>
+                <p>The page is served by the per-session loopback content host.</p>
+                <section>
+                  <h2>Document-start Ruffle polyfill</h2>
+                  <p id="injection-status">Waiting for the WKUserScript result…</p>
+                  <object id="static-flash" data="missing-static.swf" type="application/x-shockwave-flash"></object>
+                  <button id="dynamic-flash">Create dynamic Flash tag</button>
+                </section>
+                <section>
+                  <h2>Browser integration</h2>
+                  <p id="cookie-status">Persistent cookie observed before this response: {{(persistentCookieWasPresent ? "yes" : "no")}}.</p>
+                  <a href={{JsonSerializer.Serialize(popupUrl.AbsoluteUri)}} target="_blank">Open popup fixture</a>
+                  <a href={{JsonSerializer.Serialize(downloadUrl.AbsoluteUri)}} download="gate0-download.txt">Download fixture</a>
+                </section>
+                <section>
+                  <h2>SharedObject bridge</h2>
+                  <button id="write-save">Write existing SOL fixture to localStorage</button>
+                  <code id="save-status"></code>
+                </section>
+                <section>
+                  <h2>ExternalInterface</h2>
+                  <a href={{JsonSerializer.Serialize(externalInterfaceUrl.AbsoluteUri)}}>Open ExternalInterface fixture</a>
+                </section>
+              </main>
+              <script>
+                document.getElementById("dynamic-flash").addEventListener("click", () => {
+                  const embed = document.createElement("embed");
+                  embed.src = "missing-dynamic.swf";
+                  embed.type = "application/x-shockwave-flash";
+                  document.body.appendChild(embed);
+                  setTimeout(report, 50);
+                });
+                document.getElementById("write-save").addEventListener("click", () => {
+                  localStorage.setItem("127.0.0.1/gate0/settings", {{JsonSerializer.Serialize(fixtureBase64)}});
+                  document.getElementById("save-status").textContent = "SOL fixture written; the C# bridge should persist it.";
+                });
+                const report = () => {
+                  const count = document.querySelectorAll("ruffle-object, ruffle-embed, ruffle-player").length;
+                  const available = Boolean(window.RufflePlayer?.newest);
+                  document.getElementById("injection-status").textContent =
+                    `Ruffle ${available ? "available" : "missing"}; ${count} Flash element(s) polyfilled.`;
+                  window.__cefFlashBrowserPost({
+                    type: "diagnostics",
+                    ruffleAvailable: available,
+                    flashElementCount: count,
+                    persistentCookieWasPresent: {{persistentCookieWasPresent.ToString().ToLowerInvariant()}},
+                    documentStartMilliseconds: window.__cefFlashBrowserDocumentStart?.timestamp ?? null
+                  });
+                };
+                window.addEventListener("load", () => setTimeout(report, 100));
+              </script>
+            </body>
+            </html>
+            """;
+    }
+
+    private bool IsAuthorizedContentRequest(HttpContext context)
+    {
+        if (context.Request.Query.TryGetValue("session", out var queryToken)
+            && TokenMatches(queryToken.ToString()))
+        {
+            return true;
+        }
+
+        return context.Request.Cookies.TryGetValue(SessionCookieName, out var cookieToken)
+            && TokenMatches(cookieToken);
+    }
+
+    private bool TokenMatches(string candidate)
+    {
+        if (candidate.Length != _sessionToken.Length)
+        {
+            return false;
+        }
+
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.ASCII.GetBytes(candidate),
+            Encoding.ASCII.GetBytes(_sessionToken));
+    }
+
+    private static bool IsLoopbackRequest(HttpContext context)
+    {
+        var localAddress = context.Connection.LocalIpAddress;
+        var remoteAddress = context.Connection.RemoteIpAddress;
+        var host = context.Request.Host.Host;
+        return localAddress is not null
+            && remoteAddress is not null
+            && IPAddress.IsLoopback(localAddress)
+            && IPAddress.IsLoopback(remoteAddress)
+            && (host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                || host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                || host.Equals("[::1]", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void SetSessionCookie(HttpResponse response)
+    {
+        response.Cookies.Append(SessionCookieName, _sessionToken, new CookieOptions
+        {
+            HttpOnly = true,
+            IsEssential = true,
+            SameSite = Microsoft.AspNetCore.Http.SameSiteMode.Strict,
+            Path = "/",
+        });
+    }
+
+    private static void AddCrossOriginAssetHeaders(HttpResponse response)
+    {
+        response.Headers[HeaderNames.AccessControlAllowOrigin] = "*";
+        response.Headers["Cross-Origin-Resource-Policy"] = "cross-origin";
+        response.Headers[HeaderNames.CacheControl] = "public, max-age=31536000, immutable";
+    }
+
+    private static void AddHtmlSecurityHeaders(HttpResponse response)
+    {
+        response.Headers[HeaderNames.CacheControl] = "no-store";
+        response.Headers[HeaderNames.ContentSecurityPolicy] =
+            "default-src 'self' data: blob:; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; " +
+            "style-src 'self' 'unsafe-inline'; object-src 'self'; frame-src 'self'; worker-src 'self' blob:;";
+    }
+
+    private static string GetContentType(string path)
+    {
+        return Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".wasm" => "application/wasm",
+            ".js" => "text/javascript; charset=utf-8",
+            ".json" => "application/json; charset=utf-8",
+            ".html" or ".htm" => "text/html; charset=utf-8",
+            ".css" => "text/css; charset=utf-8",
+            ".swf" => "application/x-shockwave-flash",
+            ".sol" => "application/octet-stream",
+            ".xml" => "application/xml; charset=utf-8",
+            ".txt" => "text/plain; charset=utf-8",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".svg" => "image/svg+xml",
+            ".mp3" => "audio/mpeg",
+            ".wav" => "audio/wav",
+            ".flv" => "video/x-flv",
+            _ => "application/octet-stream",
+        };
+    }
+
+    private sealed record Registration(
+        string Id,
+        string RootDirectory,
+        string FileName,
+        string FilePath);
+}

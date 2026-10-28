@@ -1,0 +1,50 @@
+using System.Buffers.Binary;
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Sol.Managed;
+
+public sealed class SolCodec : ISolCodec
+{
+    private readonly Amf3ValueCodec _amf3;
+    public SolCodec() : this([]) { }
+    public SolCodec(IEnumerable<IAmfExternalizableCodec> externalizableCodecs) => _amf3 = new Amf3ValueCodec(externalizableCodecs);
+
+    public SolDocument Decode(ReadOnlyMemory<byte> source, AmfLimits? limits = null, CancellationToken cancellationToken = default)
+    {
+        var effectiveLimits = limits ?? AmfLimits.Default; effectiveLimits.Validate(); cancellationToken.ThrowIfCancellationRequested();
+        if (source.Length > effectiveLimits.MaximumFileBytes) throw new InvalidDataException("SOL input exceeds the configured maximum size.");
+        var header = SolFileInspector.ReadHeader(source.Span);
+        var reader = new AmfReadContext(source, header.Encoding, effectiveLimits, _amf3, cancellationToken);
+        reader.Skip(22 + BinaryPrimitives.ReadUInt16BigEndian(source.Span.Slice(16, 2)));
+        var entries = new List<AmfProperty>();
+        while (reader.Remaining != 0)
+        {
+            var name = reader.ReadEntryName();
+            var value = header.Encoding == SolEncoding.Amf0 ? reader.ReadAmf0(0) : _amf3.Read(reader, 0);
+            var terminator = reader.ReadByte();
+            if (terminator != 0) throw reader.Error("EntryTerminator", "Each SOL entry must end with zero.", reader.Position - 1, terminator);
+            entries.Add(new(name, value));
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        return new SolDocument(header.Name, header.Encoding, reader.Graph(entries));
+    }
+
+    public byte[] Encode(SolDocument document, AmfLimits? limits = null, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(document); cancellationToken.ThrowIfCancellationRequested();
+        AmfCodec.ValidateGraph(document.Graph, cancellationToken);
+        using var writer = new AmfWriteContext(document.Graph, document.Encoding, limits ?? AmfLimits.Default, _amf3, cancellationToken);
+        writer.WriteBytes([0x00, 0xbf]); writer.WriteUInt32(0);
+        writer.WriteBytes([0x54, 0x43, 0x53, 0x4f, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00]);
+        writer.WriteShortString(document.Name); writer.WriteUInt32((uint)document.Encoding);
+        foreach (var entry in document.Graph.Entries)
+        {
+            writer.WriteEntryName(entry.Name);
+            if (document.Encoding == SolEncoding.Amf0) writer.WriteAmf0(entry.Value, 0);
+            else _amf3.Write(writer, entry.Value, 0);
+            writer.WriteByte(0);
+        }
+        cancellationToken.ThrowIfCancellationRequested(); var bytes = writer.ToArray();
+        BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(2, 4), (uint)(bytes.Length - 6)); return bytes;
+    }
+}

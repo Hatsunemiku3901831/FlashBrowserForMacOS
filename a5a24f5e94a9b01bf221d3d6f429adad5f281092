@@ -1,0 +1,103 @@
+using FlashMacOS.Application.Sol;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class SolConversionTests
+{
+    [TestMethod]
+    public async Task IntegerConversionIsExplicitAndKeepsItsExactMathematicalValue()
+    {
+        var codec = new SolCodec(); var source = new SolDocument("integer", SolEncoding.Amf3, new AmfGraph([new("v", new AmfInteger(12345))]));
+        var plan = await new SolEncodingConversion(codec).AnalyzeAsync(source, SolEncoding.Amf0);
+        Assert.IsTrue(plan.CanApply); Assert.IsTrue(plan.Issues.Any(issue => issue.Code == "IntegerAsNumber" && !issue.IsLoss));
+        Assert.IsInstanceOfType<AmfInteger>(source.Graph.Entries[0].Value);
+        var read = codec.Decode(codec.Encode(plan.Candidate!)); Assert.AreEqual(12345d, ((AmfNumber)read.Graph.Entries[0].Value).Value);
+        Assert.IsTrue(codec.Encode(plan.Candidate!).Length > codec.Encode(source).Length);
+    }
+
+    [TestMethod]
+    public async Task CyclicAmf0ObjectsArraysDateAndBitsConvertWithExplicitMetadataNotices()
+    {
+        var date = new AmfDateNode(new(10), AmfNumber.FromBits(unchecked((long)0xbfd0000000000000)), -60);
+        var array = new AmfArrayNode(new(9), AmfArrayKind.Amf0Strict, [AmfNumber.FromBits(long.MinValue), new AmfReference(date.Id)]);
+        var item = new AmfObjectNode(new(7), new AmfTraits("Point", true), properties: [new("self", new AmfReference(new(7))), new("array", new AmfReference(array.Id))], objectKind: AmfObjectKind.Amf0TypedObject);
+        var source = new SolDocument("types", SolEncoding.Amf0, new AmfGraph([new("root", new AmfReference(item.Id))], [item, array, date]));
+        var codec = new SolCodec(); var plan = await new SolEncodingConversion(codec).AnalyzeAsync(source, SolEncoding.Amf3);
+        Assert.IsTrue(plan.CanApply); Assert.IsTrue(plan.Issues.Any(issue => issue.Code == "ReservedTimezone" && !issue.IsLoss));
+        var result = codec.Decode(codec.Encode(plan.Candidate!)); Assert.IsTrue(AmfGraphEquality.Equivalent(plan.Candidate!.Graph, result.Graph));
+        var converted = (AmfObjectNode)result.Graph.Nodes[((AmfReference)result.Graph.Entries[0].Value).Target];
+        Assert.AreEqual("Point", converted.Traits.ClassName); Assert.AreEqual(converted.Id, ((AmfReference)converted.Properties[0].Value).Target);
+        var convertedArray = (AmfArrayNode)result.Graph.Nodes[((AmfReference)converted.Properties[1].Value).Target];
+        Assert.AreEqual(long.MinValue, ((AmfNumber)convertedArray.Dense[0]).RawBits);
+        var convertedDate = (AmfDateNode)result.Graph.Nodes[((AmfReference)convertedArray.Dense[1]).Target];
+        Assert.AreEqual(date.Milliseconds.RawBits, convertedDate.Milliseconds.RawBits); Assert.IsNull(convertedDate.ReservedAmf0Timezone);
+    }
+
+    [TestMethod]
+    public async Task EcmaCountIsOnlyAnEncodingNoticeAndPropertyValuesRemainIntact()
+    {
+        var array = new AmfArrayNode(new(0), AmfArrayKind.Amf0Ecma, associative: [new("k", new AmfString("保留"))], declaredAssociativeCount: 500);
+        var source = new SolDocument("count", SolEncoding.Amf0, new AmfGraph([new("a", new AmfReference(array.Id))], [array]));
+        var plan = await new SolEncodingConversion(new SolCodec()).AnalyzeAsync(source, SolEncoding.Amf3);
+        Assert.IsTrue(plan.CanApply); Assert.IsTrue(plan.Issues.Any(issue => issue.Code == "AdvisoryArrayCount" && !issue.IsLoss));
+        var node = (AmfArrayNode)plan.Candidate!.Graph.Nodes[array.Id]; Assert.HasCount(1, node.Associative);
+        Assert.AreEqual("保留", ((AmfString)node.Associative[0].Value).Value); Assert.IsNull(node.DeclaredAssociativeCount);
+    }
+
+    [TestMethod]
+    [DataRow("amf3-bytearray", "NoNativeAmf0Type")]
+    [DataRow("amf3-vector-int", "NoNativeAmf0Type")]
+    [DataRow("amf3-dictionary-identity-self", "NoNativeAmf0Type")]
+    [DataRow("amf3-date-reference", "SharedDate")]
+    [DataRow("amf3-xml-kinds", "XmlTypeOrIdentity")]
+    [DataRow("amf3-trait-reference", "ClassTraits")]
+    public async Task LossyNativeConversionsAreBlockedButExplicitAmf3EnvelopesPreserveGraphs(string fixtureName, string lossCode)
+    {
+        var fixture = AmfGolden.Fixture(fixtureName); var graph = new AmfCodec().Decode(AmfGolden.Bytes(fixture), SolEncoding.Amf3);
+        var source = new SolDocument("source", SolEncoding.Amf3, graph); var codec = new SolCodec(); var conversion = new SolEncodingConversion(codec);
+        var plan = await conversion.AnalyzeAsync(source, SolEncoding.Amf0);
+        Assert.IsFalse(plan.CanApply); Assert.IsNull(plan.Candidate); Assert.IsTrue(plan.Issues.Any(issue => issue.IsLoss && issue.Code == lossCode));
+        var envelope = await conversion.AnalyzeAsync(source, SolEncoding.Amf0, SolConversionPolicy.PreserveWithAmf3Envelope);
+        Assert.IsTrue(envelope.CanApply); Assert.IsTrue(envelope.Issues.Any(issue => issue.Code == "EmbeddedAmf3" && !issue.IsLoss));
+        var read = codec.Decode(codec.Encode(envelope.Candidate!)); Assert.IsInstanceOfType<AmfAvmPlus>(read.Graph.Entries[0].Value);
+        Assert.IsTrue(AmfGraphEquality.Equivalent(envelope.Candidate!.Graph, read.Graph));
+        var back = await conversion.AnalyzeAsync(read, SolEncoding.Amf3); Assert.IsTrue(back.CanApply);
+        Assert.IsTrue(AmfGraphEquality.Equivalent(source.Graph, back.Candidate!.Graph));
+    }
+
+    [TestMethod]
+    public async Task MixedArrayShapeAndEmptyNamesProduceActionableLossReports()
+    {
+        var array = new AmfArrayNode(new(0), AmfArrayKind.Amf3Mixed, [new AmfInteger(1)], [new("key", new AmfString("v"))]);
+        var source = new SolDocument("mixed", SolEncoding.Amf3, new AmfGraph([new("a", new AmfReference(array.Id))], [array]));
+        var conversion = new SolEncodingConversion(new SolCodec()); var plan = await conversion.AnalyzeAsync(source, SolEncoding.Amf0);
+        Assert.IsFalse(plan.CanApply); Assert.IsTrue(plan.Issues.Any(issue => issue.Code == "MixedArrayShape" && issue.IsLoss));
+        var empty = new AmfObjectNode(new(0), new AmfTraits("", true), properties: [new("", AmfNull.Instance)], objectKind: AmfObjectKind.Amf0Object);
+        source = new("empty", SolEncoding.Amf0, new AmfGraph([new("v", new AmfReference(empty.Id))], [empty]));
+        plan = await conversion.AnalyzeAsync(source, SolEncoding.Amf3); Assert.IsFalse(plan.CanApply);
+        Assert.IsTrue(plan.Issues.Any(issue => issue.Code == "EmptyProperty" && issue.IsLoss));
+    }
+
+    [TestMethod]
+    public async Task UnsupportedContentCannotEnterAConversionCandidate()
+    {
+        var source = new SolDocument("unknown", SolEncoding.Amf0, new AmfGraph([new("v", new AmfUnsupported(SolEncoding.Amf0, 4, 31, "MovieClip"))]));
+        var plan = await new SolEncodingConversion(new SolCodec()).AnalyzeAsync(source, SolEncoding.Amf3);
+        Assert.IsFalse(plan.CanApply); Assert.IsTrue(plan.Issues.Any(issue => issue.IsLoss && issue.Code == "Unsupported"));
+    }
+
+    [TestMethod]
+    public void GraphEquivalenceRequiresAnIdentityBijectionAndPreservesCyclesOrderAndNumberBits()
+    {
+        static AmfGraph Cycle(int number)
+        { var id = new AmfNodeId(number); return new([new("v", new AmfReference(id))], [new AmfObjectNode(id, new AmfTraits("", true), properties: [new("self", new AmfReference(id))])]); }
+        Assert.IsTrue(AmfGraphEquality.Equivalent(Cycle(0), Cycle(100)));
+        var shared = new AmfGraph([new("a", new AmfReference(new(0))), new("b", new AmfReference(new(0)))], [new AmfObjectNode(new(0), new AmfTraits("", true))]);
+        var duplicated = new AmfGraph([new("a", new AmfReference(new(0))), new("b", new AmfReference(new(1)))], [new AmfObjectNode(new(0), new AmfTraits("", true)), new AmfObjectNode(new(1), new AmfTraits("", true))]);
+        Assert.IsFalse(AmfGraphEquality.Equivalent(shared, duplicated)); Assert.IsFalse(AmfGraphEquality.Equivalent(duplicated, shared));
+        Assert.IsFalse(AmfGraphEquality.Equivalent(new([new("v", new AmfNumber(0))]), new([new("v", AmfNumber.FromBits(long.MinValue))])));
+        Assert.IsFalse(AmfGraphEquality.Equivalent(new([new("a", AmfNull.Instance), new("b", AmfNull.Instance)]), new([new("b", AmfNull.Instance), new("a", AmfNull.Instance)])));
+    }
+}

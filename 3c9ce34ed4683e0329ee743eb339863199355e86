@@ -1,0 +1,47 @@
+using FlashMacOS.Desktop.ViewModels;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class CommandLifetimeTests
+{
+    [TestMethod]
+    public void DisposedCommandRejectsNewExecution()
+    {
+        var executions = 0;
+        var command = new AsyncCommand(_ => { executions++; return Task.CompletedTask; });
+        command.Dispose();
+        var accepted = command.CanExecute(null);
+        if (accepted) command.Execute(null);
+        Assert.IsFalse(accepted);
+        Assert.AreEqual(0, executions);
+    }
+
+    [TestMethod]
+    public async Task ClosingAnExecutingCommandCancelsAndJoinsWithoutDisposingItsTokenEarly()
+    {
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var canceled = false;
+        var command = new AsyncCommand(async token =>
+        {
+            started.TrySetResult();
+            try { await Task.Delay(Timeout.InfiniteTimeSpan, token); }
+            finally { canceled = token.IsCancellationRequested; }
+        });
+        var execution = command.ExecuteAsync();
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Task.WhenAll(command.DisposeAsync().AsTask(), command.DisposeAsync().AsTask());
+        await execution;
+        Assert.IsTrue(canceled); Assert.IsNull(command.LastError); Assert.IsFalse(command.CanExecute(null));
+    }
+
+    [TestMethod]
+    public async Task AnExecutionFailureRemainsObservableThroughCompletion()
+    {
+        var failure = new IOException("Controlled command failure");
+        var command = new AsyncCommand(_ => Task.FromException(failure));
+        Assert.AreSame(failure, await Assert.ThrowsExactlyAsync<IOException>(async () => await command.ExecuteAsync()));
+        Assert.AreSame(failure, command.LastError);
+        command.Dispose();
+    }
+}

@@ -1,0 +1,192 @@
+"""Freeze already closed W03 native sessions and their exact managed/package inputs.
+
+This never launches an app. Use --index-only after completing the ordered handoff to
+refresh the evidence index with immutable copies of the final living documents.
+"""
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
+import argparse
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import tarfile
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[3]
+DOC = ROOT / 'docs/evidence/W03/2026-10-29'
+EVIDENCE = ROOT / 'artifacts/evidence/W03'
+OUT = EVIDENCE / 'final-native-20261029-01'
+DEBUG = 'w03-final-managed-20261029-07'
+RELEASE = 'w03-final-release-20261029-07'
+PACKAGE = 'w03-package-20261029-05'
+PRODUCT = 'w03-product-package-20261029-01'
+RUNS = ['w03-player-20261029-05', 'w03-suite-20261029-01', 'w03-keyboard-20261029-01',
+        'w03-mouse-20261029-01', 'w03-external-20261029-01', 'w03-renderer-20261029-01',
+        'w03-mole-20261029-01', 'w03-product-20261029-01']
+FAULTS = ['w03-offline-product-20261029-01', 'w03-missing-runtime-20261029-02', 'w03-corrupt-runtime-20261029-02']
+
+def sha(path):
+    with Path(path).open('rb') as stream:
+        return hashlib.file_digest(stream, 'sha256').hexdigest()
+
+def read(path): return json.loads(Path(path).read_text())
+def save(path, data): Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+def now(): return datetime.now(timezone.utc).isoformat()
+def require(ok, why):
+    if not ok: raise ValueError(why)
+
+def files(path): return {str(p.relative_to(path)): sha(p) for p in sorted(Path(path).rglob('*')) if p.is_file()}
+def journal(result):
+    logs = [p for p in Path(result['profile']).glob('logs/*.jsonl') if f"-{result['pid']}-" in p.name]
+    require(len(logs) == 1, 'Ambiguous journal: ' + result['runId'])
+    return [json.loads(line) for line in logs[0].read_text().splitlines()]
+
+def raw_cases(run):
+    result = []
+    for path in (ROOT/'artifacts/profiles'/run).glob('compatibility*.jsonl'):
+        for line, text in enumerate(path.read_text().splitlines(), 1):
+            row = json.loads(text)
+            if 'rawData' not in row: continue
+            raw = json.loads(row['rawData'])
+            result.append((raw, {'path':str(path.relative_to(ROOT)), 'line':line, 'processRunId':run,
+                                 'receivedAt':row['receivedAt'], 'message':row['message']}))
+    return result
+
+def freeze():
+    require(not OUT.exists(), 'Use a new output; existing evidence must remain intact')
+    OUT.mkdir(parents=True)
+    DOC.mkdir(parents=True, exist_ok=True)
+    managed = [read(EVIDENCE/r/'result.json') for r in [DEBUG, RELEASE]]
+    for data in managed:
+        require(data['status']=='PASS' and data['actual']['testCount']==462 and data['actual']['inputsUnchanged'], 'Managed gate')
+        require(all(p['exitCode']==0 and p['locksUnchanged'] for p in data['actual']['phases']), 'Managed phase')
+        tooling = (EVIDENCE/data['runId']/'tooling.log').read_text()
+        require('Ran 22 tests' in tooling and 'OK' in tooling, 'Tooling gate')
+    inputs = read(EVIDENCE/DEBUG/'inputs.json')['before']
+    require(inputs==read(EVIDENCE/RELEASE/'inputs.json')['before'], 'Debug/Release inputs differ')
+    packages={}
+    for run in [PACKAGE, PRODUCT]:
+        p=read(EVIDENCE/run/'result.json');app=ROOT/p['app'];archive=ROOT/p['archive']
+        require(p['status']=='PASS' and p['locksUnchanged'] and len(p['machO'])==19, 'Package gate')
+        require(all('arm64' in x['description'] and 'x86_64' not in x['description'] for x in p['machO']), 'Architecture')
+        require(inputs==read(EVIDENCE/run/'code-inputs.json')['before'], 'Package inputs differ')
+        require(sha(archive)==p['artifactHashes']['archive'] and files(app)==p['bundleFiles'], 'Package mutated')
+        with zipfile.ZipFile(archive) as stream:
+            prefix=app.name+'/'
+            zipped={n[len(prefix):]:hashlib.sha256(stream.read(n)).hexdigest() for n in stream.namelist() if n.startswith(prefix) and not n.endswith('/')}
+        require(zipped==p['bundleFiles'], 'Archive/bundle mismatch')
+        with (OUT/(run+'-codesign.log')).open('wb') as log:
+            subprocess.run(['codesign','--verify','--deep','--strict','--verbose=2',str(app)],stdout=log,stderr=subprocess.STDOUT,check=True)
+        packages[run]=p
+    require(all(sha(ROOT/p)==h for p,h in inputs.items()), 'Formal inputs changed')
+    product=ROOT/packages[PRODUCT]['app']/'Contents/Resources'
+    require(not (product/'Assets/Fixtures').exists() and not (product/'CompatibilityFixtures').exists(), 'Product has test resources')
+    sessions={};snapshots={}
+    for run in RUNS+FAULTS:
+        data=read(EVIDENCE/run/('result.json' if run in FAULTS else 'process-result.json'))
+        rows=journal(data);counts=Counter(r['name'] for r in rows)
+        expected_exit=1 if run in FAULTS[1:] else 0
+        require(data['exitCode']==expected_exit, 'Exit: '+run)
+        if expected_exit==0:
+            require(any(r['name']=='composition.stopped' and r['detail']=='failures=0' for r in rows), 'Cleanup: '+run)
+            require(counts['browser.adapter.created']==counts['browser.adapter.destroyed']==2, 'Adapters: '+run)
+            require(not any(r['name']=='composition.startup.failed' or r['name'].endswith('.dispose.failed') for r in rows),'Unexpected error: '+run)
+        else:
+            require(data['status']=='PASS' and counts['composition.startup.failed']==1 and counts['browser.adapter.created']==0, 'Expected startup failure: '+run)
+        if run in RUNS:
+            chosen=PRODUCT if run==RUNS[-1] else PACKAGE
+            require(data['artifactHashes']['bundleFiles']==packages[chosen]['bundleFiles'], 'Wrong app: '+run)
+        else: require(data['status']=='PASS' and data['originalPackage']==PRODUCT, 'Fault-copy provenance')
+        profile=Path(data['profile']);before=files(profile)
+        shutil.copytree(profile, OUT/'profiles'/run)
+        require(before==files(OUT/'profiles'/run), 'Profile snapshot mismatch')
+        snapshots[run]=before
+        sessions[run]={'pid':data['pid'],'exitCode':data['exitCode'],'journal':dict(counts),'profile':str(profile.relative_to(ROOT)),
+                       'launch':str((EVIDENCE/run/'launch.json').relative_to(ROOT))}
+    save(OUT/'profile-snapshots.json',snapshots)
+    player=read(ROOT/'artifacts/profiles'/RUNS[0]/'player-verification/result.json')
+    require(player['status']=='PASS' and player['failures']==0 and len(player['checks'])==10 and all(c['status']=='PASS' for c in player['checks']), 'Player checks')
+    suite=raw_cases(RUNS[1]);require(len(suite)==23 and all(c['status']=='PASS' for c,_ in suite), 'P02 suite')
+    cases=[{**c,'rawEvidence':origin} for c,origin in suite]
+    keyboard=raw_cases(RUNS[2]);require([c['status'] for c,_ in keyboard]==['FAIL','PASS'], 'IME/ASCII records')
+    require(keyboard[-1][0]['actual']['traces'][1:]==keyboard[-1][0]['expected'], 'Exact ASCII')
+    mouse=raw_cases(RUNS[3]);require(len(mouse)==1 and mouse[0][0]['status']=='PASS', 'Mouse')
+    for c,origin in [keyboard[-1],mouse[0]]:cases.append({**c,'rawEvidence':origin})
+    hello=[c for c in player['checks'] if c['name'] in ['offline-local-cold','player-reload-trace','browser-reload-trace','offline-local-hot']]
+    require(len(hello)==4 and all(c['actual']['traces']==['Hello world!'] for c in hello), 'Hello four modes')
+    cases.append({'taskId':'W03','fixtureId':'hello-world-four-modes','status':'PASS','runId':RUNS[0],'operations':hello})
+    ext=raw_cases(RUNS[4]);expected={'available':True,'jsToAs':123.4,'asToJs':True,'structured':True}
+    require(len(ext)==1 and ext[0][0]==expected, 'Exact ExternalInterface')
+    cases.append({'taskId':'W03','fixtureId':'external-interface-nonreentrant','status':'PASS','expected':expected,'actual':ext[0][0],'rawEvidence':ext[0][1]})
+    golden=read(EVIDENCE/RUNS[5]/'golden/result.json');require(golden['status']=='PASS' and golden['actual']['differingPixels']==0 and golden['expected']['nonWhitePixels']==1200,'Renderer')
+    cases.append(golden)
+    notes=read(DOC/'manual-results.json')
+    require(notes['mole']['status']=='PASS' and notes['product']['status']=='PASS' and notes['fullscreen']['status']=='PASS','Manual checks')
+    cases.append({'taskId':'W03','fixtureId':'mole-official-login','status':'PASS','runId':RUNS[6],'actual':notes['mole']})
+    require(len(cases)==29,'29 P02 matrix groups')
+    save(DOC/'compatibility-matrix.json',{'schemaVersion':1,'taskId':'W03','status':'PASS','generatedAt':now(),
+      'scope':'Formal ARM64 WKWebView host; fixed P02 supported corpus rerun, original P02 matrix preserved unchanged',
+      'cases':cases,'knownFailures':[{'scope':'IME additional path, U04','raw':keyboard[0][0],'rawEvidence':keyboard[0][1]}],
+      'unsupported':['Synchronous ExternalInterface re-entry','Flash crossdomain policy interpreter; cases exercise the declared browser/CORS boundary'], 'productComplete':False})
+    source=Path('/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser')
+    original=read(ROOT/'docs/evidence/P00/2026-10-28/source-state-before.json')
+    require(all(sha(source/p)==h for p,h in original['businessFiles'].items()),'Source files changed')
+    env={**os.environ,'GIT_OPTIONAL_LOCKS':'0'}
+    head=subprocess.check_output(['git','-C',str(source),'rev-parse','HEAD'],env=env,text=True).strip()
+    dirty=subprocess.check_output(['git','-C',str(source),'status','--short'],env=env,text=True)
+    require(head==original['head'] and dirty==original['worktreeStatus'],'Source Git changed')
+    save(DOC/'source-preserved.json',{'taskId':'W03','status':'PASS','checkedFiles':len(original['businessFiles']),'head':head,'worktreeStatus':dirty,'changes':{}})
+    old=read(ROOT/'docs/evidence/P03/2026-10-28/legacy-data-preserved.json')
+    actual={name:{'exists':Path(name).exists(),'files':files(Path(name))} for name in old['roots']}
+    require(actual==old['actual'],'Legacy data changed')
+    save(DOC/'legacy-data-preserved.json',{'taskId':'W03','status':'PASS','roots':old['roots'],'actual':actual,'changes':{}})
+    prior=read(ROOT/'docs/provenance/W03-before.json')['files']
+    changes=[{'targetPath':p,'beforeSha256':prior.get(p),'targetSha256':h,
+      'origin':'Project-authored W03 implementation; no upstream code copied', 'referenceSources':[],
+      'reason':'Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report'} for p,h in inputs.items() if prior.get(p)!=h]
+    changes += [{'targetPath':p,'beforeSha256':h,'targetSha256':None,'reason':'Removed in W03','origin':'n/a','referenceSources':[]} for p,h in prior.items() if p not in inputs]
+    save(ROOT/'docs/provenance/W03-changes.json',{'schemaVersion':1,'changes':changes,
+      'apiConsulted':{'version':'0.4.1','commit':'a1ac4ce8647352ad03044031cad0454a636427b8','originals':'artifacts/evidence/W03/runtime-api-research-20261028-01','codeCopied':False}})
+    mapping=read(ROOT/'docs/provenance/A01-test-map.json');lookup={c['testName']:c for c in managed[0]['actual']['tests']}
+    for case in mapping['tests']:
+        case['formal']=lookup[case['formal']['testName']];require(case['formal']['outcome']=='Passed','Prototype name missing')
+    mapping.update(destinationRun=DEBUG,formalTotal=462)
+    save(ROOT/'docs/provenance/W03-prototype-test-map.json',mapping)
+    save(ROOT/'docs/provenance/W04-before.json',{'schemaVersion':1,'files':inputs})
+    with tarfile.open(DOC/'source-inputs.tar.gz','w:gz') as stream:
+        for path in sorted(inputs):stream.add(ROOT/path,arcname=path,recursive=False)
+    save(OUT/'result.json',{'taskId':'W03','caseId':'reviewed-formal-native-gate','status':'PASS','runId':OUT.name,
+      'finishedAt':now(),'expected':'Same-input Debug/Release and diagnostic/product-only packages; real WKWebView corpus, reliable controls, offline/no-fixture startup and explicit resource failures',
+      'actual':{'managedTests':462,'toolingTests':22,'playerChecks':10,'suiteCases':23,'matrixGroups':29,'sessions':sessions,'manual':notes,
+                'fixedAssets':104,'locks':13,'prototypeTestNamesRetained':107,'changedFormalFiles':len(changes)},
+      'environment':managed[0]['environment'],'artifactHashes':{'codeInputs':inputs,'packages':{r:p['artifactHashes']['archive'] for r,p in packages.items()}},
+      'limitations':['Additional IME path FAIL retained for U04','Synchronous re-entry and Flash policy interpreter unsupported','Mole login only; no account submission/gameplay acceptance','Q01-Q05 release gates remain pending'],'productComplete':False})
+    print(json.dumps({'status':'PASS','tests':462,'tools':22,'native':10,'suite':23,'matrix':29,'changedFiles':len(changes)},ensure_ascii=False))
+
+def index():
+    result=read(OUT/'result.json');reviewed=OUT/'reviewed-documents'
+    documents=['HANDOFF.md','HANDOFF2.md','README.md','HRNESS.md','Project.md','docs/task-status.zh-CN.md',
+      'docs/contracts/ruffle-player.zh-CN.md','docs/contracts/interfaces.zh-CN.md','docs/adr/0004-ruffle-completion-and-product-resources.zh-CN.md']
+    for name in documents:
+        destination=reviewed/name;destination.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(ROOT/name,destination)
+    paths=[EVIDENCE,DOC,Path(__file__),ROOT/'docs/evidence/W03/run-resource-fault.py',ROOT/'docs/provenance/W04-before.json']
+    paths+=list((ROOT/'docs/provenance').glob('W03-*.json'))
+    paths+=list((ROOT/'artifacts/profiles').glob('w03-*'))
+    audit=DOC/'handoff-audit.json'
+    if audit.exists():paths.append(ROOT/read(audit)['backupDirectory'])
+    indexed={}
+    for path in paths:
+        for p in (path.rglob('*') if path.is_dir() else [path]):
+            if p.is_file() and p.name!='acceptance-index.json':indexed[str(p.relative_to(ROOT))]=sha(p)
+    save(DOC/'acceptance-index.json',{'taskId':'W03','status':'PASS','capturedAt':now(),'managedRuns':[DEBUG,RELEASE],
+      'formalTests':462,'toolingTests':22,'packages':[PACKAGE,PRODUCT],'nativeRuns':RUNS+FAULTS,
+      'artifactHashes':indexed,'codeInputs':result['artifactHashes']['codeInputs'],'prototypeTestNamesRetained':107,'fixedAssets':104,'productComplete':False})
+    print(json.dumps({'indexedArtifacts':len(indexed)}))
+
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--index-only',action='store_true');args=parser.parse_args()
+    if not args.index_only:freeze()
+    index()

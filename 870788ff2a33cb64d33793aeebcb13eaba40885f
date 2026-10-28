@@ -1,0 +1,126 @@
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class AmfGraphModelTests
+{
+    private static readonly string[] PropertyNames = ["z", "", "z"];
+    private static readonly string[] SealedNames = ["second", "first"];
+    [TestMethod]
+    public void CyclicAndSharedReferencesPreserveIdentityWithoutRecursiveExpansion()
+    {
+        var id = new AmfNodeId(7);
+        var reference = new AmfReference(id);
+        var node = new AmfObjectNode(id, new AmfTraits("Node", true), properties:
+            [new("self", reference), new("value", new AmfInteger(42))]);
+        var document = new SolDocument("graph", SolEncoding.Amf3,
+            new AmfGraph([new("first", reference), new("second", reference)], [node]));
+
+        Assert.AreEqual(id, ((AmfReference)document.Graph.Entries[1].Value).Target);
+        Assert.AreSame(node, document.Graph.Nodes[((AmfReference)node.Properties[0].Value).Target]);
+        Assert.IsTrue(document.CanEditAndSave);
+        Assert.HasCount(1, document.Graph.Nodes);
+    }
+
+    [TestMethod]
+    public void EqualLookingObjectsRemainDistinctDictionaryKeys()
+    {
+        var first = new AmfNodeId(0); var second = new AmfNodeId(1); var dictionary = new AmfNodeId(2);
+        var graph = new AmfGraph([new("dictionary", new AmfReference(dictionary))],
+            [new AmfObjectNode(first, new AmfTraits("", true)), new AmfObjectNode(second, new AmfTraits("", true)),
+             new AmfDictionaryNode(dictionary,
+                [new(new AmfReference(first), new AmfString("A")), new(new AmfReference(second), new AmfString("B"))], true)]);
+
+        var value = (AmfDictionaryNode)graph.Nodes[dictionary];
+        Assert.IsTrue(value.WeakKeys);
+        Assert.AreNotEqual(value.Entries[0].Key, value.Entries[1].Key);
+    }
+
+    [TestMethod]
+    public void ScalarTypesAndFloatingPointBitPatternsAreNotMerged()
+    {
+        Assert.AreNotEqual<AmfValue>(AmfUndefined.Instance, AmfNull.Instance);
+        Assert.AreNotEqual<AmfValue>(new AmfInteger(0), new AmfNumber(0));
+        Assert.AreNotEqual(new AmfNumber(0), AmfNumber.FromBits(long.MinValue));
+        var nan = AmfNumber.FromBits(0x7ff8000000000042);
+        Assert.IsTrue(double.IsNaN(nan.Value));
+        Assert.AreEqual(0x7ff8000000000042, nan.RawBits);
+        Assert.AreEqual(long.MinValue, AmfNumber.FromBits(long.MinValue).RawBits);
+        Assert.IsTrue(double.IsPositiveInfinity(new AmfNumber(double.PositiveInfinity).Value));
+        Assert.IsTrue(double.IsNegativeInfinity(new AmfNumber(double.NegativeInfinity).Value));
+    }
+
+    [TestMethod]
+    public void OrderedDuplicatePropertiesEmptyNamesAndClassTraitsAreRetained()
+    {
+        var properties = new List<AmfProperty> { new("z", new AmfInteger(1)), new("", AmfNull.Instance), new("z", new AmfInteger(2)) };
+        var names = new List<string> { "second", "first" };
+        var node = new AmfObjectNode(new(0), new AmfTraits("example.Typed", true, names),
+            [new AmfInteger(2), new AmfInteger(1)], properties);
+        properties.Clear(); names.Clear();
+
+        CollectionAssert.AreEqual(PropertyNames, node.Properties.Select(item => item.Name).ToArray());
+        CollectionAssert.AreEqual(SealedNames, node.Traits.SealedNames.ToArray());
+        Assert.AreEqual("example.Typed", node.Traits.ClassName);
+        Assert.IsTrue(node.Traits.IsDynamic);
+        Assert.AreEqual(2, ((AmfInteger)node.SealedValues[0]).Value);
+    }
+
+    [TestMethod]
+    public void WireKindsDateMillisecondsAndVectorAttributesRemainExplicit()
+    {
+        var plain = new AmfObjectNode(new(0), new AmfTraits("", true), objectKind: AmfObjectKind.Amf0Object);
+        var typed = new AmfObjectNode(new(1), new AmfTraits("", true), objectKind: AmfObjectKind.Amf0TypedObject);
+        Assert.AreNotEqual(plain.ObjectKind, typed.ObjectKind);
+        Assert.AreNotEqual(new AmfXmlNode(new(2), "<x/>", true).Kind, new AmfXmlNode(new(3), "<x/>", false).Kind);
+        var date = new AmfDateNode(new(4), new AmfNumber(-0.25), -60);
+        Assert.AreEqual(-0.25, date.Milliseconds.Value);
+        Assert.AreEqual((short)-60, date.ReservedAmf0Timezone);
+        var ints = new AmfVectorIntNode(new(5), [int.MinValue, int.MaxValue], true);
+        var uints = new AmfVectorUIntNode(new(6), [uint.MaxValue], false);
+        var doubles = new AmfVectorNumberNode(new(7), [AmfNumber.FromBits(long.MinValue)], true);
+        var objects = new AmfVectorObjectNode(new(8), [new AmfReference(new(8))], false, "example.Item");
+        Assert.IsTrue(ints.IsFixed); Assert.AreEqual(int.MinValue, ints.Values[0]);
+        Assert.IsFalse(uints.IsFixed); Assert.AreEqual(uint.MaxValue, uints.Values[0]);
+        Assert.AreEqual(long.MinValue, doubles.Values[0].RawBits);
+        Assert.AreEqual("example.Item", objects.TypeName);
+        Assert.AreEqual(new AmfNodeId(8), ((AmfReference)objects.Values[0]).Target);
+    }
+
+    [TestMethod]
+    public void UnknownMarkerAndExternalizableClassBlockEditingAndSaving()
+    {
+        var unsupported = new AmfUnsupported(SolEncoding.Amf0, 0x0e, 31, "Reserved Recordset marker");
+        var graph = new AmfGraph([new("unknown", unsupported), new("custom", new AmfReference(new(0)))],
+            [new AmfObjectNode(new(0), new AmfTraits("unknown.Payload", false, isExternalizable: true))]);
+        var document = new SolDocument("unknown", SolEncoding.Amf3, graph);
+
+        Assert.IsFalse(document.CanEditAndSave);
+        Assert.HasCount(2, graph.FindUnsupported());
+        Assert.IsTrue(graph.FindUnsupported().Any(item => item.Offset == 31 && item.Marker == 0x0e));
+        Assert.IsTrue(graph.FindUnsupported().Any(item => item.Reason.Contains("unknown.Payload", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    public void InvalidGraphAndImplicitNullAreRejectedBeforeUse()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfGraph([new("bad", new AmfReference(new(99)))]));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfGraph([], [new AmfXmlNode(new(0), "a", true), new AmfXmlNode(new(0), "b", true)]));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfProperty("bad", null!));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfArrayNode(new(0), AmfArrayKind.Amf3Mixed, [null!]));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfObjectNode(new(0), new AmfTraits("T", false, ["one"])));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfTraits("Bad", true, isExternalizable: true));
+    }
+
+    [TestMethod]
+    public void BinaryDataAndArrayVariantsAreNotImplicitlyConverted()
+    {
+        var bytes = new byte[] { 0, 255 };
+        var node = new AmfByteArrayNode(new(0), bytes); bytes[0] = 42;
+        Assert.AreEqual((byte)0, node.Bytes.Span[0]);
+        var ecma = new AmfArrayNode(new(1), AmfArrayKind.Amf0Ecma, associative: [new("x", AmfNull.Instance)], declaredAssociativeCount: 500);
+        Assert.AreEqual(500u, ecma.DeclaredAssociativeCount);
+        Assert.HasCount(1, ecma.Associative);
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfArrayNode(new(2), AmfArrayKind.Amf0Ecma, [AmfNull.Instance]));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfArrayNode(new(3), AmfArrayKind.Amf0Strict, associative: [new("x", AmfNull.Instance)]));
+    }
+}

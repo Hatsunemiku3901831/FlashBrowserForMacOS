@@ -1,0 +1,363 @@
+using Avalonia.Threading;
+using FlashMacOS.Application.Configuration;
+using FlashMacOS.Application.Browser;
+using FlashMacOS.Infrastructure.Configuration;
+using FlashMacOS.Application.Lifecycle;
+using Avalonia.Controls;
+using FlashMacOS.Application.Files;
+using FlashMacOS.Application.Sol;
+using FlashMacOS.Flash.Ruffle.Hosting;
+using FlashMacOS.Flash.Ruffle.Runtime;
+using FlashMacOS.Infrastructure.Persistence;
+using FlashMacOS.Sol.Managed;
+using FlashMacOS.Platform.MacOS;
+using FlashMacOS.Browser.WebKit.Diagnostics;
+using FlashMacOS.Application.Flash;
+using FlashMacOS.Infrastructure.Paths;
+using FlashMacOS.Browser.WebKit;
+using FlashMacOS.Infrastructure.Diagnostics;
+using FlashMacOS.Desktop.ViewModels;
+using FlashMacOS.Desktop.Views;
+
+namespace FlashMacOS.Desktop.Composition;
+
+public sealed class CompositionRoot : IAsyncDisposable
+{
+    private readonly IReadOnlyList<string> _arguments;
+    private readonly Action _requestQuit;
+    private readonly AppProfile _paths;
+    private readonly IFileAccess _files = new LocalFileAccess();
+    private readonly ISolHeaderInspector _inspector = new SolHeaderInspector();
+    private readonly JsonRuffleSaveStore _saveStore;
+    private readonly JsonSettingsRepository _settingsRepository;
+    private readonly JsonFavoritesRepository _favoritesRepository;
+    private readonly SettingsService _settings;
+    private readonly FavoritesService _favorites;
+    private readonly LoopbackContentHost _contentHost;
+    private readonly string _resourceRoot;
+    private readonly CompatibilityContentHost? _compatibilityHost;
+    private readonly CompatibilityEvidenceRecorder? _compatibilityRecorder;
+    private readonly CancellationTokenSource _probeLifetime = new();
+    private Task? _pageProbe;
+    private Task? _browserVerification;
+    private readonly DocumentStartScriptSource _documentStartScriptSource;
+    private readonly GateZeroSessionJournal _journal;
+    private readonly IDocumentStartInjector _documentStartInjector = new MacDocumentStartInjector();
+    private readonly AsyncLifecycle _lifecycle;
+    private readonly TimeProvider _clock;
+    private readonly object _windowGate = new();
+    private readonly HashSet<AvaloniaNativeWebViewSession> _sessions = [];
+    private readonly Dictionary<PopupWindow, Task> _popups = [];
+    private readonly List<Exception> _popupErrors = [];
+    private readonly List<WeakReference> _popupProbes = [];
+    private readonly List<int> _popupWindowIds = [];
+    private readonly List<IDisposable> _surfaceDownloads = [];
+    private bool _popupsClosed;
+    private DownloadManager? _downloads;
+    private SaveDialogDownloadDestinations? _saveDestinations;
+    private DiagnosticDownloadDestinations? _diagnosticDestinations;
+    private MainWindow? _mainWindow;
+    private IFlashPlayer? _player;
+    private volatile Exception? _startupFailure;
+    private BrowserWorkspace? _mainBrowser;
+    private AvaloniaNativeWebViewSession? _webBrowser;
+    private AvaloniaNativeWebViewSession? _localBrowser;
+    private MainWindowViewModel? _mainViewModel;
+    private volatile bool _disposed;
+
+    public CompositionRoot(IReadOnlyList<string> arguments, TimeProvider? clock = null, Action? requestQuit = null)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        _arguments = arguments;
+        _requestQuit = requestQuit ?? (() => { });
+        _clock = clock ?? TimeProvider.System;
+        _paths = AppProfile.FromEnvironment();
+        _paths.EnsureCreated();
+        _journal = new GateZeroSessionJournal(_paths.LogDirectory, _clock);
+        _journal.Record("profile.selected", $"kind={_paths.Kind}; webKitDataStore={_paths.DataStoreIdentifier}");
+
+        var resourceRoot = _resourceRoot = BundleResourceLocator.ResolveRoot();
+        _journal.Record("composition.resources.resolved", resourceRoot);
+        var ruffleAssets = Path.Combine(resourceRoot, "Assets", "Ruffle");
+        var fixture = Path.Combine(resourceRoot, "Assets", "Fixtures", "settings.sol");
+        var externalInterfaceFixture = Path.Combine(
+            resourceRoot,
+            "Assets",
+            "Fixtures",
+            "avm2-external-interface");
+        _saveStore = new JsonRuffleSaveStore(_paths.RuffleSaveStorePath, _inspector, _clock);
+        _settingsRepository = new JsonSettingsRepository(_paths.SettingsPath);
+        _favoritesRepository = new JsonFavoritesRepository(_paths.FavoritesPath);
+        _settings = new SettingsService(_settingsRepository);
+        _favorites = new FavoritesService(_favoritesRepository);
+        var diagnostics = _paths.Kind == ProfileKind.Test &&
+            (Environment.GetEnvironmentVariable("FLASHMACOS_PAGE_INSPECT") == "1" ||
+             Environment.GetEnvironmentVariable("FLASHMACOS_COMPAT_CASE") is { Length: > 0 });
+        _contentHost = diagnostics ? new LoopbackContentHost(ruffleAssets, fixture, externalInterfaceFixture, _saveStore)
+            : new LoopbackContentHost(ruffleAssets, _saveStore);
+        if (diagnostics) _compatibilityHost = new CompatibilityContentHost(Path.Combine(resourceRoot, "CompatibilityFixtures", "ruffle-v0.4.1"));
+        if (_paths.Kind == ProfileKind.Test &&
+            (Environment.GetEnvironmentVariable("FLASHMACOS_PAGE_INSPECT") == "1" ||
+             Environment.GetEnvironmentVariable("FLASHMACOS_COMPAT_CASE") is { Length: > 0 }))
+            _compatibilityRecorder = new CompatibilityEvidenceRecorder(_paths.RootDirectory, _journal.Record);
+        _documentStartScriptSource = new DocumentStartScriptSource(
+            _contentHost,
+            Path.Combine(ruffleAssets, "ruffle.js"));
+        _lifecycle = new AsyncLifecycle(InitializeCoreAsync, DisposeCoreAsync, _clock);
+    }
+
+    public static AppProfile ValidateStartupProfile() => AppProfile.FromEnvironment();
+
+    public bool HasFailure => _startupFailure is not null || _lifecycle.InitializationError is not null || _lifecycle.State == LifecycleState.Faulted;
+
+    private void ReportStartupFailure(Exception exception)
+    {
+        _startupFailure = exception;
+        _journal.Record("composition.startup.failed", exception.ToString());
+    }
+
+    private static ContentControl CreateBrowserControl(AvaloniaNativeWebViewSession browser)
+    {
+        var control = new NativeWebView();
+        var owner = new ContentControl { Content = control };
+        browser.Attach(control, () => owner.Content = null);
+        return owner;
+    }
+
+    public MainWindow CreateMainWindow()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (_mainViewModel is not null)
+        {
+            throw new InvalidOperationException("The main window has already been composed.");
+        }
+
+        _webBrowser = CreateBrowserSession(BrowserPurpose.Web);
+        _localBrowser = CreateBrowserSession(BrowserPurpose.LocalPlayer);
+        _mainBrowser = new BrowserWorkspace(_webBrowser, _localBrowser, address =>
+            _contentHost.BaseUri is { } local && address.GetLeftPart(UriPartial.Authority) == local.GetLeftPart(UriPartial.Authority)
+                ? BrowserPurpose.LocalPlayer : BrowserPurpose.Web);
+        if (_compatibilityRecorder is not null) _mainBrowser.BridgeMessageReceived += _compatibilityRecorder.Record;
+        _player = new RufflePlayerCoordinator(_mainBrowser, _contentHost, _saveStore, new RuffleScriptBuilder(), _inspector, _files, _clock);
+        MainWindow? mainWindow = null;
+        var dialogs = new MacFileDialogs(() => mainWindow!.StorageProvider);
+        _downloads = new DownloadManager(CreateDownloadDestinations(dialogs), new LocalDownloadFiles(), _clock);
+        _downloads.Changed += RecordDownload;
+        _surfaceDownloads.Add(_downloads.Attach(_webBrowser));
+        _surfaceDownloads.Add(_downloads.Attach(_localBrowser));
+        _mainViewModel = new MainWindowViewModel(_mainBrowser, _contentHost, _player, _files, new AvaloniaUiDispatcher(),
+            input => SettingsService.ResolveAddress(input, _settings.Current!.Value), () => _settings.Current!.Value, _downloads);
+        mainWindow = new MainWindow(
+            _mainViewModel,
+            _mainBrowser,
+            CreateWorkspaceControls,
+            dialogs,
+            InitializeAsync,
+            _arguments,
+            OpenPopup,
+            DisposeAsync,
+            () => _paths.Kind == ProfileKind.Test && Environment.GetEnvironmentVariable("FLASHMACOS_COMPAT_CASE") is { Length: > 0 } caseId
+                ? caseId == "external-interface" ? new Uri(_contentHost.DiagnosticsUri!, "fixtures/external-interface")
+                    : _compatibilityHost!.GetCaseUri(caseId) : null,
+            StartPageProbe,
+            ReportStartupFailure);
+        return _mainWindow = mainWindow;
+    }
+
+    // Product downloads use the native save panel; only the explicit Test-profile automated case writes to its own directory.
+    private IDownloadDestinations CreateDownloadDestinations(IFileDialogs dialogs)
+    {
+        if (_paths.Kind == ProfileKind.Test && Environment.GetEnvironmentVariable("FLASHMACOS_COMPAT_CASE") == "downloads")
+            return _diagnosticDestinations = new DiagnosticDownloadDestinations(Path.Combine(_paths.RootDirectory, "download-verification", "files"));
+        return _saveDestinations = new SaveDialogDownloadDestinations(dialogs);
+    }
+
+    // Status transitions only: progress ticks are not journalled, and neither are paths or URLs of user files.
+    private void RecordDownload(DownloadItem item)
+    {
+        if (item.Status == DownloadStatus.Running && item.ReceivedBytes > 0) return;
+        _journal.Record("download." + item.Status.ToString().ToLowerInvariant(),
+            $"sequence={item.Sequence}; method={item.Method}; bytes={item.ReceivedBytes}; error={item.Error}");
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        return _lifecycle.DisposeAsync();
+    }
+
+    private ValueTask InitializeAsync(CancellationToken cancellationToken) => _lifecycle.StartAsync(cancellationToken);
+
+    private async ValueTask DisposeCoreAsync(CancellationToken cancellationToken)
+    {
+        var failures = new List<Exception>();
+        async ValueTask Cleanup(string name, Func<ValueTask> cleanup)
+        {
+            try
+            {
+                await cleanup().AsTask().WaitAsync(cancellationToken).ConfigureAwait(false);
+                _journal.Record(name + ".disposed");
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+                _journal.Record(name + ".dispose.failed", exception.ToString());
+            }
+        }
+        _journal.Record("composition.stopping");
+        await Cleanup("composition.probe", async () =>
+        {
+            await _probeLifetime.CancelAsync().ConfigureAwait(false);
+            if (_pageProbe is not null) await _pageProbe.ConfigureAwait(false);
+            if (_browserVerification is not null) await _browserVerification.ConfigureAwait(false);
+        });
+        if (_mainViewModel is not null) await Cleanup("composition.viewModel", _mainViewModel.DisposeAsync);
+        if (_player is not null) await Cleanup("composition.player", _player.DisposeAsync);
+        KeyValuePair<PopupWindow, Task>[] popups;
+        AvaloniaNativeWebViewSession[] sessions;
+        lock (_windowGate) { _popupsClosed = true; popups = _popups.ToArray(); sessions = _sessions.ToArray(); }
+        foreach (var popup in popups)
+            await Cleanup("composition.popup", async () =>
+            {
+                await Dispatcher.UIThread.InvokeAsync(popup.Key.Close);
+                await popup.Key.ClosedTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+            });
+        if (_mainBrowser is not null && _compatibilityRecorder is not null) _mainBrowser.BridgeMessageReceived -= _compatibilityRecorder.Record;
+        if (_mainBrowser is not null) await Cleanup("composition.workspace", _mainBrowser.DisposeAsync);
+        foreach (var session in sessions) await Cleanup("composition.browser", session.DisposeAsync);
+        foreach (var popup in popups)
+            await Cleanup("composition.popupObserver", () => new ValueTask(popup.Value));
+        foreach (var registration in _surfaceDownloads) registration.Dispose();
+        if (_downloads is not null)
+        {
+            await Cleanup("composition.downloads", _downloads.DisposeAsync);
+            _downloads.Changed -= RecordDownload;
+        }
+        _saveDestinations?.Dispose();
+        if (_compatibilityRecorder is not null) await Cleanup("composition.compatibilityRecorder", _compatibilityRecorder.DisposeAsync);
+        if (_compatibilityHost is not null) await Cleanup("composition.compatibilityHost", _compatibilityHost.DisposeAsync);
+        _documentStartScriptSource.Dispose();
+        await Cleanup("composition.contentHost", _contentHost.DisposeAsync);
+        _saveStore.Dispose();
+        _settings.Dispose(); _favorites.Dispose();
+        _settingsRepository.Dispose(); _favoritesRepository.Dispose();
+        _probeLifetime.Dispose();
+        lock (_windowGate) failures.AddRange(_popupErrors);
+        _journal.Record("composition.stopped", $"failures={failures.Count}");
+        await Cleanup("composition.journal", _journal.DisposeAsync);
+        if (failures.Count != 0) throw new AggregateException("Application cleanup failed.", failures);
+    }
+
+    private Grid CreateWorkspaceControls()
+    {
+        var web = CreateBrowserControl(_webBrowser!);
+        var local = CreateBrowserControl(_localBrowser!);
+        var grid = new Grid { Children = { web, local } };
+        void Select(BrowserPurpose purpose)
+        {
+            void Update() { web.IsVisible = purpose == BrowserPurpose.Web; local.IsVisible = purpose == BrowserPurpose.LocalPlayer; }
+            if (Dispatcher.UIThread.CheckAccess()) Update(); else Dispatcher.UIThread.Post(Update);
+        }
+        _mainBrowser!.SurfaceChanged += Select;
+        // Both controls remain attached for the entire workspace lifetime. Visibility never reparents them.
+        // Both must be visible until Ready: NativeWebView lazily creates hidden adapters.
+        // The first routed navigation selects the surface after MainWindow awaits workspace.Ready.
+        return grid;
+    }
+
+    private AvaloniaNativeWebViewSession CreateBrowserSession(BrowserPurpose purpose)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var session = new AvaloniaNativeWebViewSession(
+            _documentStartInjector,
+            _documentStartScriptSource.GetRequiredScript,
+            _paths.GetWebKitDataStoreIdentifier(purpose),
+            purpose,
+            _journal.Record,
+            _clock, requestQuit: _requestQuit, diagnosticSink: _compatibilityRecorder is null ? null : _compatibilityRecorder.RecordNative);
+        lock (_windowGate) _sessions.Add(session);
+        return session;
+    }
+
+    // UI thread. The popup inherits the opener's purpose (data store) and is owned by the main window; closing the
+    // main window closes it. Requests after shutdown started are refused, so no surface outlives the composition.
+    private void OpenPopup(BrowserPopupRequest request)
+    {
+        PopupWindow popup;
+        lock (_windowGate)
+        {
+            if (_popupsClosed || _disposed || _mainWindow is null) { _journal.Record("popup.rejected", "composition stopping"); return; }
+            var browser = CreateBrowserSession(request.Purpose);
+            popup = new PopupWindow(browser, browser, () => CreateBrowserControl(browser), request.Request, OpenPopup);
+            if (_diagnosticDestinations is not null) _popupProbes.Add(new WeakReference(popup));
+            _popups.Add(popup, ObservePopupAsync(popup, browser, _downloads!.Attach(browser)));
+        }
+        _journal.Record("popup.opened", $"purpose={request.Purpose}; method={request.Request.Method}; bodyBytes={request.Request.Body?.Length ?? 0}");
+        popup.Show(_mainWindow);
+        if (_diagnosticDestinations is not null) _popupWindowIds.Add(NativeWindowDiagnostics.WindowNumber(popup.TryGetPlatformHandle()!.Handle));
+    }
+
+    private async Task ObservePopupAsync(PopupWindow popup, AvaloniaNativeWebViewSession browser, IDisposable downloads)
+    {
+        try { await popup.ClosedTask.ConfigureAwait(false); }
+        catch (Exception exception)
+        {
+            _journal.Record("popup.close.failed", exception.ToString());
+            lock (_windowGate) _popupErrors.Add(exception);
+        }
+        finally
+        {
+            downloads.Dispose();
+            lock (_windowGate) { _popups.Remove(popup); _sessions.Remove(browser); }
+            _journal.Record("popup.ownership.released");
+        }
+    }
+
+    // Test-profile verification only; runs on the UI thread so window visibility can be read.
+    private Task<IReadOnlyList<PopupProbe>> SnapshotPopupsAsync() => Dispatcher.UIThread.InvokeAsync<IReadOnlyList<PopupProbe>>(() =>
+    {
+        lock (_windowGate)
+            return _popups.Keys.Select(window => new PopupProbe(window.Session, ((AvaloniaNativeWebViewSession)window.Session).Purpose,
+                window.IsVisible, () => Dispatcher.UIThread.InvokeAsync(window.Close).GetTask())).ToArray();
+    }).GetTask();
+
+    private async ValueTask InitializeCoreAsync(CancellationToken cancellationToken)
+    {
+        await _settings.LoadAsync(cancellationToken).ConfigureAwait(false);
+        await _favorites.LoadAsync(cancellationToken).ConfigureAwait(false);
+        _journal.Record("configuration.loaded");
+        await _documentStartScriptSource.PrepareAsync(cancellationToken).ConfigureAwait(false);
+        _journal.Record("composition.documentStart.prepared");
+        if (_mainViewModel is null) throw new InvalidOperationException("The main view model is unavailable.");
+        await _mainViewModel.InitializeAsync(cancellationToken).ConfigureAwait(false);
+        if (_compatibilityHost is not null)
+        {
+            await _compatibilityHost.StartAsync(_contentHost.RufflePublicPath!, cancellationToken).ConfigureAwait(false);
+            _journal.Record("compatibility.host.started", _compatibilityHost.SuiteUri!.AbsoluteUri);
+        }
+        _journal.Record("composition.initialized");
+    }
+
+    private void StartPageProbe()
+    {
+        if (_paths.Kind == ProfileKind.Test && Environment.GetEnvironmentVariable("FLASHMACOS_COMPAT_CASE") == "browser")
+            _browserVerification = Task.Run(() => BrowserNativeVerification.RunAsync(_webBrowser!, _localBrowser!,
+                _compatibilityHost!.BrowserValidationUri, _paths.RootDirectory, _probeLifetime.Token));
+        if (_paths.Kind == ProfileKind.Test && Environment.GetEnvironmentVariable("FLASHMACOS_COMPAT_CASE") == "player")
+            _browserVerification = Task.Run(() => RuffleNativeVerification.RunAsync(new RuffleVerificationHarness(_mainBrowser!, _localBrowser!, _player!, _contentHost,
+                Path.Combine(_resourceRoot, "Assets", "Fixtures", "avm2-hello-world", "test.swf"),
+                Path.Combine(_resourceRoot, "CompatibilityFixtures", "ruffle-v0.4.1", "url-loader", "test.swf"),
+                _compatibilityHost!.RuffleValidationUri, _paths.RootDirectory), _probeLifetime.Token));
+        if (_diagnosticDestinations is not null)
+            _browserVerification = Task.Run(() => DownloadPopupNativeVerification.RunAsync(new DownloadVerificationHarness(_mainBrowser!, _webBrowser!, _localBrowser!,
+                _contentHost.DiagnosticsUri!, _downloads!, _diagnosticDestinations, SnapshotPopupsAsync, () => { lock (_windowGate) return _sessions.Count; },
+                _compatibilityHost!.DownloadValidationUri, _paths.RootDirectory, () => new PopupWindowInventory(_popupProbes.Count(probe => probe.IsAlive), _popupWindowIds.ToArray())), _probeLifetime.Token));
+        if (_paths.Kind != ProfileKind.Test || Environment.GetEnvironmentVariable("FLASHMACOS_PAGE_INSPECT") != "1" || _mainBrowser is null) return;
+        _pageProbe = Task.Run(async () =>
+        {
+            try { await NativePageProbe.CaptureAsync(_mainBrowser.ActiveSession, _paths.RootDirectory, _probeLifetime.Token).ConfigureAwait(false); }
+            catch (OperationCanceledException) when (_probeLifetime.IsCancellationRequested) { }
+            catch (Exception exception) { _journal.Record("page.probe.failed", exception.ToString()); }
+        });
+    }
+}

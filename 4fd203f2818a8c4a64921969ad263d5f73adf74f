@@ -1,0 +1,60 @@
+# ADR-0001：macOS vNext 采用 WKWebView 浏览器后端
+
+- 状态：已接受（Gate 0，正式兼容认证尚未完成）
+- 日期：2026-08-07
+- 关联方案：`Docs/macos-porting-plan.zh-CN.md`
+
+## 背景
+
+Windows Legacy 将 WPF、WinForms `HwndHost`、CefSharp 84 和 Pepper Flash 绑定在一起，无法直接移植到 macOS。Gate 0 需要先判断系统 WKWebView 能否承载普通浏览、document-start Ruffle 注入、JS bridge、popup、下载、持久 Cookie 和 SharedObject；只有出现可复现的硬能力缺口时才承担 CefGlue/Chromium 的分发、更新、签名与内存成本。
+
+## 决策
+
+vNext 继续采用 Avalonia `NativeWebView` 的 WKWebView 后端，并通过 `IBrowserSession` 隔离。Ruffle、本地内容服务、SharedObject 与导航用例保持浏览器无关；macOS 原生 `WKUserScript`、下载接管和窗口创建只存在于 Desktop 适配层。
+
+本决策冻结 M1–M4 的默认后端，但不取消兼容性门槛。若后续固定语料证明 WKWebView 无法满足下列切换条件之一，再以相同端口实现 CefGlue 适配器，而不是让业务层感知后端。
+
+## 真机证据
+
+在 Apple M1 Pro、16 GB、macOS 26.5.1 上，签名后的 arm64 `.app` 已验证：
+
+| 能力 | 结果 |
+|---|---|
+| NativeWebView 创建、导航、前后退/刷新状态 | 通过 |
+| 原生 document-start 注入 | 通过；诊断页报告 60–84 ms，早于页面插件检测 |
+| 静态 Flash 标签替换 | 通过；页面加载后为 1 个 Ruffle 元素 |
+| 动态 Flash 标签替换 | 通过；点击创建后增至 2 个 Ruffle 元素 |
+| JavaScript → C# bridge | 通过；收到 Ruffle、诊断和 saveChanged 消息 |
+| popup | 通过；`target=_blank` 路由至独立 Avalonia/WKWebView 窗口 |
+| 下载 | 通过；`download` 请求进入应用接管的 macOS 原生保存面板 |
+| 持久 Cookie | 通过；首次为 `no`，关闭应用并更换随机端口重启后为 `yes` |
+| 本地 Ruffle SWF | 通过；Ruffle 0.4.1 的 AVM1 SharedObject fixture 可运行 |
+| SharedObject 修改闭环 | 通过；一字节变体导入后被 SWF 读取并重写为官方期望 SOL |
+| 开发签名包启动 | 通过；ad-hoc + Hardened Runtime，退出码 0 |
+
+这些结果支持继续使用 WKWebView。完整网页兼容语料、认证下载、外部协议、打印、UA、Web Inspector 和长时泄漏仍需在 M4/M6 验证。
+
+## 切换到 CefGlue 的数据门槛
+
+只有固定语料出现以下问题，且无法在适配层以受支持 API 修复时，才重新打开后端选择：
+
+1. `WKUserScriptInjectionTime.atDocumentStart` 无法稳定早于真实站点的 Flash/plugin 检测。
+2. 必须支持的认证下载、popup 或导航策略无法保留 Cookie/请求语义。
+3. Ruffle 需要的 WASM、WebGL、音频、全屏、网络或 ExternalInterface 行为在受支持 macOS 版本上系统性失败。
+4. 系统代理策略不能覆盖经产品确认的必需用例。
+5. 兼容语料显示 WKWebView 与 Chromium 的成功率差异足以抵消 Chromium 的包体、内存、更新和签名成本。
+
+单个站点差异、CEF DevTools UI 不一致或尚未建立测试语料，都不是自动切换理由。
+
+## 影响
+
+收益：不随应用分发 Chromium，减少包体、常驻进程、补丁面与嵌套签名复杂度；使用系统 WebKit 的平台集成；业务层保持可替换。
+
+代价：浏览行为跟随 macOS WebKit；自定义代理和 CEF 专有能力不能直接复用；下载、popup、Web Inspector 等需适配；兼容矩阵必须包含受支持的 macOS/WebKit 版本。
+
+## 参考
+
+- [Avalonia NativeWebView](https://docs.avaloniaui.net/accelerate/components/webview)
+- [Apple WKWebView](https://developer.apple.com/documentation/webkit/wkwebview)
+- [Apple WKUserScriptInjectionTime.atDocumentStart](https://developer.apple.com/documentation/webkit/wkuserscriptinjectiontime/atdocumentstart)
+- [Ruffle JavaScript API](https://ruffle.rs/js-docs/master/index.html)

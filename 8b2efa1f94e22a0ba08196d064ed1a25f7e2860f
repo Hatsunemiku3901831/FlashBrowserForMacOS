@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "flashmacos.application": {
+        "type": "Project",
+        "dependencies": {
+          "FlashMacOS.Domain": "[1.0.0, )"
+        }
+      },
+      "flashmacos.domain": {
+        "type": "Project"
+      }
+    },
+    "net10.0/osx-arm64": {}
+  }
+}

@@ -1,0 +1,77 @@
+"""Run a controlled missing/corrupt resource copy of a verified product-only development package.
+
+The signed code is unchanged; resource signature failure in the copy is intentional and recorded.
+Original package and all original assets are preserved. Operator closes the actual startup error window.
+"""
+import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[3]
+
+def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+def now(): return datetime.now(timezone.utc).isoformat()
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--package', required=True)
+    parser.add_argument('--run', required=True)
+    parser.add_argument('--fault', choices=['missing','corrupt','offline'], required=True)
+    args = parser.parse_args()
+    if any(not value or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in value) for value in [args.package,args.run]): parser.error('Simple names required')
+    package = json.loads((ROOT/'artifacts/evidence/W03'/args.package/'result.json').read_text())
+    assert package['status']=='PASS' and package['resourceMode']=='product-runtime-only'
+    original = ROOT/package['app']
+    assert all(sha(original/p)==h for p,h in package['bundleFiles'].items())
+    out = ROOT/'artifacts/evidence/W03'/args.run
+    out.mkdir(parents=True,exist_ok=False)
+    app = out/'FlashMacOS.app';shutil.copytree(original,app)
+    target=app/'Contents/Resources/Assets/Ruffle/ruffle.js'
+    original_hash=sha(target)
+    if args.fault=='missing':target.unlink()
+    elif args.fault=='corrupt':target.write_bytes(target.read_bytes()+b'\nW03 intentional resource corruption\n')
+    changes={p:{'before':h,'after':sha(app/p) if (app/p).exists() else None} for p,h in package['bundleFiles'].items() if not (app/p).exists() or sha(app/p)!=h}
+    assert list(changes)==([] if args.fault=='offline' else ['Contents/Resources/Assets/Ruffle/ruffle.js'])
+    profile=ROOT/'artifacts/profiles'/args.run
+    environment={k:v for k,v in os.environ.items() if k not in ['DOTNET_ROOT','DOTNET_ROOT_ARM64','FLASHMACOS_PAGE_INSPECT','FLASHMACOS_COMPAT_CASE','FLASHMACOS_PROFILE_MODE']}
+    environment.update(PATH='/usr/bin:/bin:/usr/sbin:/sbin',FLASHMACOS_TEST_PROFILE=str(profile))
+    sandbox='(version 1) (allow default) (deny network-outbound) '+ ' '.join('(deny file-read* (subpath '+json.dumps(str(p))+'))' for p in [ROOT/'reference',ROOT/'bootstrap',ROOT.parent/'CefFlashBrowser'])
+    movie = None
+    if args.fault == 'offline':
+        sandbox += ' (allow network-outbound (remote ip "localhost:*"))'
+        (profile / 'user-movies').mkdir(parents=True, exist_ok=False)
+        movie = profile / 'user-movies/离线 Hello.swf'
+        shutil.copyfile(ROOT / 'test-assets/flash/ruffle-v0.4.1/hello-world/test.swf', movie)
+    command=['sandbox-exec','-p',sandbox,str(app/'Contents/MacOS/FlashMacOS.Desktop')] + ([str(movie)] if movie else [])
+    result={'taskId':'W03','caseId':args.fault+'-runtime-resource','runId':args.run,'startedAt':now(),'expected':'Explicit startup error naming missing asset or hash mismatch, no WebView/loopback start, exit 1 on closing; outbound network denied','profile':str(profile),'originalPackage':args.package,'originalArchiveSha256':package['artifactHashes']['archive'],'changes':changes,'command':command,'cwd':str(out)}
+    with (out/'process.log').open('wb') as log:
+        process=subprocess.Popen(command,cwd=out,env=environment,stdout=log,stderr=subprocess.STDOUT)
+        result['pid']=process.pid;(out/'launch.json').write_text(json.dumps(result,indent=2)+'\n');print('Fault copy PID',process.pid,flush=True)
+        result['exitCode']=process.wait()
+    result['finishedAt']=now()
+    (out/'process-result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+    rows=[json.loads(l) for p in (profile/'logs').glob('*.jsonl') for l in p.read_text().splitlines()]
+    errors=[r for r in rows if r['name']=='composition.startup.failed']
+    if args.fault == 'offline':
+        assert result['exitCode']==0 and not errors and any(r['name']=='composition.stopped' and r['detail']=='failures=0' for r in rows)
+        assert not any(r['name']=='compatibility.host.started' for r in rows)
+        assert sum(r['name']=='browser.adapter.destroyed' for r in rows)==2
+        result['expected']='Actual user SWF runs using product-only resources while all non-loopback networking is denied; normal native Quit'
+        result['inputMovie']={'path':str(movie),'sha256':sha(movie)}
+    else:
+        required='asset is missing' if args.fault=='missing' else 'hash mismatch'
+        # Startup journals intentionally omit exception text; the actual UI observation is separate evidence.
+        notes=json.loads((out/'manual-results.json').read_text())
+        assert result['exitCode']==1 and len(errors)==1 and required in notes['observedError']
+        assert (out/notes['screenshot']).is_file()
+        assert not any(r['name'] in ['browser.adapter.created','composition.initialized'] for r in rows)
+    result.update(status='PASS',finishedAt=now(),actual={'startupErrors':errors,'adapterCreated':sum(r['name']=='browser.adapter.created' for r in rows)},artifactHashes={str(p.relative_to(out)):sha(p) for p in out.glob('*') if p.is_file()})
+    (out/'result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
+    print(json.dumps({'status':'PASS','exitCode':result['exitCode'],'fault':args.fault}),flush=True)
+
+if __name__=='__main__':main()

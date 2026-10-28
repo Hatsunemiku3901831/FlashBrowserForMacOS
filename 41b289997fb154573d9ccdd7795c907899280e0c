@@ -1,0 +1,39 @@
+using Avalonia.Platform;
+
+namespace FlashMacOS.Tests;
+
+// These tests exercise the real adapter's managed lifecycle without creating a native control.
+[TestClass]
+public sealed class NativeSessionLifetimeTests
+{
+    [TestMethod]
+    public async Task PublicReadyIsSharedAndCannotWaitForeverForAMissingAdapter()
+    {
+        await using var session = new AvaloniaNativeWebViewSession(new NoOpInjector(), () => "script",
+            Guid.NewGuid(), BrowserPurpose.Web, readyTimeout: TimeSpan.FromMilliseconds(50));
+        var ready = session.Ready;
+        Assert.AreSame(ready, session.Ready);
+        await Assert.ThrowsExactlyAsync<TimeoutException>(async () => await ready);
+        await Task.WhenAll(session.DisposeAsync().AsTask(), session.DisposeAsync().AsTask());
+    }
+
+    [TestMethod]
+    public async Task CallerCanCancelBeforeAttachAndConcurrentCloseStopsTheReader()
+    {
+        await using var session = new AvaloniaNativeWebViewSession(new NoOpInjector(), () => "script",
+            Guid.NewGuid(), BrowserPurpose.Web);
+        using var cancellation = new CancellationTokenSource();
+        var navigation = session.NavigateAsync(new Uri("https://example.test"), cancellation.Token).AsTask();
+        await cancellation.CancelAsync();
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(async () => await navigation);
+        Assert.IsFalse(session.Ready.IsCompleted);
+        await Task.WhenAll(session.DisposeAsync().AsTask(), session.DisposeAsync().AsTask());
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(async () => await session.Ready);
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(async () => await session.ExecuteScriptAsync("true"));
+    }
+
+    private sealed class NoOpInjector : IDocumentStartInjector
+    {
+        public void Inject(IPlatformHandle platformHandle, string script) => throw new NotSupportedException("This test must never create a native view.");
+    }
+}

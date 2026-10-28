@@ -1,0 +1,142 @@
+using FlashMacOS.Domain.Flash;
+using System.Text.Json;
+
+namespace FlashMacOS.Flash.Ruffle.Runtime;
+
+public static class RuffleDocumentStartScriptBuilder
+{
+    public const string DefaultBridgeName = "cefFlashBrowserBridge";
+
+    public static string Build(
+        string ruffleJavaScript,
+        Uri publicPath,
+        string bridgeName = DefaultBridgeName, IReadOnlyList<RuffleSiteProfile>? profiles = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruffleJavaScript);
+        ArgumentNullException.ThrowIfNull(publicPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(bridgeName);
+
+        profiles ??= RuffleGameProfiles.BuiltIn;
+        foreach (var profile in profiles) profile.Configuration.Validate();
+        var profilesJson = JsonSerializer.Serialize(profiles.Select(profile => new
+        { host = profile.Host, id = profile.Configuration.Id, quality = profile.Configuration.Quality,
+          scale = profile.Configuration.Scale, compatibility = profile.Compatibility }));
+        var publicPathJson = JsonSerializer.Serialize(publicPath.AbsoluteUri);
+        var versionJson = JsonSerializer.Serialize(RuffleAssetManifest.Version);
+        var bridgeNameJson = JsonSerializer.Serialize(bridgeName);
+        using var compatibilitySource = new StreamReader(typeof(RuffleDocumentStartScriptBuilder).Assembly.GetManifestResourceStream(
+            "FlashMacOS.Flash.Ruffle.Runtime.MoleCompatibility.js")!);
+        var moleCompatibility = compatibilitySource.ReadToEnd();
+        using var storageSource = new StreamReader(typeof(RuffleDocumentStartScriptBuilder).Assembly.GetManifestResourceStream(
+            "FlashMacOS.Flash.Ruffle.Runtime.RuffleStorageObserver.js")!);
+        var storageObserver = storageSource.ReadToEnd();
+
+        return $$"""
+            (() => {
+              "use strict";
+              if (globalThis.__cefFlashBrowserDocumentStart) return;
+
+              const bridgeName = {{bridgeNameJson}};
+              const createIdentifier = () => {
+                const words = new Uint32Array(4);
+                if (globalThis.crypto?.getRandomValues) crypto.getRandomValues(words);
+                else for (let index = 0; index < words.length; index++) words[index] = Math.floor(Math.random() * 4294967296);
+                return [...words].map(word => word.toString(16).padStart(8, "0")).join("");
+              };
+              const navigationId = createIdentifier();
+              Object.defineProperty(globalThis, "__flashMacOSNavigationId", { value: navigationId });
+              const post = payload => {
+                try {
+                  const handler = globalThis.webkit?.messageHandlers?.[bridgeName];
+                  const envelope = { protocolVersion: 1, navigationId,
+                    runId: payload.runId || globalThis.__flashMacOSRunId || navigationId,
+                    messageType: payload.type, origin: location.origin, href: location.href,
+                    isMainFrame: globalThis === globalThis.top, payload };
+                  if (handler) handler.postMessage(JSON.stringify(envelope));
+                } catch (_) { }
+              };
+
+              globalThis.__cefFlashBrowserPost = post;
+              Object.defineProperty(globalThis, "__flashMacOSBeginRun", { value: () => {
+                const runId = createIdentifier();
+                globalThis.__flashMacOSRunId = runId;
+                post({ type: "playerRunStarted", runId });
+                return runId;
+              } });
+              globalThis.__cefFlashBrowserDocumentStart = {
+                version: {{versionJson}},
+                timestamp: performance.now()
+              };
+
+              {{moleCompatibility}}
+
+              {{storageObserver}}
+
+              // Downloads (download attribute, blob, data, attachments) stay native WKDownloads of the original request.
+
+              const gameProfiles = {{profilesJson}};
+              const gameProfile = gameProfiles.find(profile => profile.host === location.hostname)
+                || {id:"default",quality:"high",scale:"showAll",compatibility:"Compatibility varies by content; Ruffle 0.4.1"};
+              globalThis.__flashMacOSGameProfile = gameProfile;
+              window.RufflePlayer = window.RufflePlayer || {};
+              window.RufflePlayer.config = {
+                ...(window.RufflePlayer.config || {}),
+                publicPath: {{publicPathJson}},
+                polyfills: true,
+                quality: gameProfile.quality,
+                scale: gameProfile.scale,
+                autoplay: "auto",
+                unmuteOverlay: "visible",
+                warnOnUnsupportedContent: true,
+                upgradeToHttps: location.protocol === "https:"
+              };
+
+              try {
+                {{ruffleJavaScript}}
+                post({ type: "ruffleInjected", message: {{versionJson}} });
+              } catch (error) {
+                post({ type: "bridgeError", message: String(error?.stack || error) });
+              }
+
+              document.addEventListener("DOMContentLoaded", () => {
+                queueMicrotask(() => post({
+                  type: "diagnostics",
+                  ruffleAvailable: Boolean(window.RufflePlayer?.newest),
+                  flashElementCount: document.querySelectorAll("ruffle-object, ruffle-embed, ruffle-player").length,
+                  documentStartMilliseconds: globalThis.__cefFlashBrowserDocumentStart.timestamp
+                }));
+              }, { once: true });
+            })();
+            """;
+    }
+
+    public static string BuildPageBootstrap(Uri publicPath)
+    {
+        ArgumentNullException.ThrowIfNull(publicPath);
+        var publicPathJson = JsonSerializer.Serialize(publicPath.AbsoluteUri);
+
+        return $$"""
+            window.RufflePlayer = window.RufflePlayer || {};
+            window.RufflePlayer.config = {
+              ...(window.RufflePlayer.config || {}),
+              publicPath: {{publicPathJson}},
+              polyfills: true,
+              autoplay: "on",
+              unmuteOverlay: "visible",
+              warnOnUnsupportedContent: true,
+              allowFullscreen: true,
+              upgradeToHttps: false
+            };
+
+            window.__cefFlashBrowserPost = window.__cefFlashBrowserPost || (payload => {
+              try {
+                const handler = window.webkit?.messageHandlers?.[{{JsonSerializer.Serialize(DefaultBridgeName)}}];
+                if (handler) handler.postMessage(JSON.stringify(payload));
+                else if (typeof window.invokeCSharpAction === "function") {
+                  window.invokeCSharpAction(JSON.stringify(payload));
+                }
+              } catch (_) { }
+            });
+            """;
+    }
+}

@@ -1,0 +1,63 @@
+using FlashMacOS.Domain.Identity;
+using FlashMacOS.Infrastructure.Paths;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class ProductProfileTests
+{
+    [TestMethod]
+    public void BuildIdentityAndUserAgentHaveOneMetadataVersion()
+    {
+        Assert.AreEqual(ProductIdentity.Version, typeof(ProductIdentity).Assembly.GetName().Version!.ToString(3));
+        Assert.AreEqual(ProductIdentity.Name + "/" + ProductIdentity.Version, ProductIdentity.UserAgentProduct);
+        Assert.AreEqual(ProductIdentity.Name, BrowserState.Empty.Title);
+        Assert.IsFalse(string.IsNullOrEmpty(ProductIdentity.BundleId));
+        Assert.IsTrue(Version.TryParse(ProductIdentity.MinimumMacOS, out _));
+        Assert.IsTrue(int.TryParse(ProductIdentity.Build, out _));
+    }
+
+    [TestMethod]
+    public void ProductDevelopmentAndTestProfilesCannotSharePathsOrStores()
+    {
+        using var directory = new TemporaryDirectory();
+        var one = AppProfile.Resolve(directory.GetPath("home"), ProfileKind.Product);
+        var dev = AppProfile.Resolve(directory.GetPath("home"), ProfileKind.Development);
+        var test = AppProfile.Resolve(directory.GetPath("home"), ProfileKind.Product, directory.GetPath("test"));
+        Assert.AreNotEqual(one.RootDirectory, dev.RootDirectory);
+        Assert.AreNotEqual(one.DataStoreIdentifier, dev.DataStoreIdentifier);
+        Assert.AreNotEqual(one.DataStoreIdentifier, test.DataStoreIdentifier);
+        Assert.AreEqual(ProfileKind.Test, test.Kind);
+        Assert.AreEqual(new TestProfile(test.RootDirectory).DataStoreIdentifier, test.DataStoreIdentifier);
+        foreach (var profile in new[] { one, dev, test })
+        {
+            profile.EnsureCreated();
+            Assert.IsTrue(Directory.Exists(profile.LogDirectory));
+            Assert.IsTrue(Directory.Exists(profile.CacheDirectory));
+            Assert.IsTrue(profile.SettingsPath.StartsWith(profile.ApplicationSupportDirectory, StringComparison.Ordinal));
+        }
+        Assert.AreEqual(one.DataStoreIdentifier, AppProfile.Resolve(directory.GetPath("other-home"), ProfileKind.Product).DataStoreIdentifier);
+    }
+
+    [TestMethod]
+    public void InvalidExplicitProfileCannotFallBackToProductData()
+    {
+        using var directory = new TemporaryDirectory();
+        Assert.ThrowsExactly<ArgumentException>(() => AppProfile.Resolve(directory.RootPath, ProfileKind.Product, "relative/test"));
+        Assert.ThrowsExactly<ArgumentException>(() => AppProfile.Resolve(directory.RootPath, ProfileKind.Test));
+        Assert.ThrowsExactly<ArgumentException>(() => AppProfile.Resolve("relative-home", ProfileKind.Product));
+    }
+
+    [TestMethod]
+    public void ProductPathCannotBeRedirectedIntoASourceCheckout()
+    {
+        using var directory = new TemporaryDirectory();
+        var home = directory.GetPath("home");
+        var source = directory.GetPath("source");
+        Directory.CreateDirectory(source);
+        File.WriteAllText(Path.Combine(source, "FlashMacOS.slnx"), "source marker");
+        Directory.CreateDirectory(Path.Combine(home, "Library"));
+        Directory.CreateSymbolicLink(Path.Combine(home, "Library", "Application Support"), source);
+        Assert.ThrowsExactly<ArgumentException>(() => AppProfile.Resolve(home, ProfileKind.Product));
+    }
+}

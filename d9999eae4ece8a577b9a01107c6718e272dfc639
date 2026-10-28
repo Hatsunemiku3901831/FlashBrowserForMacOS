@@ -1,0 +1,27 @@
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Sol.Managed;
+
+internal sealed class Amf3ValueCodec : IAmf3ValueCodec
+{
+    private readonly Dictionary<string, AmfExternalRegistration> _registry = new(StringComparer.Ordinal);
+    public Amf3ValueCodec(IEnumerable<IAmfExternalizableCodec> externalizableCodecs)
+    {
+        ArgumentNullException.ThrowIfNull(externalizableCodecs);
+        foreach (var codec in externalizableCodecs.Take(1025))
+        {
+            ArgumentNullException.ThrowIfNull(codec);
+            var className = codec.ClassName; var codecId = codec.CodecId;
+            ArgumentException.ThrowIfNullOrWhiteSpace(className);
+            ArgumentException.ThrowIfNullOrWhiteSpace(codecId);
+            if (_registry.Count == 1024 || !_registry.TryAdd(className, new(codec, codecId)))
+                throw new ArgumentException("Externalizable class aliases must be unique and bounded.", nameof(externalizableCodecs));
+        }
+    }
+    public AmfValue Read(AmfReadContext context, int depth) => context.ReadAmf3(depth, _registry);
+    public void Write(AmfWriteContext context, AmfValue value, int depth) => context.WriteAmf3(value, depth, _registry);
+    internal static bool IsLayoutFailure(Exception error) => error is not AmfFormatException &&
+        error is FormatException or ArgumentException or InvalidOperationException or OverflowException or IndexOutOfRangeException or NotSupportedException;
+}
+
+internal sealed record AmfExternalRegistration(IAmfExternalizableCodec Codec, string CodecId);

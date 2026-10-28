@@ -1,0 +1,5 @@
+global using FlashMacOS.Domain.Browser;
+global using FlashMacOS.Domain.Flash;
+global using FlashMacOS.Domain.Sol;
+global using FlashMacOS.Application.Browser;
+global using FlashMacOS.Application.Flash;

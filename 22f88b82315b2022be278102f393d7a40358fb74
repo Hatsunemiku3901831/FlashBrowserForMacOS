@@ -1,0 +1,76 @@
+using System.Text.Json;
+using FlashMacOS.Infrastructure.Persistence;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class PersistenceTransactionTests
+{
+    [TestMethod]
+    public async Task FailedUpsertCannotPublishCandidateInMemory()
+    {
+        using var directory = new TemporaryDirectory();
+        var parent = directory.GetPath("store");
+        Directory.CreateDirectory(parent);
+        var path = Path.Combine(parent, "saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        await store.UpsertAsync("old", data);
+        var original = await File.ReadAllBytesAsync(path);
+        var moved = directory.GetPath("preserved");
+        Directory.Move(parent, moved);
+        await File.WriteAllTextAsync(parent, "deterministic directory access failure");
+
+        await Assert.ThrowsExactlyAsync<IOException>(async () => await store.UpsertAsync("new", data));
+
+        var entries = await store.GetAllAsync();
+        Assert.HasCount(1, entries, "A failed commit must not publish its candidate.");
+        Assert.AreEqual("old", entries[0].Key);
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(Path.Combine(moved, "saves.json")));
+    }
+
+    [TestMethod]
+    public async Task FailedRemovalCannotRemoveFromMemory()
+    {
+        using var directory = new TemporaryDirectory();
+        var parent = directory.GetPath("store");
+        Directory.CreateDirectory(parent);
+        var path = Path.Combine(parent, "saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+        await store.UpsertAsync("old", data);
+        Directory.Move(parent, directory.GetPath("preserved"));
+        await File.WriteAllTextAsync(parent, "deterministic directory access failure");
+
+        await Assert.ThrowsExactlyAsync<IOException>(async () => await store.RemoveAsync("old"));
+
+        Assert.HasCount(1, await store.GetAllAsync(), "A failed removal must leave the committed snapshot visible.");
+    }
+
+    [TestMethod]
+    public async Task InvalidEntryNeverLeavesAPartiallyLoadedStore()
+    {
+        using var directory = new TemporaryDirectory();
+        var path = directory.GetPath("saves.json");
+        var data = Convert.ToBase64String(await File.ReadAllBytesAsync(TestAssets.Sol("settings.sol")));
+        var document = new
+        {
+            schemaVersion = 1,
+            saves = new Dictionary<string, object>
+            {
+                ["a-valid"] = new { base64Data = data, updatedAt = DateTimeOffset.UnixEpoch },
+                ["z-invalid"] = new { base64Data = "invalid base64", updatedAt = DateTimeOffset.UnixEpoch },
+            },
+        };
+        var original = JsonSerializer.SerializeToUtf8Bytes(document);
+        await File.WriteAllBytesAsync(path, original);
+        using var store = new JsonRuffleSaveStore(path, new SolHeaderInspector());
+
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await store.GetAllAsync());
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await store.GetAllAsync());
+        await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await store.UpsertAsync("new", data));
+
+        CollectionAssert.AreEqual(original, await File.ReadAllBytesAsync(path));
+    }
+}

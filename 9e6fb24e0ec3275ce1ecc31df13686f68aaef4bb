@@ -1,0 +1,17 @@
+from pathlib import Path
+import plistlib
+import unittest
+
+
+class TransportPolicyTests(unittest.TestCase):
+    def test_legacy_http_exceptions_are_scoped_to_observed_official_hosts(self):
+        root = Path(__file__).resolve().parents[2]
+        path = root / 'packaging/macos/Info.plist'
+        policy = plistlib.loads(path.read_bytes())['NSAppTransportSecurity']
+        self.assertFalse(policy.get('NSAllowsArbitraryLoads', False))
+        self.assertFalse(policy.get('NSAllowsArbitraryLoadsInWebContent', False))
+        self.assertEqual({'mole.61.com', 'webres.61.com', 'game-res.61.com'}, set(policy['NSExceptionDomains']))
+
+
+if __name__ == '__main__':
+    unittest.main()

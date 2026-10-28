@@ -1,0 +1,11 @@
+# FlashMacOS 简要交接
+
+2026-10-29，Australia/Sydney。用户指定的 **W02 下载/popup、W03 Ruffle 产品化均已完成并验收**；状态表和 Project.md 已同步。P00—P03、A01—A04、S01—S05、W01—W03 共 16 项 DONE，完整产品/发布仍未完成。
+
+**请先读 [HANDOFF2.md（详细交接）](HANDOFF2.md)**，再按 [任务状态](docs/task-status.zh-CN.md) 与 [实施方案](docs/implementation-plan.zh-CN.md) 接手。本轮在这里结束，W04/U01 未开始，不自动继续。恢复时首个可执行任务为 W04，基线 docs/provenance/W04-before.json 已冻结。
+
+- W02：同输入 Debug/Release 454+21；最终 package13 原生 25/25、50 次 popup 循环及人工保存/替换/取消/Basic/下载中关闭通过。旧原生窗口壳疑问已定位为不累积的 AppKit 有界缓存，详见 [W02 报告](docs/evidence/W02/2026-10-28/report.md)。
+- W03：同输入 Debug/Release **462+22**；播放器 10/10、核心语料 23/23、29 组正式兼容矩阵通过。纯产品资源、真实离线、缺失/损坏明确错误和新摩尔庄园登录已验收，详见 [W03 报告](docs/evidence/W03/2026-10-29/report.md)。中文 IME 失败原件保留给 U04，未声称全 Flash 兼容。
+- 当前真实 Mac 可构建/运行；目标 main HEAD 为 05c89d2726c4fbcdeb914bf659e99f0433679d3a，有既有提交与 dirty，全部保留。原 CefFlashBrowser/旧用户数据保持；本轮未执行提交、推送或发布。当前无本任务 app/runner 运行。
+
+旧 HANDOFF.md、HANDOFF2.md 已先完整备份至 [交接备份目录](docs/handoffs/2026-10-29-w02-w03/)，旧 HANDOFF 同时保存无损 gzip 和历史压缩摘要；之后先覆盖详细 HANDOFF2，再写本简略导航。顺序及 SHA 核验见 [交接审计](docs/evidence/W03/2026-10-29/handoff-audit.json)。搬机时须同时保存 artifacts 中的原始证据。

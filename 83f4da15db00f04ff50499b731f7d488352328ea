@@ -1,0 +1,25 @@
+namespace FlashMacOS.Application.Browser;
+
+public sealed class BrowserReadiness(TimeProvider clock, TimeSpan? timeout = null) : IDisposable
+{
+    private readonly TaskCompletionSource _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TimeSpan _timeout = timeout ?? TimeSpan.FromSeconds(30);
+    private int _disposed;
+
+    public Task Ready => _ready.Task;
+    public bool IsClosed => Volatile.Read(ref _disposed) != 0;
+    public bool Complete() => !IsClosed && _ready.TrySetResult();
+    public bool Fail(Exception exception) => !IsClosed && _ready.TrySetException(exception);
+
+    public async ValueTask WaitAsync(CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(IsClosed, this);
+        await Ready.WaitAsync(_timeout, clock, cancellationToken).ConfigureAwait(false);
+        ObjectDisposedException.ThrowIf(IsClosed, this);
+    }
+
+    public void Dispose()
+    {
+        if (Interlocked.Exchange(ref _disposed, 1) == 0) _ready.TrySetCanceled();
+    }
+}

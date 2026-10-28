@@ -1,0 +1,84 @@
+using System.Security.Cryptography;
+
+namespace FlashMacOS.Infrastructure.Persistence;
+
+public enum AtomicWriteStage { TemporaryCreated, ContentFlushed, BeforeCommit }
+
+public sealed record FileRevision(bool Exists, string? Sha256)
+{
+    public static FileRevision Missing { get; } = new(false, null);
+    public static FileRevision FromBytes(ReadOnlySpan<byte> bytes) => new(true, Convert.ToHexStringLower(SHA256.HashData(bytes)));
+}
+
+public sealed record AtomicWriteOptions
+{
+    public long MaximumBytes { get; init; } = 256L * 1024 * 1024;
+    public FileRevision? ExpectedRevision { get; init; }
+    public bool CreateBackup { get; init; } = true;
+    public Func<AtomicWriteStage, CancellationToken, ValueTask>? FaultPoint { get; init; }
+}
+
+public static class AtomicFileWriter
+{
+    public static ValueTask WriteAsync(string destinationPath, Func<Stream, CancellationToken, ValueTask> write,
+        CancellationToken cancellationToken = default) => WriteAsync(destinationPath, write, new AtomicWriteOptions(), cancellationToken);
+
+    public static ValueTask WriteAsync(string destinationPath, Func<Stream, CancellationToken, ValueTask> write,
+        AtomicWriteOptions options, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+        ArgumentNullException.ThrowIfNull(write);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(options.MaximumBytes);
+        // Directory creation, durable flush and replacement must never block the UI thread.
+        return new ValueTask(Task.Run(() => WriteCoreAsync(Path.GetFullPath(destinationPath), write, options, cancellationToken), cancellationToken));
+    }
+
+    private static async Task WriteCoreAsync(string destination, Func<Stream, CancellationToken, ValueTask> write,
+        AtomicWriteOptions options, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var directory = Path.GetDirectoryName(destination)!;
+        Directory.CreateDirectory(directory);
+        // Keep the lease file: deleting it would let another process lock a different inode.
+        using var lease = new FileStream(destination + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+        await CheckRevisionAsync(destination, options, cancellationToken).ConfigureAwait(false);
+        var temporary = Path.Combine(directory, $".{Path.GetFileName(destination)}.{Guid.NewGuid():N}.tmp");
+        try
+        {
+            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                64 * 1024, FileOptions.Asynchronous | FileOptions.WriteThrough))
+            {
+                await VisitAsync(AtomicWriteStage.TemporaryCreated).ConfigureAwait(false);
+                using var limited = new LimitedWriteStream(stream, options.MaximumBytes);
+                await write(limited, cancellationToken).ConfigureAwait(false);
+                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                stream.Flush(flushToDisk: true);
+            }
+            await VisitAsync(AtomicWriteStage.ContentFlushed).ConfigureAwait(false);
+            await VisitAsync(AtomicWriteStage.BeforeCommit).ConfigureAwait(false);
+            await CheckRevisionAsync(destination, options, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            // There is deliberately no cancellation check after the commit point.
+            if (options.CreateBackup && File.Exists(destination))
+                File.Replace(temporary, destination, destination + ".bak");
+            else File.Move(temporary, destination, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
+
+        ValueTask VisitAsync(AtomicWriteStage stage) => options.FaultPoint?.Invoke(stage, cancellationToken) ?? ValueTask.CompletedTask;
+    }
+
+    private static async ValueTask CheckRevisionAsync(string path, AtomicWriteOptions options, CancellationToken cancellationToken)
+    {
+        if (options.ExpectedRevision is null) return;
+        var actual = await AtomicDocumentFile.ReadRevisionAsync(path, options.MaximumBytes, cancellationToken).ConfigureAwait(false);
+        if (actual != options.ExpectedRevision)
+            throw new PersistenceConflictException("The file changed after its snapshot was read; reload or preserve both versions.");
+    }
+}
+
+public sealed class PersistenceConflictException(string message) : IOException(message);

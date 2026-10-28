@@ -1,0 +1,6 @@
+namespace FlashMacOS.Domain.Browser;
+
+public enum BrowserPurpose { Web, LocalPlayer }
+public sealed record BrowserCapabilities(bool Zoom, bool Find, bool Printing, bool PdfExport, bool JavaScriptDialogs, bool Inspectable);
+public sealed record BrowserNavigationError(string Domain, int Code, string Message, Uri? Address);
+public sealed record BrowserFindRequest(string Text, bool Backwards = false, bool CaseSensitive = false);

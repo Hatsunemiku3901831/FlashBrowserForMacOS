@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "sourceRelativePath": "spike/macos-host/packaging/macos/Info.plist",
+      "sourceSha256": "b57bb9aa6951c13e5c38cc267edfaf5977b2eda9810182c01b8dbf283624ce2b",
+      "previousP01Sha256": "6217dc2023f72a1d7f9469b584d01509ebd2dcd9794d782e8ff5dc326feecc95",
+      "sourceKind": "frozen-source-adaptation",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/packaging/macos/Info.plist",
+      "targetSha256": "0fe5061a62362ecd1242f58d6fb023dbc13e2ca7312e39491986f786566ba144",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/scripts/package-macos.sh",
+      "sourceSha256": "e6dc82e3d760b9693faa084c43477de019242d3cebfb644fd87ca2ebb17251e8",
+      "previousP01Sha256": "e6dc82e3d760b9693faa084c43477de019242d3cebfb644fd87ca2ebb17251e8",
+      "sourceKind": "frozen-source-adaptation",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/scripts/package-macos.sh",
+      "targetSha256": "b71dc743d0d69d5f624e0c91881921b11d8d7f3a1bfb61072d69b2d5f39e9f9a",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+      "sourceSha256": "49d01e621981c698a339e69ccf9977e99895b4147066d28f4c8d95a188b7a9a7",
+      "previousP01Sha256": "49d01e621981c698a339e69ccf9977e99895b4147066d28f4c8d95a188b7a9a7",
+      "sourceKind": "frozen-source-adaptation",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj",
+      "targetSha256": "3195dfb642ac85cf967d117c6836180c914c95a5b4ed141498c8a26ae93222c9",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/CompatibilityContentHost.cs",
+      "targetSha256": "415cbaf9b65c244448584679746039d8d33ea6d685ab0e5e029272bfdef7adda",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/CompatibilityRunner.js",
+      "targetSha256": "0103db9ce9186edbe4da47f1c3e4f6060082d4e26f69ff5b88dd61911d2bac11",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/MoleCompatibility.js",
+      "targetSha256": "66877f9cfb69bc5fa94dc9a995205130693a1592c1065787536ca1aca366f19c",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "sourceSha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae",
+      "previousP01Sha256": "c0326c24baaa9cec2afff7b123c0f47b206e8a4588aac986a6b8534b7d67b7ae",
+      "sourceKind": "frozen-source-adaptation",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RuffleDocumentStartScriptBuilder.cs",
+      "targetSha256": "e188d905cc24192b3ecc0d8bb774e6d4950d574c9191c538f03aad8c5050d246",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "sourceSha256": "1dcb8dce078f93c11ed4fe4dbe054045b18e9bc7068716f8ccf5e1e895047782",
+      "previousP01Sha256": "549d2305a2151d38c1847ce51ffe5f5eccda8f93e70da2166dab63c60adb15e0",
+      "sourceKind": "frozen-source-adaptation",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs",
+      "targetSha256": "183c7e5b87a881a7ec6dd1ec8ef1bb683df77a00bfb9c16d82f0b35c92d23181",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+      "sourceSha256": "0a5e1f23e5024f823a6c194d67f7df1aed55404a05ddddf5b097f4a43591daa3",
+      "previousP01Sha256": "2596df5028127d8b496547285431cbb4fa713ec3553f164428d555c0f427038d",
+      "sourceKind": "frozen-source-adaptation",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj",
+      "targetSha256": "064014b15f0e39f0922ef69a12b843f760bb6a098c5dba698b7225e22eca9253",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "sourceSha256": "6ec8e4f7c65419b8aee34e2969c1c3a1a7382252fb230aa105f145a8cf622916",
+      "previousP01Sha256": "41ab1d6abb6ab21b4f7e74b4c64dbfcc24473b0c802c7c05dfd24379c66cd356",
+      "sourceKind": "frozen-source-adaptation",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs",
+      "targetSha256": "aa583bd1e2c85dbad24f0d4d2a5cd0cfece48099d413954e9d13b6ad616951ac",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/CompatibilityEvidenceRecorder.cs",
+      "targetSha256": "d5e2cde036dc9c8a499b45544a58e7dd88fb18866ebf821f0a729ddd0c3f6193",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Diagnostics/NativePageProbe.cs",
+      "targetSha256": "0ad23ab4defd952109e22eae81f7e110b195aef29ac1945b7e5272063bf22efc",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Platform/MacOS/MacWebViewSnapshot.cs",
+      "targetSha256": "006fcf28292834ce922ebdc7d9effd54bb2dbbb9aa3ae73414edc34647a4b372",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "sourceSha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "previousP01Sha256": "5e236d623e076b38a8e2a2b2baced99f6fbdc7d6719531595d539370b7ad9adb",
+      "sourceKind": "frozen-source-adaptation",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop/Views/MainWindow.axaml.cs",
+      "targetSha256": "87e5733b43e40078aa6234b1514dfe8e5d1d9dee458fbf22afe97135ea0f599e",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": "spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+      "sourceSha256": "263e751a41971ff6e44123d690737f0d09466a24334f3258cf79352df258625d",
+      "previousP01Sha256": "263e751a41971ff6e44123d690737f0d09466a24334f3258cf79352df258625d",
+      "sourceKind": "frozen-source-adaptation",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj",
+      "targetSha256": "3ff27e3193531e139127c87b59479ecd5b8e59090a26c954ca872a96f6725ea4",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "bootstrap/legacy/spike/macos-host/tests/CefFlashBrowser.MacOS.Spike.Tests/CompatibilityContentHostTests.cs",
+      "targetSha256": "374f4975c7de13345f701001a7a96f2a8e24b680038579f7f5473539731ef3e8",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "scripts/compare-native-golden.py",
+      "targetSha256": "ef7ddd17c2f7019c7f145a3cfe130314fc9841b5ae7367403083e0a5f2888a4c",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "scripts/index-p02-evidence.py",
+      "targetSha256": "58dfe898f7887cb2a23b83e729de00d00c58b39f1c49314ca59c3a5e4f1d8ade",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "scripts/package-bootstrap.py",
+      "targetSha256": "8a92760f1e263272241532f2b499b76bcb7d71f9875de8da4980871b5766ab10",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "scripts/regenerate-p02-fixtures.py",
+      "targetSha256": "a7f9841953407902ce8156a8cf90690f7195f4898947a2312a6f4a00f91a1c6b",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "scripts/run-native-prototype.py",
+      "targetSha256": "2aa962dd3cb202dcef3e5f3e0bf495635a670b842e3dd817f5b38dc43b858f19",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "scripts/tests/mole-compatibility.cjs",
+      "targetSha256": "466d3fca91812a0daaa1986ff4858cddbe08b6b1a00bc4b695ee481e310e9566",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": "1996c08fc9de21d646c95b1c6cb6a1a074acfbc9703b43934764867e4a709e59",
+      "sourceKind": "project-authored",
+      "targetRelativePath": "scripts/verify-bootstrap.py",
+      "targetSha256": "bf921ee83fc28d3ecc8f57fea8a7f7b98a7ca798407ea946ed4b8f4b5fa0edf4",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "tests/tooling/test_mole_compatibility.py",
+      "targetSha256": "5517291f47040fb9beb7575494ecff9346558b9202d67d81fe84b9faab9a9c71",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    },
+    {
+      "sourceRelativePath": null,
+      "sourceSha256": null,
+      "previousP01Sha256": null,
+      "sourceKind": "project-authored",
+      "targetRelativePath": "tests/tooling/test_transport_policy.py",
+      "targetSha256": "9f85786f37aae1d217419999d7e2710a9096535277673c2cedb6e60c2e0b05b7",
+      "reason": "P02 fixed corpus, bounded native evidence, exact target transport/site compatibility and independent verification; no upstream runtime or dependency upgrade"
+    }
+  ]
+}

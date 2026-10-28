@@ -1,0 +1,128 @@
+using System.Text.Json;
+
+namespace FlashMacOS.Browser.WebKit;
+
+public static class WebBridgeProtocol
+{
+    public static WebBridgeMessage ParseNative(string body, string nativeOrigin, bool nativeMainFrame)
+    {
+        if (!nativeMainFrame) throw new InvalidDataException("Subframe messages cannot select host state.");
+        var message = Parse(body);
+        if (!message.IsMainFrame || message.ProtocolVersion != 1 || !string.Equals(message.Origin, nativeOrigin, StringComparison.Ordinal))
+            throw new InvalidDataException("Web message does not match its native frame origin.");
+        return message;
+    }
+
+    private const int MaximumContextLength = 2_048;
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    public static WebBridgeMessage Parse(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body) || body.Length > BridgeLimits.MaximumBodyCharacters)
+        {
+            throw CreateInvalidMessageException();
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(body, new JsonDocumentOptions { MaxDepth = 32 });
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw CreateInvalidMessageException();
+            }
+
+            var root = document.RootElement;
+            var versioned = root.TryGetProperty("protocolVersion", out var version);
+            var payload = versioned ? root.GetProperty("payload") : root;
+            if (payload.ValueKind != JsonValueKind.Object) throw CreateInvalidMessageException();
+            var message = payload.Deserialize<WebBridgeMessage>(JsonOptions)
+                ?? throw CreateInvalidMessageException();
+            if (versioned)
+            {
+                if (version.GetInt32() != 1) throw CreateInvalidMessageException();
+                var messageType = RequiredString(root, "messageType", 128);
+                if (!string.IsNullOrEmpty(message.Type) && message.Type != messageType)
+                    throw CreateInvalidMessageException();
+                var navigation = RequiredString(root, "navigationId", 128);
+                var run = RequiredString(root, "runId", 128);
+                if (!Guid.TryParse(navigation, out _) || !Guid.TryParse(run, out _)) throw CreateInvalidMessageException();
+                message = message with
+                {
+                    Type = messageType, ProtocolVersion = 1, NavigationId = navigation, RunId = run,
+                    Origin = RequiredString(root, "origin", BridgeLimits.MaximumContextCharacters),
+                    Href = RequiredString(root, "href", BridgeLimits.MaximumContextCharacters),
+                    IsMainFrame = root.GetProperty("isMainFrame").GetBoolean(),
+                };
+            }
+            else if (message.ProtocolVersion != 0 || message.NavigationId is not null || message.RunId is not null)
+            {
+                throw CreateInvalidMessageException();
+            }
+            Validate(message);
+            return message;
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException or KeyNotFoundException or InvalidOperationException or FormatException)
+        {
+            // Do not retain the source exception: serializer diagnostics can include protocol
+            // details that must never flow into the journal through this boundary.
+            throw CreateInvalidMessageException();
+        }
+    }
+
+    private static string RequiredString(JsonElement root, string property, int maximumLength)
+    {
+        var value = root.GetProperty(property).GetString();
+        if (string.IsNullOrWhiteSpace(value) || value.Length > maximumLength) throw CreateInvalidMessageException();
+        return value;
+    }
+
+    public static string Describe(WebBridgeMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentException.ThrowIfNullOrWhiteSpace(message.Type);
+
+        var context = message.Message ?? message.Key;
+        if (string.IsNullOrEmpty(context))
+        {
+            return message.Type;
+        }
+
+        return context.Length <= MaximumContextLength
+            ? $"{message.Type}: {context}"
+            : $"{message.Type}: {context[..MaximumContextLength]}…";
+    }
+
+    private static void Validate(WebBridgeMessage message)
+    {
+        if (string.IsNullOrWhiteSpace(message.Type))
+        {
+            throw CreateInvalidMessageException();
+        }
+
+        var isValid = message.Type switch
+        {
+            "saveChanged" => !string.IsNullOrWhiteSpace(message.Key) && message.Data is not null,
+            "saveDeleted" => !string.IsNullOrWhiteSpace(message.Key),
+            "savesSnapshot" => message.Data is not null,
+            "trace" => message.Message is not null,
+            "playerReady" => true,
+            "diagnostics" => message.RuffleAvailable is not null
+                && message.FlashElementCount is not null
+                && message.DocumentStartMilliseconds is not null,
+            "bridgeError" => message.Message is not null,
+            "downloadRequested" => !string.IsNullOrWhiteSpace(message.Url),
+            "compatibilityResult" => !string.IsNullOrWhiteSpace(message.Key)
+                && !string.IsNullOrWhiteSpace(message.Message)
+                && message.Data is not null,
+            _ => true,
+        };
+        if (!isValid)
+        {
+            throw CreateInvalidMessageException();
+        }
+    }
+
+    private static JsonException CreateInvalidMessageException() =>
+        new("The web bridge message is invalid.");
+}

@@ -1,0 +1,59 @@
+using System.Buffers.Binary;
+using System.Diagnostics;
+using System.Security.Cryptography;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class SolCancellationTests
+{
+    [TestMethod]
+    [TestCategory("SolCancellation")]
+    public async Task ActiveLargeReadAndWriteObserveCancellationWithinOneHundredMilliseconds()
+    {
+        const int count = 900000;
+        var input = new byte[5 + count * 9]; input[0] = 0x0a; BinaryPrimitives.WriteUInt32BigEndian(input.AsSpan(1,4),count);
+        var inputPath = TestEvidence.NewPath("cancel-input", ".amf0"); await File.WriteAllBytesAsync(inputPath,input);
+        var codec = new AmfCodec(); var graph = codec.Decode(input,SolEncoding.Amf0); codec.Encode(graph,SolEncoding.Amf0);
+        var samples = new List<object>(); var failures = 0;
+        foreach(var operation in new[]{"decode","encode"})
+        {
+            for(var index=0;index<30;index++)
+            {
+                using var cancellation = new CancellationTokenSource();
+                var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                var worker = Task.Run(() =>
+                {
+                    started.TrySetResult();
+                    if(operation=="decode") codec.Decode(input,SolEncoding.Amf0,cancellationToken:cancellation.Token);
+                    else codec.Encode(graph,SolEncoding.Amf0,cancellationToken:cancellation.Token);
+                });
+                await started.Task.WaitAsync(TimeSpan.FromSeconds(3)); await Task.Delay(2);
+                var watch=Stopwatch.StartNew(); cancellation.Cancel(); var canceled=false;
+                try { await worker.WaitAsync(TimeSpan.FromSeconds(3)); }
+                catch(OperationCanceledException) { canceled=true; }
+                watch.Stop(); if(!canceled || watch.Elapsed.TotalMilliseconds>100) failures++;
+                samples.Add(new{operation,index,canceled,latencyMs=watch.Elapsed.TotalMilliseconds});
+            }
+        }
+        TestEvidence.Write("cancellation",new{status=failures==0?"PASS":"FAIL",inputPath,inputBytes=input.Length,
+            inputSha256=Convert.ToHexStringLower(SHA256.HashData(input)),structure="AMF0 strict array of 900000 Number(+0) values; manually specified bytes, 8.1 MB",
+            method="Warm decode and encode; worker-start handshake, 2 ms of active work, cancellation request to observed completion; 30 samples each",
+            maximumLatencyMs=100,samples,failures});
+        Assert.AreEqual(0,failures,"Cancellation did not interrupt active work within its measured budget.");
+    }
+
+    [TestMethod]
+    public void GraphSnapshotConstructionHonorsCancellationWhileEnumeratingInput()
+    {
+        using var cancellation=new CancellationTokenSource(); var visits=0;
+        IEnumerable<AmfProperty> Entries()
+        {
+            for(var i=0;i<10000;i++)
+            { if(++visits==32)cancellation.Cancel(); yield return new("x",AmfNull.Instance); }
+        }
+        Assert.ThrowsExactly<OperationCanceledException>(()=>new AmfGraph(Entries(),cancellationToken:cancellation.Token));
+        Assert.IsTrue(visits<=33);
+    }
+}

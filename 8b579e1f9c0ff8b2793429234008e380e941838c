@@ -1,0 +1,52 @@
+/* Project-owned completion boundary. Fixed Ruffle API v1 remains unchanged. */
+(() => {
+  const pending = new Map();
+  let closed = false;
+  const abortError = () => new DOMException("Player operation cancelled", "AbortError");
+  const fullscreen = (api, signal) => new Promise((resolve, reject) => {
+    const finish = error => {
+      clearTimeout(timer);
+      document.removeEventListener("fullscreenchange", changed);
+      document.removeEventListener("fullscreenerror", failed);
+      signal.removeEventListener("abort", aborted);
+      error ? reject(error) : resolve();
+    };
+    const aborted = () => finish(abortError());
+    signal.addEventListener("abort", aborted, {once:true});
+    const changed = () => { if (api.isFullscreen) finish(); };
+    const failed = () => finish(new Error("Fullscreen was refused; use the player's fullscreen button with a real user gesture."));
+    const timer = setTimeout(failed, 5000);
+    document.addEventListener("fullscreenchange", changed);
+    document.addEventListener("fullscreenerror", failed);
+    try { api.requestFullscreen(); if (api.isFullscreen) finish(); } catch (error) { finish(error); }
+  });
+  globalThis.__flashMacOSCancelControl = id => { pending.get(id)?.abort(); return true; };
+  globalThis.__flashMacOSDispatchControl = (id, runId, command, volume) => {
+    const api = globalThis.__cefFlashBrowserPlayerApi;
+    if (closed || !api || !runId || runId !== globalThis.__flashMacOSRunId)
+      return JSON.stringify({accepted:false,error:"The requested player run is no longer ready."});
+    const cancellation = new AbortController();
+    pending.set(id, cancellation);
+    const cancelled = new Promise((_, reject) => cancellation.signal.addEventListener("abort", () => reject(abortError()), {once:true}));
+    const operation = Promise.resolve().then(async () => {
+      if (cancellation.signal.aborted) throw abortError();
+      switch (command) {
+        case "Pause": api.suspend(); if (!api.suspended) throw new Error("Player did not suspend"); break;
+        case "Resume": api.resume(); if (api.suspended) throw new Error("Player did not resume"); break;
+        case "Reload": await api.reload(undefined, cancellation.signal); break;
+        case "Volume": api.volume = volume; if (Math.abs(api.volume-volume)>0.00001) throw new Error("Player rejected volume"); break;
+        case "Fullscreen": await fullscreen(api, cancellation.signal); break;
+        default: throw new Error("Unknown player command");
+      }
+    });
+    void Promise.race([operation,cancelled]).then(() => {
+      if (!closed) globalThis.__cefFlashBrowserPost({type:"playerCommandResult",key:id,runId,message:"completed"});
+    }, error => {
+      if (!closed && error.name !== "AbortError") globalThis.__cefFlashBrowserPost({type:"playerCommandResult",key:id,runId,message:"failed",data:String(error.message || error)});
+    }).finally(() => pending.delete(id));
+    return JSON.stringify({accepted:true});
+  };
+  globalThis.addEventListener("pagehide", () => {
+    closed = true; for (const cancellation of pending.values()) cancellation.abort(); pending.clear();
+  }, {once:true});
+})();

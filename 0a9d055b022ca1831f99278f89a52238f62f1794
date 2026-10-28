@@ -1,0 +1,211 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="locale">zh-CN</sys:String>
+    <sys:String x:Key="language_name">中文</sys:String>
+
+    <!--共用字段-->
+    <sys:String x:Key="common_swfFile">SWF文件</sys:String>
+    <sys:String x:Key="common_solFile">SOL文件</sys:String>
+    <sys:String x:Key="common_allFiles">所有文件</sys:String>
+    <sys:String x:Key="common_shortcut">快捷方式</sys:String>
+    <sys:String x:Key="common_favorites">收藏夹</sys:String>
+    <sys:String x:Key="common_settings">设置</sys:String>
+    <sys:String x:Key="common_export">导出</sys:String>
+    <sys:String x:Key="common_import">导入</sys:String>
+    <sys:String x:Key="common_rename">重命名</sys:String>
+    <sys:String x:Key="common_moveUp">上移</sys:String>
+    <sys:String x:Key="common_moveDown">下移</sys:String>
+    <sys:String x:Key="common_moveToTop">移到顶部</sys:String>
+    <sys:String x:Key="common_moveToBottom">移到底部</sys:String>
+
+    <!--主窗口-->
+    <sys:String x:Key="mainWindow_title">欢迎</sys:String>
+    <sys:String x:Key="mainWindow_go">跳转</sys:String>
+    <sys:String x:Key="mainWindow_manageFavorites">管理收藏夹</sys:String>
+    <sys:String x:Key="mainWindow_manageSolSaveFiles">管理SOL存档</sys:String>
+    <sys:String x:Key="mainWindow_openSolFile">打开SOL文件...</sys:String>
+    <sys:String x:Key="mainWindow_languages">语言</sys:String>
+    <sys:String x:Key="mainWindow_options">选项</sys:String>
+    <sys:String x:Key="mainWindow_loadSwf">加载本地SWF文件...</sys:String>
+    <sys:String x:Key="mainWindow_viewGithub">在GitHub中查看</sys:String>
+
+    <!--设置窗口-->
+    <sys:String x:Key="settings_tabMainWindow">主窗口</sys:String>
+    <sys:String x:Key="settings_tabBrowser">浏览器</sys:String>
+    <sys:String x:Key="settings_headerAddressBar">地址栏和搜索</sys:String>
+    <sys:String x:Key="settings_headerTheme">主题</sys:String>
+    <sys:String x:Key="settings_headerOther">其他</sys:String>
+    <sys:String x:Key="settings_headerBrowserData">浏览器缓存</sys:String>
+    <sys:String x:Key="settings_headerWebsiteBehavior">网站行为</sys:String>
+    <sys:String x:Key="settings_headerAdvanced">高级</sys:String>
+    <sys:String x:Key="settings_headerAboutCef">关于 CEF</sys:String>
+    <sys:String x:Key="settings_useSearchEngine">在地址栏中使用搜索引擎</sys:String>
+    <sys:String x:Key="settings_searchEngine">搜索引擎</sys:String>
+    <sys:String x:Key="settings_currentTheme">当前主题</sys:String>
+    <sys:String x:Key="settings_followSystemTheme">跟随系统主题</sys:String>
+    <sys:String x:Key="settings_hideMainWindowOnBrowsing">浏览网页时隐藏主窗口</sys:String>
+    <sys:String x:Key="settings_deleteCache">清除所有缓存</sys:String>
+    <sys:String x:Key="settings_openNewPage">打开新页面方式</sys:String>
+    <sys:String x:Key="settings_disableOnBeforeUnloadDialog">阻止网页刷新/关闭时的弹窗</sys:String>
+    <sys:String x:Key="settings_enableProxy">使用代理</sys:String>
+    <sys:String x:Key="settings_enableCustomUserAgent">自定义用户代理（UA）</sys:String>
+    <sys:String x:Key="settings_enableFakeFlashVersion">伪造Flash版本</sys:String>
+    <sys:String x:Key="settings_cefVersion">CefSharp版本</sys:String>
+    <sys:String x:Key="settings_server">服务器</sys:String>
+    <sys:String x:Key="settings_username">用户名</sys:String>
+    <sys:String x:Key="settings_password">密码</sys:String>
+    <sys:String x:Key="settings_userAgent">用户代理</sys:String>
+    <sys:String x:Key="settings_flashVersion">Flash版本</sys:String>
+    <sys:String x:Key="settings_buttonDeleteCache">清除</sys:String>
+    <sys:String x:Key="settings_buttonViewDetails">详情</sys:String>
+    <sys:String x:Key="settings_buttonRestart">重启</sys:String>
+    <sys:String x:Key="settings_needRestart">此部分设置的改动将在程序重启后生效。</sys:String>
+    <sys:String x:Key="settings_ip">IP</sys:String>
+    <sys:String x:Key="settings_port">端口</sys:String>
+    <sys:String x:Key="settings_optional">（可选）</sys:String>
+    <sys:String x:Key="settings_saveZoomLevel">保存缩放比例</sys:String>
+    <sys:String x:Key="settings_enableIntegratedDevTools">嵌入开发工具到浏览器窗口</sys:String>
+    <sys:String x:Key="settings_disableFullscreen">阻止网页进入全屏模式</sys:String>
+    <sys:String x:Key="settings_disableGpuAcceleration">禁用GPU加速</sys:String>
+    <sys:String x:Key="settings_disableBrowserContextMenu">禁用右键菜单</sys:String>
+
+    <!--主窗口地址栏-->
+    <sys:String x:Key="navigationType_auto">自动</sys:String>
+    <sys:String x:Key="navigationType_searchOnly">仅搜索</sys:String>
+    <sys:String x:Key="navigationType_navigateOnly">仅导航</sys:String>
+
+    <!--打开新网页时的行为-->
+    <sys:String x:Key="newPageBehavior_originalWindow">原窗口</sys:String>
+    <sys:String x:Key="newPageBehavior_newWindow">新窗口</sys:String>
+
+    <!--搜索引擎-->
+    <sys:String x:Key="searchEngine_baidu">百度</sys:String>
+    <sys:String x:Key="searchEngine_google">谷歌</sys:String>
+    <sys:String x:Key="searchEngine_bing">必应</sys:String>
+    <sys:String x:Key="searchEngine_sogou">搜狗</sys:String>
+    <sys:String x:Key="searchEngine_so360">360</sys:String>
+    <sys:String x:Key="searchEngine_duckDuckGo">DuckDuckGo</sys:String>
+    <sys:String x:Key="searchEngine_yandex">Yandex</sys:String>
+    <sys:String x:Key="searchEngine_bilibili">哔哩哔哩</sys:String>
+    <sys:String x:Key="searchEngine_game4399">4399</sys:String>
+
+    <!--主题-->
+    <sys:String x:Key="theme_light">浅色</sys:String>
+    <sys:String x:Key="theme_dark">深色</sys:String>
+
+    <!--收藏夹管理器-->
+    <sys:String x:Key="favorites_managerTitle">收藏夹管理器</sys:String>
+    <sys:String x:Key="favorites_add">添加</sys:String>
+    <sys:String x:Key="favorites_remove">移除</sys:String>
+    <sys:String x:Key="favorites_edit">编辑</sys:String>
+    <sys:String x:Key="favorites_name">名称</sys:String>
+    <sys:String x:Key="favorites_url">地址</sys:String>
+    <sys:String x:Key="favorites_save">保存</sys:String>
+    <sys:String x:Key="favorites_defaultName">新收藏夹项</sys:String>
+
+    <!--浏览器窗口-->
+    <sys:String x:Key="browser_back">返回</sys:String>
+    <sys:String x:Key="browser_forward">前进</sys:String>
+    <sys:String x:Key="browser_reload">刷新</sys:String>
+    <sys:String x:Key="browser_stop">停止</sys:String>
+    <sys:String x:Key="browser_cut">剪切</sys:String>
+    <sys:String x:Key="browser_copy">复制</sys:String>
+    <sys:String x:Key="browser_paste">粘贴</sys:String>
+    <sys:String x:Key="browser_selectAll">全选</sys:String>
+    <sys:String x:Key="browser_print">打印</sys:String>
+    <sys:String x:Key="browser_redo">重做</sys:String>
+    <sys:String x:Key="browser_undo">撤销</sys:String>
+    <sys:String x:Key="browser_find">查找</sys:String>
+    <sys:String x:Key="browser_searchFor">搜索“{0}”</sys:String>
+    <sys:String x:Key="browser_openInNewWindow">在新窗口中打开</sys:String>
+    <sys:String x:Key="browser_openSelectedUrl">转到“{0}”</sys:String>
+    <sys:String x:Key="browser_addToDictionary">添加到字典</sys:String>
+    <sys:String x:Key="browser_reloadNoCache">刷新（忽略缓存）</sys:String>
+    <sys:String x:Key="browser_openDevTool">打开开发工具</sys:String>
+    <sys:String x:Key="browser_toggleDevTool">打开/关闭开发工具</sys:String>
+    <sys:String x:Key="browser_viewSource">查看网页源码</sys:String>
+    <sys:String x:Key="browser_zoom">缩放</sys:String>
+    <sys:String x:Key="browser_openInDefaultBrowser">在默认浏览器中打开</sys:String>
+    <sys:String x:Key="browser_createShortcut">创建网页快捷方式</sys:String>
+    <sys:String x:Key="browser_addFavorite">添加此网站到收藏夹</sys:String>
+    <sys:String x:Key="browser_tipsBlockedSwfs">一些Flash内容似乎被Chromium内核屏蔽，你可以在SWF播放器中播放它：</sys:String>
+    <sys:String x:Key="browser_toolTipBack">返回（Alt+向左键）</sys:String>
+    <sys:String x:Key="browser_toolTipForward">前进（Alt+向右键）</sys:String>
+    <sys:String x:Key="browser_toolTipReload">刷新（F5）</sys:String>
+    <sys:String x:Key="browser_toolTipStop">停止（Esc）</sys:String>
+    <sys:String x:Key="browser_toolTipMore">更多</sys:String>
+    <sys:String x:Key="browser_toolTipBlockedSwfs">被屏蔽的Flash内容</sys:String>
+    <sys:String x:Key="browser_toolTipZoomIn">放大（Ctrl+加号键）</sys:String>
+    <sys:String x:Key="browser_toolTipZoomOut">缩小（Ctrl+减号键）</sys:String>
+    <sys:String x:Key="browser_loading">加载中...</sys:String>
+    <sys:String x:Key="browser_showMainWindow">打开主窗口</sys:String>
+    <sys:String x:Key="browser_newBrowserWindow">新建浏览器窗口</sys:String>
+
+    <!--存档管理器-->
+    <sys:String x:Key="solSaveManager_title">SOL存档管理器</sys:String>
+    <sys:String x:Key="solSaveManager_headerFileName">文件名</sys:String>
+    <sys:String x:Key="solSaveManager_headerFileDir">文件路径</sys:String>
+    <sys:String x:Key="solSaveManager_headerOperations">操作</sys:String>
+    <sys:String x:Key="solSaveManager_toolTipReload">刷新</sys:String>
+    <sys:String x:Key="solSaveManager_toolTipDelete">删除</sys:String>
+    <sys:String x:Key="solSaveManager_toolTipEdit">编辑</sys:String>
+    <sys:String x:Key="solSaveManager_filterPlaceholder">筛选...</sys:String>
+
+    <!--存档编辑器-->
+    <sys:String x:Key="solEditor_title">SOL编辑器</sys:String>
+    <sys:String x:Key="solEditor_file">文件</sys:String>
+    <sys:String x:Key="solEditor_save">保存</sys:String>
+    <sys:String x:Key="solEditor_saveAs">另存为...</sys:String>
+    <sys:String x:Key="solEditor_close">关闭</sys:String>
+    <sys:String x:Key="solEditor_edit">编辑</sys:String>
+    <sys:String x:Key="solEditor_addItem">添加项</sys:String>
+    <sys:String x:Key="solEditor_removeItem">移除项</sys:String>
+    <sys:String x:Key="solEditor_statusReady">就绪</sys:String>
+    <sys:String x:Key="solEditor_statusError">错误</sys:String>
+    <sys:String x:Key="solEditor_statusModified">已修改</sys:String>
+    <sys:String x:Key="solEditor_statusSaved">已保存</sys:String>
+    <sys:String x:Key="solEditor_statusUnknown">未知状态</sys:String>
+    <sys:String x:Key="solEditor_emptyString">（空）</sys:String>
+    <sys:String x:Key="solEditor_amf0SolFile">AMF0编码的SOL文件</sys:String>
+    <sys:String x:Key="solEditor_amf3SolFile">AMF3编码的SOL文件</sys:String>
+
+    <!--对话框-->
+    <sys:String x:Key="dialog_ok">确定</sys:String>
+    <sys:String x:Key="dialog_cancel">取消</sys:String>
+    <sys:String x:Key="dialog_yes">是</sys:String>
+    <sys:String x:Key="dialog_no">否</sys:String>
+    <sys:String x:Key="dialog_error">错误</sys:String>
+    <sys:String x:Key="dialog_addFavorite">添加收藏夹</sys:String>
+    <sys:String x:Key="dialog_selectLanguage">请选择语言</sys:String>
+    <sys:String x:Key="dialog_addItem">添加项</sys:String>
+    <sys:String x:Key="dialog_itemName">名称</sys:String>
+    <sys:String x:Key="dialog_assocArray">关联数组</sys:String>
+
+    <!--提示信息-->
+    <sys:String x:Key="message_emptyUrl">请输入网址。</sys:String>
+    <sys:String x:Key="message_deleteCache">确定要清除所有缓存吗？浏览器将会重启。</sys:String>
+    <sys:String x:Key="message_restart">是否要重启程序？</sys:String>
+    <sys:String x:Key="message_removeItem">确定要移除“{0}”吗？</sys:String>
+    <sys:String x:Key="message_askWhetherToLeave">要离开此页面吗？</sys:String>
+    <sys:String x:Key="message_askWhetherToReload">要重新加载此页面吗？</sys:String>
+    <sys:String x:Key="message_deleteFile">是否删除文件“{0}”？</sys:String>
+    <sys:String x:Key="message_deleted">删除成功。</sys:String>
+    <sys:String x:Key="message_imported">导入成功。</sys:String>
+    <sys:String x:Key="message_exported">导出成功。</sys:String>
+    <sys:String x:Key="message_askSaveChange">是否将更改保存到“{0}”？</sys:String>
+    <sys:String x:Key="message_renameItem">重命名“{0}”：</sys:String>
+    <sys:String x:Key="message_askImportFile">是否导入文件“{0}”到“{1}”？</sys:String>
+
+    <!--错误信息-->
+    <sys:String x:Key="error_message">错误信息</sys:String>
+    <sys:String x:Key="error_webSiteEmptyName">名称不能为空。</sys:String>
+    <sys:String x:Key="error_webSiteEmptyUrl">网址不能为空。</sys:String>
+    <sys:String x:Key="error_deleteCachesRetry">清除缓存时发生错误，是否重试？</sys:String>
+    <sys:String x:Key="error_arrKeyAreadyExists">数组已经存在名称为“{0}”的键值。</sys:String>
+    <sys:String x:Key="error_objPropAreadyExists">对象已经存在名称为“{0}”的属性。</sys:String>
+    <sys:String x:Key="error_keyOrPropEmpty">键值/属性名不能为空。</sys:String>
+    <sys:String x:Key="error_keyOrPropAreadyExists">已经存在名称为“{0}”的键值/属性。</sys:String>
+    <sys:String x:Key="error_notSolFile">文件“{0}”不是SOL文件。</sys:String>
+    <sys:String x:Key="error_unknownSearchEngine">未知的搜索引擎。</sys:String>
+</ResourceDictionary>

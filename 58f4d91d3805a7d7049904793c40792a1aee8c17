@@ -1,0 +1,52 @@
+import importlib.util
+from pathlib import Path
+import shutil
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location('boundaries', ROOT / 'scripts/check-build-boundaries.py')
+boundaries = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(boundaries)
+
+
+class BuildBoundaryTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix='FlashMacOS-boundary-test-')
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        for p in [ROOT / 'FlashMacOS.slnx', *boundaries.source_files(ROOT, 'src', '.csproj'),
+                  *boundaries.source_files(ROOT, 'tests', '.csproj')]:
+            target = self.root / p.relative_to(ROOT)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(p, target)
+        self.assertEqual([], boundaries.check_graph(self.root)['failures'])
+
+    def add_reference(self, owner, include, tag='ProjectReference'):
+        path = self.root / f'src/FlashMacOS.{owner}/FlashMacOS.{owner}.csproj'
+        path.write_text(path.read_text().replace('</Project>', f'<ItemGroup><{tag} Include="{include}" /></ItemGroup></Project>'))
+        return boundaries.check_graph(self.root)['failures']
+
+    def test_inner_layer_cannot_reference_infrastructure(self):
+        failures = self.add_reference('Domain', '../FlashMacOS.Infrastructure/FlashMacOS.Infrastructure.csproj')
+        self.assertTrue(any('forbidden dependency direction' in f for f in failures))
+
+    def test_sibling_adapters_cannot_reference_each_other(self):
+        failures = self.add_reference('Browser.WebKit', '../FlashMacOS.Flash.Ruffle/FlashMacOS.Flash.Ruffle.csproj')
+        self.assertTrue(any('forbidden dependency direction' in f for f in failures))
+
+    def test_legacy_and_external_content_are_rejected(self):
+        for content in ('../../bootstrap/file', '../../reference/file', '../../../outside/file', '/tmp/outside/file'):
+            with self.subTest(content=content):
+                failures = self.add_reference('Desktop', content, 'Content')
+                self.assertTrue(any('boundary' in f or 'absolute input' in f for f in failures))
+
+    def test_viewmodel_cannot_import_a_concrete_browser(self):
+        source = self.root / 'src/FlashMacOS.Desktop/ViewModels/Invalid.cs'
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text('using FlashMacOS.Browser.WebKit;\nnamespace FlashMacOS.Desktop.ViewModels;')
+        self.assertTrue(any('outside composition root' in f for f in boundaries.check_graph(self.root)['failures']))
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,0 +1,229 @@
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using FlashMacOS.Application.Files;
+using FlashMacOS.Application.Browser;
+using FlashMacOS.Desktop.ViewModels;
+
+namespace FlashMacOS.Desktop.Views;
+
+public sealed partial class MainWindow : Window, IAsyncDisposable
+{
+    private readonly MainWindowViewModel _viewModel;
+    private readonly IBrowserSession _browserSession;
+    private readonly Func<Control> _createBrowserControl;
+    private readonly IFileDialogs _fileDialogs;
+    private readonly Func<CancellationToken, ValueTask> _initialize;
+    private readonly IReadOnlyList<string> _arguments;
+    private readonly Action<BrowserPopupRequest> _openPopup;
+    private readonly Func<ValueTask> _shutdown;
+    private readonly Func<Uri?> _initialTarget;
+    private readonly Action _pageOpened;
+    private readonly Action<Exception> _reportStartupFailure;
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly CancellationToken _cancellationToken;
+    private readonly object _cleanupGate = new();
+    private Task? _cleanupTask;
+    private bool _started;
+    private bool _shutdownStarted;
+    private bool _closingWaitActive;
+    private bool _shutdownComplete;
+
+    public MainWindow(
+        MainWindowViewModel viewModel,
+        IBrowserSession browserSession,
+        Func<Control> createBrowserControl,
+        IFileDialogs fileDialogs,
+        Func<CancellationToken, ValueTask> initialize,
+        IReadOnlyList<string> arguments,
+        Action<BrowserPopupRequest> openPopup,
+        Func<ValueTask> shutdown,
+        Func<Uri?> initialTarget,
+        Action pageOpened,
+        Action<Exception> reportStartupFailure)
+    {
+        ArgumentNullException.ThrowIfNull(viewModel);
+        ArgumentNullException.ThrowIfNull(browserSession);
+        ArgumentNullException.ThrowIfNull(initialize);
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(openPopup);
+        ArgumentNullException.ThrowIfNull(shutdown);
+        ArgumentNullException.ThrowIfNull(initialTarget);
+        ArgumentNullException.ThrowIfNull(pageOpened);
+
+        _cancellationToken = _lifetime.Token;
+        _viewModel = viewModel;
+        _browserSession = browserSession;
+        _createBrowserControl = createBrowserControl ?? throw new ArgumentNullException(nameof(createBrowserControl));
+        _fileDialogs = fileDialogs ?? throw new ArgumentNullException(nameof(fileDialogs));
+        _initialize = initialize;
+        _arguments = arguments;
+        _openPopup = openPopup;
+        _shutdown = shutdown;
+        _initialTarget = initialTarget;
+        _pageOpened = pageOpened;
+        _reportStartupFailure = reportStartupFailure ?? throw new ArgumentNullException(nameof(reportStartupFailure));
+        DataContext = viewModel;
+        InitializeComponent();
+
+        Opened += OnOpened;
+        Closing += OnClosing;
+        Closed += OnClosed;
+        _viewModel.PopupRequested += OnPopupRequested;
+    }
+
+    private async void OnOpened(object? sender, EventArgs args)
+    {
+        if (_started)
+        {
+            return;
+        }
+
+        _started = true;
+        try
+        {
+            await _initialize(_cancellationToken);
+            _cancellationToken.ThrowIfCancellationRequested();
+            this.FindControl<ContentControl>("BrowserHost")!.Content = _createBrowserControl();
+            await _browserSession.Ready.WaitAsync(_cancellationToken);
+            await _viewModel.ApplyBrowserPreferencesAsync(_cancellationToken);
+            if (_initialTarget() is { } target) await _browserSession.NavigateAsync(target, _cancellationToken);
+            else await _viewModel.OpenInitialTargetAsync(_arguments, _cancellationToken);
+            _pageOpened();
+        }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception)
+        {
+            _reportStartupFailure(exception);
+            _viewModel.ReportError(exception);
+            try { await _shutdown(); }
+            catch (Exception cleanupFailure) { Console.Error.WriteLine(cleanupFailure); }
+        }
+    }
+
+    private void OnClosed(object? sender, EventArgs args)
+    {
+        Opened -= OnOpened;
+        Closing -= OnClosing;
+        Closed -= OnClosed;
+        _viewModel.PopupRequested -= OnPopupRequested;
+        _lifetime.Dispose();
+    }
+
+    private async void OnClosing(object? sender, WindowClosingEventArgs args)
+    {
+        if (_shutdownComplete)
+        {
+            return;
+        }
+
+        args.Cancel = true;
+        if (_closingWaitActive)
+        {
+            return;
+        }
+
+        _closingWaitActive = true;
+        try
+        {
+            await DisposeAsync();
+        }
+        catch (Exception exception)
+        {
+            _reportStartupFailure(exception);
+            _viewModel.ReportError(exception);
+        }
+        finally
+        {
+            _shutdownComplete = true;
+            Close();
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_cleanupGate) return new ValueTask(_cleanupTask ??= DisposeCoreAsync());
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        _shutdownStarted = true;
+        try
+        {
+            try { await _lifetime.CancelAsync(); }
+            finally { await _shutdown(); }
+        }
+        finally { _lifetime.Dispose(); }
+    }
+
+    private void OnAddressKeyDown(object? sender, KeyEventArgs args)
+    {
+        if (args.Key != Key.Enter || !_viewModel.NavigateCommand.CanExecute(null))
+        {
+            return;
+        }
+
+        args.Handled = true;
+        _viewModel.NavigateCommand.Execute(null);
+    }
+
+    private async void OnOpenSwfClick(object? sender, RoutedEventArgs args)
+    {
+        try
+        {
+            var path = await _fileDialogs.OpenAsync(NativeFileKind.FlashMovie, "Open Flash movie", _cancellationToken);
+            if (path is not null)
+            {
+                await _viewModel.OpenSwfAsync(path, _cancellationToken);
+            }
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportError(exception);
+        }
+    }
+
+    private async void OnImportSaveClick(object? sender, RoutedEventArgs args)
+    {
+        try
+        {
+            var path = await _fileDialogs.OpenAsync(NativeFileKind.SharedObject, _viewModel.SelectedSave is null ? "Import SharedObject" : "Replace selected SharedObject", _cancellationToken);
+            if (path is not null)
+            {
+                await _viewModel.ImportSaveAsync(path, _cancellationToken);
+            }
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportError(exception);
+        }
+    }
+
+    private async void OnExportSaveClick(object? sender, RoutedEventArgs args)
+    {
+        var selected = _viewModel.SelectedSave;
+        if (selected is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var path = await _fileDialogs.SaveAsync(NativeFileKind.SharedObject, "Export SharedObject", selected.SolName, "sol", _cancellationToken);
+            if (path is not null)
+            {
+                await _viewModel.ExportSelectedSaveAsync(path, _cancellationToken);
+            }
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportError(exception);
+        }
+    }
+
+    private void OnPopupRequested(BrowserPopupRequest request)
+    {
+        if (_shutdownStarted) return;
+        _openPopup(request);
+    }
+}

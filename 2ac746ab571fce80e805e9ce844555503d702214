@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/FlashMacOS.Desktop/FlashMacOS.Desktop.csproj" />
+    <ProjectReference Include="../../src/FlashMacOS.Application/FlashMacOS.Application.csproj" />
+    <ProjectReference Include="../../src/FlashMacOS.Domain/FlashMacOS.Domain.csproj" />
+  </ItemGroup>
+</Project>

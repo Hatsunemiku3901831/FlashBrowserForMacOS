@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "settings": {
+    "firstStart": false,
+    "language": "ja-JP",
+    "theme": "dark",
+    "searchEngine": "duckDuckGo",
+    "navigationType": "searchOnly",
+    "newPageBehavior": "newWindow",
+    "disableOnBeforeUnloadDialog": true,
+    "mainWindowSizeInfo": {
+      "left": -1440,
+      "top": 50,
+      "width": 1280,
+      "height": 800,
+      "isMaximized": false,
+      "futureWindow": "preserve"
+    },
+    "browserWindowSizeInfo": {
+      "left": 20,
+      "top": 30,
+      "width": 900,
+      "height": 650,
+      "isMaximized": true
+    },
+    "swfWindowSizeInfo": null,
+    "solSaveManagerSizeInfo": null,
+    "userAgentSetting": {
+      "enableCustom": true,
+      "userAgent": "FixtureBrowser/1.0",
+      "futureAgent": "preserve"
+    },
+    "hideMainWindowOnBrowsing": true,
+    "followSystemTheme": false,
+    "enableIntegratedDevTools": false,
+    "integratedDevToolsWidth": 420.5,
+    "saveZoomLevel": false,
+    "browserZoomLevel": 1.5,
+    "disableFullscreen": true,
+    "retainedLogCount": 7,
+    "disableBrowserShortcuts": true,
+    "customEmoticon": "round",
+    "disableBrowserContextMenu": true,
+    "futureRoot": {
+      "enabled": true,
+      "values": [
+        1,
+        "two",
+        null
+      ]
+    }
+  },
+  "legacy": {
+    "windows": {
+      "proxySettings": {
+        "enableProxy": true,
+        "ip": "127.0.0.1",
+        "port": "8888",
+        "userName": "synthetic-user",
+        "password": "synthetic-not-a-secret",
+        "futureProxy": {
+          "keep": 1
+        }
+      },
+      "fakeFlashVersionSetting": {
+        "enable": true,
+        "flashVersion": "32.0.0.465"
+      },
+      "disableGpuAccelerationWPF": true,
+      "disableGpuAcceleration": true
+    },
+    "sourceSettings": {
+      "FirstStart": false,
+      "Language": "ja-JP",
+      "Theme": 1,
+      "SearchEngine": 5,
+      "NavigationType": 1,
+      "NewPageBehavior": 1,
+      "DisableOnBeforeUnloadDialog": true,
+      "MainWindowSizeInfo": {
+        "Left": -1440,
+        "Top": 50,
+        "Width": 1280,
+        "Height": 800,
+        "IsMaximized": false,
+        "futureWindow": "preserve"
+      },
+      "BrowserWindowSizeInfo": {
+        "Left": 20,
+        "Top": 30,
+        "Width": 900,
+        "Height": 650,
+        "IsMaximized": true
+      },
+      "SwfWindowSizeInfo": null,
+      "SolSaveManagerSizeInfo": null,
+      "ProxySettings": {
+        "EnableProxy": true,
+        "IP": "127.0.0.1",
+        "Port": "8888",
+        "UserName": "synthetic-user",
+        "Password": "synthetic-not-a-secret",
+        "futureProxy": {
+          "keep": 1
+        }
+      },
+      "UserAgentSetting": {
+        "EnableCustom": true,
+        "UserAgent": "FixtureBrowser/1.0",
+        "futureAgent": "preserve"
+      },
+      "FakeFlashVersionSetting": {
+        "Enable": true,
+        "FlashVersion": "32.0.0.465"
+      },
+      "HideMainWindowOnBrowsing": true,
+      "FollowSystemTheme": false,
+      "EnableIntegratedDevTools": false,
+      "IntegratedDevToolsWidth": 420.5,
+      "SaveZoomLevel": false,
+      "BrowserZoomLevel": 1.5,
+      "DisableFullscreen": true,
+      "RetainedLogCount": 7,
+      "DisableBrowserShortcuts": true,
+      "DisableGpuAcceleration": true,
+      "DisableGpuAccelerationWPF": true,
+      "CustomEmoticon": "round",
+      "DisableBrowserContextMenu": true,
+      "futureRoot": {
+        "enabled": true,
+        "values": [
+          1,
+          "two",
+          null
+        ]
+      }
+    },
+    "preserved": {}
+  }
+}

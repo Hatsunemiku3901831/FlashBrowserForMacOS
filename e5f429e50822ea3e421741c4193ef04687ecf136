@@ -1,0 +1,34 @@
+// Static regression against the complete observed site script. Native WKWebView evidence is separate.
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const root = path.resolve(__dirname, '../..');
+const vendor = fs.readFileSync(path.join(root, 'test-assets/web/mole/swfobject-202507311216.js'), 'utf8');
+const shim = fs.readFileSync(path.join(root, 'src/FlashMacOS.Flash.Ruffle/Runtime/MoleCompatibility.js'), 'utf8');
+const cases = [];
+for (const [name, hostname, enabled, active, retained] of [
+  ['stock-site-replaces-Ruffle-with-install-screen', 'mole.61.com', false, true, false],
+  ['mole-retains-original-SWF-and-parameters', 'mole.61.com', true, true, true],
+  ['other-sites-unchanged', 'other.example', true, true, false],
+  ['no-runtime-no-compatibility-override', 'mole.61.com', true, false, false],
+]) {
+  const target = {innerHTML:''};
+  const plugin = {name:'Shockwave Flash',description:'Shockwave Flash 32.0 r0',filename:'ruffle.js'};
+  const location = {hostname,search:'',hash:'',href:'http://'+hostname+'/'};
+  const sandbox = {location,navigator:{plugins:{'Shockwave Flash':plugin},mimeTypes:{length:1},userAgent:'Mac OS X'},
+    document:{location,title:'Fixture',getElementById:()=>target,getElementsByTagName:()=>[]},
+    __cefFlashBrowserPost:()=>{}, RufflePlayer:active?{newest:()=>({})}:{} };
+  sandbox.window=sandbox; sandbox.top=sandbox; sandbox.self=sandbox;
+  vm.createContext(sandbox);
+  if(enabled) vm.runInContext(shim,sandbox,{timeout:1000});
+  vm.runInContext(vendor,sandbox,{timeout:1000});
+  vm.runInContext(`const movie = new SWFObject('Client.swf?fixed', 'Client', '960', '560', '8', '#FFFFFF'); movie.addParam('allowScriptAccess','always'); movie.write('flashContent');`,sandbox,{timeout:1000});
+  assert.equal(target.innerHTML.includes('Client.swf?fixed'),retained,name);
+  assert.equal(target.innerHTML.includes('upgrade.html'),!retained,name);
+  assert.equal(plugin.description,'Shockwave Flash 32.0 r0');
+  assert.equal(plugin.filename,'ruffle.js');
+  if(retained) assert(target.innerHTML.includes('allowScriptAccess="always"'));
+  cases.push({caseId:name,status:'PASS',retained});
+}
+process.stdout.write(JSON.stringify({scope:'static vendor-script regression; not browser or game acceptance',cases},null,2)+'\n');

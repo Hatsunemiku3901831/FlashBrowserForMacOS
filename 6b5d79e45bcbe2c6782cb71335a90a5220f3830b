@@ -1,0 +1,262 @@
+using System.Collections.Concurrent;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+
+namespace FlashMacOS.Flash.Ruffle.Hosting;
+
+/// <summary>One served W02 request; Sha256 is over the bytes actually written to the response.</summary>
+public sealed record DownloadObservation(long Sequence, string Method, string Origin, string Path, string Query, int Status,
+    bool SessionCookie, bool Authorization, string? BodySha256, long Bytes, string? Sha256, DateTimeOffset StartedAt, DateTimeOffset FinishedAt);
+
+/// <summary>
+/// W02 offline download/popup endpoints on both loopback origins. Test-profile corpus only; the Basic credentials
+/// are fixed test values shown on the page, never user data.
+/// </summary>
+public sealed partial class CompatibilityContentHost
+{
+    public const string DownloadBasicUser = "w02-user";
+    public const string DownloadBasicPassword = "w02-pass";
+    private const int MaximumObservations = 4096;
+    private readonly ConcurrentQueue<DownloadObservation> _downloadObservations = new();
+    private readonly ConcurrentDictionary<string, byte> _downloadSessions = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, int> _onceTokens = new(StringComparer.Ordinal);
+    private long _downloadSequence;
+
+    public Uri DownloadValidationUri => BaseUri is null ? throw new InvalidOperationException("Start the corpus first.") : new Uri(BaseUri, $"{_token}/w02/page");
+
+    public IReadOnlyList<DownloadObservation> DownloadObservations => _downloadObservations.ToArray();
+
+    /// <summary>Deterministic content shared by the endpoints and their tests: SHA-256 counter blocks.</summary>
+    public static byte[] DownloadContent(string name, int length)
+    {
+        var bytes = new byte[length];
+        Span<byte> block = stackalloc byte[32];
+        for (var offset = 0; offset < length; offset += 32)
+        {
+            SHA256.HashData(Encoding.UTF8.GetBytes($"FlashMacOS-W02:{name}:{offset / 32}"), block);
+            block[..Math.Min(32, length - offset)].CopyTo(bytes.AsSpan(offset));
+        }
+        return bytes;
+    }
+
+    private void MapDownloadValidation(WebApplication app)
+    {
+        var prefix = $"/{_token}/w02";
+        app.MapGet(prefix + "/page", () => Results.Content(DownloadPage(), "text/html; charset=utf-8"));
+        app.MapGet(prefix + "/observations", () => Results.Json(_downloadObservations.ToArray()));
+        app.MapGet(prefix + "/file/{kind}", (string kind, HttpContext context) => ServeDownloadAsync(kind, context));
+        app.MapPost(prefix + "/file/post", async (HttpContext context) =>
+        {
+            var body = await ReadBodyAsync(context).ConfigureAwait(false);
+            var content = Encoding.UTF8.GetBytes($"method={context.Request.Method}\nbody={Encoding.UTF8.GetString(body)}\nbody-sha256={Hash(body)}\n");
+            await WriteAsync(context, 200, content, "text/plain; charset=utf-8", "attachment; filename=\"w02-post.txt\"", Hash(body)).ConfigureAwait(false);
+        });
+        app.MapPost(prefix + "/login", async (HttpContext context) =>
+        {
+            var session = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
+            _downloadSessions.TryAdd(session, 0);
+            context.Response.Cookies.Append("W02-Session", session, new CookieOptions { HttpOnly = true, SameSite = SameSiteMode.Lax, Path = prefix + "/" });
+            await WriteAsync(context, 200, "signed-in"u8.ToArray(), "text/plain; charset=utf-8", null, null).ConfigureAwait(false);
+        });
+        app.MapGet(prefix + "/redirect", (HttpContext context) =>
+        {
+            Observe(context, 302, [], null, DateTimeOffset.UtcNow);
+            return Results.Redirect(new Uri(SecondOrigin!, $"{_token}/w02/file/redirected{context.Request.QueryString}").AbsoluteUri);
+        });
+        app.MapGet(prefix + "/basic/page", (HttpContext context) => BasicUser(context) is null ? Challenge(context)
+            : Results.Content($"<!doctype html><meta charset=\"utf-8\"><title>W02 Basic page</title><h1>Signed in as {DownloadBasicUser}</h1><a id=\"basic-file\" href=\"file\">Download protected file</a>", "text/html; charset=utf-8"));
+        app.MapGet(prefix + "/basic/file", async (HttpContext context) =>
+        {
+            if (BasicUser(context) is not { } user) { await Challenge(context).ExecuteAsync(context).ConfigureAwait(false); return; }
+            await WriteAsync(context, 200, [.. Encoding.UTF8.GetBytes($"authorized={user}\n"), .. DownloadContent("basic", 4096)],
+                "text/plain; charset=utf-8", "attachment; filename=\"w02-basic.txt\"", null).ConfigureAwait(false);
+        });
+        app.MapGet(prefix + "/popup/child", (HttpContext context) => Results.Content(PopupPage("GET", context.Request.QueryString.Value ?? "", ""), "text/html; charset=utf-8"));
+        app.MapPost(prefix + "/popup/echo", async (HttpContext context) =>
+        {
+            var body = await ReadBodyAsync(context).ConfigureAwait(false);
+            Observe(context, 200, [], Hash(body), DateTimeOffset.UtcNow);
+            return Results.Content(PopupPage(context.Request.Method, "", Encoding.UTF8.GetString(body)), "text/html; charset=utf-8");
+        });
+    }
+
+    private async Task ServeDownloadAsync(string kind, HttpContext context)
+    {
+        var started = DateTimeOffset.UtcNow;
+        var query = context.Request.Query;
+        switch (kind)
+        {
+            case "attachment": // A displayable type that Content-Disposition alone turns into a download.
+                await WriteAsync(context, 200, DownloadContent("attachment", 256 * 1024), "text/plain; charset=utf-8", "attachment; filename=\"w02-attachment.txt\"", null).ConfigureAwait(false);
+                return;
+            case "binary": // No disposition; WebKit cannot show the MIME type.
+                await WriteAsync(context, 200, DownloadContent("binary", 128 * 1024), "application/octet-stream", null, null).ConfigureAwait(false);
+                return;
+            case "plain": // Displayable and without disposition: only a download attribute makes it a download.
+                await WriteAsync(context, 200, DownloadContent("plain", 4096), "text/plain; charset=utf-8", null, null).ConfigureAwait(false);
+                return;
+            case "redirected":
+                await WriteAsync(context, 200, DownloadContent("redirected", 64 * 1024), "application/octet-stream", "attachment; filename=\"w02-redirected.bin\"", null).ConfigureAwait(false);
+                return;
+            case "private":
+                if (context.Request.Cookies["W02-Session"] is not { } session || !_downloadSessions.ContainsKey(session))
+                {
+                    await WriteAsync(context, 401, "login required"u8.ToArray(), "text/plain; charset=utf-8", null, null).ConfigureAwait(false);
+                    return;
+                }
+                await WriteAsync(context, 200, DownloadContent("private", 32 * 1024), "application/octet-stream", "attachment; filename=\"w02-private.bin\"", null).ConfigureAwait(false);
+                return;
+            case "once":
+                var nonce = query["n"].ToString();
+                if (nonce.Length is 0 or > 64) { await WriteAsync(context, 400, [], "text/plain", null, null).ConfigureAwait(false); return; }
+                if (_onceTokens.AddOrUpdate(nonce, 1, (_, count) => count + 1) > 1)
+                {
+                    await WriteAsync(context, 410, "already used"u8.ToArray(), "text/plain; charset=utf-8", null, null).ConfigureAwait(false);
+                    return;
+                }
+                await WriteAsync(context, 200, DownloadContent("once:" + nonce, 48 * 1024), "application/octet-stream", "attachment; filename=\"w02-once.bin\"", null).ConfigureAwait(false);
+                return;
+            case "slow":
+                var total = int.TryParse(query["ms"], out var milliseconds) ? Math.Clamp(milliseconds, 0, 600_000) : 6_000;
+                var slow = DownloadContent("slow:" + query["n"], 8 * 32 * 1024);
+                // At least eight chunks and one every two seconds: WebKit's 60 s idle timeout must never end a slow download.
+                var chunks = Math.Max(8, total / 2_000);
+                PrepareDownload(context, 200, slow.Length, "application/octet-stream", "attachment; filename=\"w02-slow.bin\"");
+                for (var chunk = 0; chunk < chunks; chunk++)
+                {
+                    if (chunk != 0) await Task.Delay(total / (chunks - 1), context.RequestAborted).ConfigureAwait(false);
+                    // Recorded before the final bytes leave, so an observer never sees a finished download without its record.
+                    if (chunk == chunks - 1) Observe(context, 200, slow, null, started);
+                    var start = slow.Length * chunk / chunks;
+                    await context.Response.Body.WriteAsync(slow.AsMemory(start, slow.Length * (chunk + 1) / chunks - start), context.RequestAborted).ConfigureAwait(false);
+                    await context.Response.Body.FlushAsync(context.RequestAborted).ConfigureAwait(false);
+                }
+                return;
+            case "abort": // Promises 1 MiB, sends 64 KiB, then drops the connection.
+                var partial = DownloadContent("abort", 64 * 1024);
+                PrepareDownload(context, 200, 1024 * 1024, "application/octet-stream", "attachment; filename=\"w02-abort.bin\"");
+                await context.Response.Body.WriteAsync(partial, context.RequestAborted).ConfigureAwait(false);
+                await context.Response.Body.FlushAsync(context.RequestAborted).ConfigureAwait(false);
+                await Task.Delay(300, context.RequestAborted).ConfigureAwait(false);
+                Observe(context, 200, partial, null, started);
+                context.Abort();
+                return;
+            default:
+                await WriteAsync(context, 404, [], "text/plain", null, null).ConfigureAwait(false);
+                return;
+        }
+    }
+
+    private static void PrepareDownload(HttpContext context, int status, long length, string type, string? disposition)
+    {
+        context.Response.StatusCode = status;
+        context.Response.ContentType = type;
+        context.Response.ContentLength = length;
+        if (disposition is not null) context.Response.Headers.ContentDisposition = disposition;
+    }
+
+    private async Task WriteAsync(HttpContext context, int status, byte[] content, string type, string? disposition, string? bodySha256)
+    {
+        var started = DateTimeOffset.UtcNow;
+        PrepareDownload(context, status, content.Length, type, disposition);
+        // Recorded before the body is sent: a client that finished reading always finds the record.
+        Observe(context, status, content, bodySha256, started);
+        await context.Response.Body.WriteAsync(content, context.RequestAborted).ConfigureAwait(false);
+    }
+
+    private void Observe(HttpContext context, int status, byte[] content, string? bodySha256, DateTimeOffset started)
+    {
+        if (_downloadObservations.Count >= MaximumObservations) return;
+        var request = context.Request;
+        _downloadObservations.Enqueue(new DownloadObservation(Interlocked.Increment(ref _downloadSequence), request.Method,
+            $"{request.Scheme}://{request.Host}", request.Path.Value ?? "", request.QueryString.Value ?? "", status,
+            request.Cookies.ContainsKey("W02-Session"), request.Headers.Authorization.Count != 0, bodySha256,
+            content.Length, content.Length == 0 ? null : Hash(content), started, DateTimeOffset.UtcNow));
+    }
+
+    private static async Task<byte[]> ReadBodyAsync(HttpContext context)
+    {
+        using var buffer = new MemoryStream();
+        await context.Request.Body.CopyToAsync(buffer, context.RequestAborted).ConfigureAwait(false);
+        return buffer.Length <= 1024 * 1024 ? buffer.ToArray() : throw new InvalidDataException("W02 request body exceeds 1 MiB.");
+    }
+
+    private static string? BasicUser(HttpContext context)
+    {
+        var header = context.Request.Headers.Authorization.ToString();
+        if (!header.StartsWith("Basic ", StringComparison.Ordinal)) return null;
+        try
+        {
+            var pair = Encoding.UTF8.GetString(Convert.FromBase64String(header[6..]));
+            return pair == DownloadBasicUser + ":" + DownloadBasicPassword ? DownloadBasicUser : null;
+        }
+        catch (FormatException) { return null; }
+    }
+
+    private IResult Challenge(HttpContext context)
+    {
+        context.Response.Headers.WWWAuthenticate = "Basic realm=\"FlashMacOS W02 test only\", charset=\"UTF-8\"";
+        Observe(context, 401, [], null, DateTimeOffset.UtcNow);
+        return Results.Text("authentication required", "text/plain; charset=utf-8", statusCode: 401);
+    }
+
+    private static string Hash(byte[] content) => Convert.ToHexStringLower(SHA256.HashData(content));
+
+    private string DownloadPage()
+    {
+        var config = JsonSerializer.Serialize(new { token = _token, second = SecondOrigin!.AbsoluteUri, user = DownloadBasicUser, password = DownloadBasicPassword });
+        return $$$"""
+            <!doctype html><html><head><meta charset="utf-8"><title>W02 Downloads and popups</title>
+            <style>body{font:15px system-ui;color:#15283c;background:#f3f6ee;margin:16px}a,button{font:inherit;margin:4px;padding:6px;display:inline-block}section{margin:10px 0;padding:8px;border:1px solid #9aa8b5}pre{white-space:pre-wrap}</style>
+            <script>
+            globalThis.__w02Config={{{config}}};
+            const base=location.pathname.replace(/\/page$/, "");
+            globalThis.__w02={
+              anchor(href,download,target){const a=document.createElement("a");a.href=href;if(download!==null)a.download=download;if(target)a.target=target;document.body.append(a);a.click();a.remove();return true;},
+              bytes(length){const b=new Uint8Array(length);for(let i=0;i<length;i++)b[i]=(i*31+7)&255;return b;},
+              blob(name,length){const url=URL.createObjectURL(new Blob([this.bytes(length)],{type:"application/octet-stream"}));this.anchor(url,name,null);setTimeout(()=>URL.revokeObjectURL(url),60000);return url;},
+              data(name){return this.anchor("data:application/octet-stream;base64,"+btoa(String.fromCharCode(...this.bytes(300))),name,null);},
+              post(action,fields,target){const f=document.createElement("form");f.method="post";f.action=action;if(target)f.target=target;for(const [k,v] of Object.entries(fields)){const i=document.createElement("input");i.type="hidden";i.name=k;i.value=v;f.append(i);}document.body.append(f);f.submit();f.remove();return true;},
+              login(){this.loginStatus="pending";fetch(base+"/login",{method:"POST",credentials:"same-origin"}).then(r=>this.loginStatus=r.status,e=>this.loginStatus=String(e));return true;},
+              once(){return this.anchor(base+"/file/once?n="+crypto.randomUUID(),null,null);}
+            };
+            </script></head><body><h1>W02 Downloads and popups</h1><div id="host">Manual checks below; native verification writes its result here.</div>
+            <section><h2>Downloads</h2>
+            <a id="attachment" href="file/attachment">Attachment (Content-Disposition, text/plain)</a>
+            <a id="binary" href="file/binary">Unsupported MIME (application/octet-stream)</a>
+            <a id="download-attribute" href="file/plain" download="w02-download-attribute.txt">download attribute (same origin)</a>
+            <button onclick="__w02.blob('w02-blob.bin',65536)">Blob download</button>
+            <button onclick="__w02.data('w02-data.bin')">data: download</button>
+            <button onclick="__w02.post(base+'/file/post',{game:'mole',note:'W02 POST body'},null)">POST form download</button>
+            <button onclick="__w02.login()">Sign in (HttpOnly session cookie)</button><a id="private" href="file/private">Private download (needs sign-in)</a>
+            <a id="basic" href="basic/page">HTTP Basic page (user w02-user / password w02-pass — test values)</a>
+            <a id="redirect" href="redirect">Cross-origin redirect download</a>
+            <button onclick="__w02.once()">One-time URL download</button>
+            <a id="slow" href="file/slow?ms=8000">Slow download (cancel test)</a><a id="long" href="file/slow?ms=600000&amp;n=long">Long download (quit test, 10 min)</a><a id="abort" href="file/abort">Download that fails mid-stream</a></section>
+            <section><h2>Popups</h2>
+            <button id="window-open" onclick="window.open(base+'/popup/child?via=window.open')">window.open</button>
+            <a id="blank" href="popup/child?via=target-blank" target="_blank">target=_blank link</a>
+            <button onclick="__w02.post(base+'/popup/echo',{game:'mole',note:'W02 popup POST'},'_blank')">POST form into a new window</button></section>
+            <pre id="result"></pre></body></html>
+            """;
+    }
+
+    private static string PopupPage(string method, string query, string body)
+    {
+        var state = JsonSerializer.Serialize(new { method, query, body });
+        return $$$"""
+            <!doctype html><html><head><meta charset="utf-8"><title>W02 Popup {{{WebUtility.HtmlEncode(method)}}}</title>
+            <script>
+            globalThis.__w02Popup={{{state}}};
+            addEventListener("DOMContentLoaded",()=>{__w02Popup.cookie=document.cookie;__w02Popup.opener=window.opener!==null;document.getElementById("state").textContent=JSON.stringify(__w02Popup,null,2);});
+            </script></head><body><h1>W02 Popup</h1><pre id="state"></pre>
+            <button id="close" onclick="window.close()">window.close()</button>
+            <button id="nested" onclick="window.open(location.pathname+'?via=nested')">Open nested popup</button>
+            <a id="download" href="../file/plain" download="w02-popup-download.txt">Download from popup</a></body></html>
+            """;
+    }
+}

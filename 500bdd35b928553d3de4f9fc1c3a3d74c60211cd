@@ -1,0 +1,9 @@
+global using FlashMacOS.Domain.Browser;
+global using FlashMacOS.Domain.Flash;
+global using FlashMacOS.Domain.Sol;
+global using FlashMacOS.Application.Browser;
+global using FlashMacOS.Application.Flash;
+global using FlashMacOS.Infrastructure.Persistence;
+global using FlashMacOS.Sol.Managed;
+global using FlashMacOS.Flash.Ruffle.Runtime;
+global using FlashMacOS.Browser.WebKit;

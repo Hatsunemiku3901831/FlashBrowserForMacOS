@@ -1,0 +1,159 @@
+# FlashMacOS 暂停交接
+
+交接日期：2026-10-28，Australia/Sydney（AEDT，UTC+11）。这是本轮 W01 完成后的交接快照；持续任务状态的唯一维护入口仍是 [docs/task-status.zh-CN.md](docs/task-status.zh-CN.md)。
+
+**已按用户要求暂停。W01 已完成，W02 没有开始。不要因为原启动指令要求连续执行而自动继续；等待用户明确恢复。** 没有提交、推送、创建远程仓库、公证或对外发布。完整产品尚未完成。
+
+## 1. 目标与不可破坏的边界
+
+- 最终目标已更新为：本项目单独构建、单独运行。原 CefFlashBrowser 仅作为资源和参考，不是运行依赖。目标内容已更正为**摩尔庄园**，从官方入口进入可见游戏登录界面；赛尔号已撤销。当前目标不包含提交账号或进入游戏后的玩法验收。
+- 当前工作目录及 Git 根：`/Users/umisonoda/PycharmProjects/flash/flashMacOS`。
+- 只读来源：`/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser`。不要在这里 restore/build/package、运行应用、修改文件或执行 Git 写操作。来源审计可以读取。
+- 只构建、测试和交付 `osx-arm64`；不建立 x64/Rosetta/universal 产物或矩阵。
+- 采用 .NET 10、Avalonia、WKWebView、自托管固定 Ruffle、纯 C# SOL。优先保留已验证行为，不能整套重写或借任务升级依赖。
+- Domain 纯模型；Application 拥有端口和用例；适配器向内依赖；Desktop 的 composition root 组装。ViewModel 不持有原生控件/句柄/Window/文件对话框。
+- 保留所有已有修改、原始证据、失败、样本和许可。固定第三方 JS/WASM、规范 golden、锁文件不能为了测试通过而改动。真实 Cookie/会话不能成为测试 fixture。
+- 完成门槛由 [实施方案](docs/implementation-plan.zh-CN.md)定义，不以旧原型测试、新 managed 计数或一次正常退出替代 GUI/兼容/发布验收。
+
+## 2. 仓库和环境现状
+
+Git 是新建 `main`，**尚无任何提交（unborn HEAD）**。根目录源码、文档、脚本等均未跟踪，这是已有项目状态，不要清理或重置；`CLAUDE.md` 等用户原有文件保留。`legacy-source` 只用于历史读取，push URL 已禁用；没有新产品远程仓库。此处不是为本轮新建的 worktree。
+
+真实开发机为 Apple M1 Pro / ARM64 / macOS 26.5.1。固定 SDK 10.0.301、运行时 .NET 10.0.9；Python 3.14.5、Node、Apple 开发工具、macOS SDK 和 Poppler 已可用。`dotnet` 是 Homebrew wrapper；需要实际 DOTNET_ROOT 的开发工具必须从运行时目录确定，不能把 `/opt/homebrew/bin` 当运行时根。当前实际 libexec 为 `/opt/homebrew/Cellar/dotnet/10.0.301/libexec`，它是本机信息，不得硬编码进产品。
+
+八个正式模块、五个测试工程、13 份产品依赖锁已建立。正式构建禁读原仓库、reference、bootstrap；原生包自带运行时和固定资源，运行时无 DOTNET_ROOT，PATH 仅系统目录。Apple SDK 只在编译项目自有动态库时需要。最终独立安装、干净用户和支持设备矩阵尚待 Q01/Q05。
+
+目录导航见 [HRNESS.md](HRNESS.md)，常规入口见 [README.md](README.md)。`bootstrap` 已冻结，只是历史回归副本；新实现只改 `src`。
+
+## 3. 已完成的任务
+
+目前 P00—P03、A01—A04、S01—S05、W01 共 14 项 DONE。下表是接手摘要；每项完整输入、命令、退出码和 hash 在其 `docs/evidence/<任务>/2026-10-28/` 下。
+
+| 任务 | 已完成内容及证明边界 |
+|---|---|
+| P00 | 冻结原工作树的 296 文件，包含尚未提交的原型；幂等导入与原始 SHA 可核验。不是只 clone 远程历史。 |
+| P01 | 在本项目复现独立原型；最初 102 项，补充后 107 项，旧 97 逐名保留。不是正式产品验收。 |
+| P02 | 固定 Ruffle 0.4.1，真实嵌入式 WK 的 23 条核心语料 PASS；29 条矩阵记录包含未支持范围。renderer 与独立非空预期像素差异 0。中文 IME 失败保留。 |
+| P03 | G0 十一组真实闭环，包括原生文件面板、本地 SWF、SOL 捕获/导入/导出/重启、Cookie、popup 和下载；冻结支持范围与六项性能预算。 |
+| A01 | 八模块正式迁移、五测试工程和 13 锁；原型 107 逐名迁入；来源禁读及中文/空格新位置的干净构建通过。 |
+| A02 | Ready、导航/document/run ID、bridge 队列、生命周期/取消/排空和 native adapter 实际销毁；正式 app 独立运行与摩尔庄园登录。旧 Flash 焦点 Quit/frame 问题当时仍失败，W01 才完成对应复验。 |
+| A03 | Product.props 唯一产品身份、Product/Development/Test 分区、稳定 store ID、磁盘优先候选提交、临时文件/原子替换/备份/冲突/日志限额。两个真实 Product 进程及 Test 隔离通过。 |
+| A04 | 27 字段设置与收藏 schema v2，保留未知/legacy/null、顺序、重复与独立 ID；失败/取消/冲突不提前发布内存。合法和坏 JSON 的真实启动退出分别核验。完整设置 UI 未完成。 |
+| S01 | 显式 AMF 图、身份/循环/位模式/traits；31 个手工 byte golden、12 个 U29 边界、五份完整样本内容预期、117 个 Legacy 断言去向冻结。 |
+| S02 | 有界 AMF0 读写、严格 UTF-8、引用/环/日期/ECMA/对象语义与全前缀截断。 |
+| S03 | AMF3 00—11 标准类型、三个池、对象身份、Vector/Dictionary、AVM+；外部类只按显式 codec，默认产品注册表为空，未知类不猜测。 |
+| S04 | 完整 SOL 文件共享池、完整图等价、候选编辑/撤销重做/另存为/转换/备份恢复/冲突取消。未知内容保留原字节；默认有损转换拒绝，显式 AMF3 封套可保留。实际桌面编辑器未完成。 |
+| S05 | 402 managed+21 工具，12 万受限突变、384 生成图、Domain.Sol/codec 分支覆盖率 98.79%/91.13%。10 MiB 30 次读/保存 P95 8.709/35.533ms；额外分配和 60 次取消均在预算内，最慢取消 10.9064ms。G2 只指核心。 |
+| W01 | 两用途持久 store、主 frame 状态/错误/同文档历史、可信消息来源、查找/缩放/UA/打印/PDF/JS sheet/全屏/受控检查/原生焦点 Quit。420 managed+21 工具；两进程各 12 项原生检查及人工补充；新摩尔庄园登录与账号框焦点 Quit 通过。 |
+
+来源复核是 332 个业务文件/HEAD/dirty，导入快照是 296 个白名单文件，两者口径不同，不要混为“丢文件”。原仓库原 HEAD 为 `7cfbe01596168aca6326db7a68ca1c15d1b55638`。具体 dirty 原文在 P00/source-state-before.json。
+
+## 4. W01 最终交付与定位
+
+先读 [W01 报告](docs/evidence/W01/2026-10-28/report.md)、[15 项清单](docs/evidence/W01/2026-10-28/native-checklist.json)、[浏览器契约](docs/contracts/browser.zh-CN.md)、[ADR 0002](docs/adr/0002-wk-native-capabilities.zh-CN.md)。
+
+| 内容 | 最终位置 |
+|---|---|
+| Debug 420+21，同一正式输入 | `artifacts/evidence/W01/same-document-transport-20261028-02/` |
+| Release 420+21，同一正式输入 | `artifacts/evidence/W01/browser-final-managed-20261028-01/` |
+| 最终开发 app | `artifacts/dev-packages/browser-package-20261028-04/FlashMacOS.app` |
+| 可复核 self-contained zip、签名、19 Mach-O | `artifacts/evidence/W01/browser-package-20261028-04/` |
+| 首次 12/12、人工 sheet/检查/协议/frame、较长驻留后退出 | `artifacts/evidence/W01/browser-native-20261028-04/` |
+| 第二进程 12/12、Cookie 恢复、真实全屏/退出、SPA 历史、本地 SWF 互换 | `artifacts/evidence/W01/browser-native-restart-20261028-01/` |
+| 本轮摩尔庄园官方入口、开始、登录 UI、Flash 账号框点击后 Quit | `artifacts/evidence/W01/browser-mole-native-20261028-01/` |
+| 汇总 gate、PDF 独立文本、运行后签名与闭合 profile 完整副本 | `artifacts/evidence/W01/final-native-20261028-01/` |
+| 正式输入归档、来源/旧数据复核、完整 hash 索引 | `docs/evidence/W01/2026-10-28/` |
+| 本轮源前后差异/引用映射 | `docs/provenance/W01-before.json`、`W01-source-inputs.json`、`W01-changes.json` |
+
+最终 zip SHA-256 为 `de519a77ef5cc78e230ff3670de445a6a1eba381a876e754813f0e6868bfeb23`。包的 372 份正式输入与最终 Release 测试输入完全相同，运行后全部 bundle 文件仍等于归档。不要用包 01/02/03 替代最终包。
+
+本轮登录截图为 [mole-login-native.png](docs/evidence/W01/2026-10-28/mole-login-native.png)，SHA-256 `0a68d13db16cd744f389a4266ab046411d8dc85621b05e64a25af9c71866c81b`。截图实际显示空账号、密码与登录按钮；没有输入或提交凭据。A02/P02 的历史截图没有充当 W01 新验收。
+
+三次最终原生进程 PID 33184、52620、52997 均 exit 0、`composition.stopped failures=0`、两个 adapter 实际 destroyed，且记录 native Quit。第一进程保留了约 5 小时 29 分钟墙钟时间，但包含中断/可能挂起，不能记作 Q02 的持续负载运行。当前这些应用和测试 runner 已关闭；不要为了“读退出状态”再启动 app。
+
+`artifacts/` 被 Git 忽略，保存原始日志、截图、TRX、zip 等。交付/搬机时要连同所需 artifacts 一起备份；只复制 Git 可跟踪文件会丢掉大部分原始实机证据。`docs/evidence/.../source-inputs.tar.gz` 冻结正式输入；它不是原始 GUI 证据的替代品。
+
+## 5. W01 实现地图与所有权
+
+- `Application/Browser/IBrowserSession.cs`、`IJavaScriptExecutor`、`IBrowserTools.cs`：应用端口。浏览器能力/不可变导航错误在 Domain/Browser。
+- `Application/Browser/BrowserWorkspace.cs`：Web/LocalPlayer 两会话路由、活动事件过滤、用途切换、串行导航和操作排空。它不拥有原生控件；composition root 销毁实际 sessions。
+- `Infrastructure/Paths/AppProfile.cs`：Web 保留 A03 的 v1 ID，LocalPlayer 使用 `FlashMacOS.WebKit.LocalPlayer.v1\0` 与 ProfileId 的版本化哈希。不得随端口、应用路径、工作目录或版本重新生成。
+- `Browser.WebKit/Native/FlashMacOSWebKit.m`：项目自有公开 Apple API 薄层，ARC 负责代理/block 所有权。`MacBrowserBridge.cs` 拥有托管 GCHandle、回调和查找 waiter。关闭时先移除自己拥有的 handler/KVO/key monitor、恢复 delegate、取消 sheet/回调，再释放。
+- 本项目 handler 是 `flashMacOSNativeBridgeV1`。第三方原有 `cefFlashBrowserBridge` 注册保留，不得替换/移除。消息先信任 native frameInfo/securityOrigin，再解析 v1 envelope 与 document/run ID。原生句柄只在适配层。
+- `AvaloniaNativeWebViewSession.cs`：原生导航/元数据/错误、同文档 loading、原生工具、消息 ingress、有限等待和关闭。脚本 15s、find 10s、PDF 30s/64MiB；PDF 迟到 stream 也要关闭，不能遗留后台工作。
+- `Desktop/Composition/CompositionRoot.cs`：两个 surface 必须先 Ready 才隐藏，切换仅可见性，不重新挂载；主窗口、popup、取消入口及资源所有者在这里组装。popup 完整语义仍待 W02。
+- `Flash.Ruffle/Hosting/BrowserValidationSite.cs` 与 `Browser.WebKit/Diagnostics/BrowserNativeVerification.cs`：严格 nonce CSP、frame 伪造、导航/错误/慢响应、同源 Cookie、12 项真实自动检查。不是最终用户产品界面。
+- `CompatibilityEvidenceRecorder` 现在既有旧 P02 行，也有 W01 `nativeEvent` 行。后续解析必须先按类型分流，不能把每一行当 compatibilityResult。
+- 自有 `.m` 的编译 target 包含 `.m`、csproj、Product.props 作为输入，输出 ARM64 dylib 并传递复制到 app。依赖升级应单独做，不能通过改第三方库来规避生命周期问题。
+
+## 6. 尚未完成、当前问题与外部条件
+
+W01 必需验收当前没有遗留 FAIL/BLOCKED。下面这些并未完成，不能随着 W01 一起标通过：
+
+| 后续任务/问题 | 当前事实与解除动作 |
+|---|---|
+| W02 下载与 popup | 仍 TODO。旧实现有部分接管/Cookie 后重新 GET 等限制；不能声称 POST、blob、attachment、一次性 URL、认证、并发、取消、磁盘失败、请求保持或 popup 资源释放已产品化。应优先原生 WKDownload 保留原请求。 |
+| W03 正式 Ruffle | 仍 TODO。全部 P02 行为还要在正式宿主重过；逐游戏配置、状态机、可靠控制完成语义、降频、资源损坏错误和取消清理待做。产品启动还带测试/诊断资源与初始化假设，要独立测试路由，不能依赖测试 SOL。 |
+| W04 实时存档/身份 | 仍 TODO。新稳定游戏身份、真实捕获/编辑/写回、旧 raw key/Base64 保留及显式迁移待完成。Web 原共享区不会自动复制到 LocalPlayer。 |
+| U01—U03 | 仍 TODO。当前是开发外壳，完整设计系统/原生菜单、设置收藏界面、SOL 编辑器和存档管理器都没完成。S04 是核心事务，不是桌面编辑器验收。六个 Legacy CLR 类型目录/default UI 断言仍待 U03。 |
+| 中文输入法 U04 | 已知组合输入重复事件仍 FAIL；ASCII 和 prompt 的 AX Unicode setValue 都不能算修复。需要实际 IME/焦点/可访问性/五语言 UI 验证。 |
+| Ruffle 固定上游边界 | 同步重入、策略解释器等范围有明确未支持记录，保留 P02 最小复现；不以非重入往返冒称完整 Flash 兼容。任何必要新目标受影响时需按任务保留真实 FAIL/BLOCKED。 |
+| Safari Inspector 窗口 | 公共 isInspectable 默认与显式 true/false 回读已过；完整 Safari Develop/Inspector 窗口工作流未验证。本机没有开启 Develop，没有修改 Safari 设置。不能说当前 app 直接弹出了 WebInspector。 |
+| M01 文件/激活集成 | 仍 TODO，系统默认打开、拖入、多文件、Dock/激活等待按方案实现。 |
+| M02 真实旧数据迁移 | fixture 和持久化核心可用；用户真实旧数据副本尚未登记，迁移向导、预览、幂等、备份与回滚尚待验收。到任务时查询，不修改用户原数据。 |
+| Q01/Q02 | 完整回归与干净独立构建门禁、外壳/播放/UI 性能和长期负载未完成。S05 只关闭 SOL 核心预算，当前整体 measurementStatus 仍 PARTIAL。 |
+| Q03/Q04 | 当前只有开发签名 zip。正式布局、entitlement 收敛、Developer ID 签名、公证、staple 尚未实施。凭据尚未查询，不能把“尚未查询”写成“已确认缺失”；到 Q04 核查，真缺则 BLOCKED。 |
+| Q05 设备/系统/安装升级 | 仅实测本机 M1 Pro/macOS 26.5.1；最低/最高声明系统、第二代芯片、干净账户矩阵尚未安排。到验收时实际缺少设备/系统则保持 BLOCKED，不能外推当前真机结果。 |
+
+这些后续任务仍保留 TODO；可工程修复的问题不是“外部阻塞”。当前停工原因是用户主动要求暂停，不能为了表现进度把它们改为 DONE，或无依据地改为 BLOCKED。
+
+## 7. 已走弯路及避坑
+
+| 弯路/失败 | 正确处理方式与保留位置 |
+|---|---|
+| 用远程历史替代未提交原型 | P00 必须冻结真实工作树。来源快照已完成，不要再导入覆盖；后续用 manifest 审计。 |
+| 历史测试/截图被误作当前验收 | 旧 97、原型 107、P02/A02 登录图只说明历史。每次正式行为/包验收要新 run、新输入 hash、新 GUI 证据。 |
+| source 禁读但复用已存活构建节点 | 早期 A01 曾受后台 MSBuild 节点影响；使用仓库 verify 入口隔离节点/构建盐，不手工绕过边界。 |
+| WebView 隐藏后才等待 Ready | 隐藏控件不一定创建 native adapter；先两个 Ready 再选 surface。W01 首轮 failure 保留。 |
+| 注册自己的 handler 前先删第三方注册 | 第三轮长会话退出 Objective-C abort，ips 在 browser-native-20261028-03/crash.ips。用独立注册名，关闭只移除自己的对象。根因内部所有权是推断，不冒称读过库源码。 |
+| 原生 11 项通过就认为 W01 完成 | 人工 SPA 返回发现 Stop 卡住，随后退出还 crash。补 loading KVO/等待标记及第 12 项自动用例，再重包实测，不能跳过延迟销毁。 |
+| 端口 9 或空白画面当错误用例 | 不保证产生 NSError。确定性站点主动断连接得到 -1005，再验证恢复。 |
+| AX press 当作前台用户激活 | AX 后台全屏曾因 hidden document 被拒绝，CUA 还出现断连/旧 sheet 图。失败原件保留；最终同包新进程前台实际点击、Escape 恢复通过。核对新 AX 与当前画面，不能重复盲点旧坐标。 |
+| 退出后再 getApp/getAXState | macOS CUA 可能重新启动已关闭 app，过去产生过意外 Product 会话。Quit 后用 process-result/journal/进程检查，不再询问死 app 的 AX。要绑定运行中的 app 时用完整包路径，同 bundle ID 多包会歧义。 |
+| isInspectable 意味着右键 Inspect | 公共 API 的入口是 Safari Develop。提示已改正；不加私有 API，不把属性回读扩大为完整 Inspector UI 已验证。 |
+| SWF 加载成功就算到登录页 | 本轮官方入口先白屏加载多份 DLL，再出现“开始”。等实际画面、点击开始，看到账号/密码才算登录 UI。Login.swf 网络记录或开始图都不够。 |
+| managed 性能靠总覆盖率掩盖低模块 | S05 曾总结果不足，必须分别检查 Domain.Sol 与 codec，不能排除低覆盖文件。保留 bounded-coverage-01 等原始失败。 |
+| SOL 大 ByteArray 复制过多 | 初始读约 3 倍、保存约 6 倍分配失败。最终单次 ByteArray 副本、64KiB 分段输出/流式 revision hash；不要改回 MemoryStream/ToArray 多重复制。 |
+| 取消只在操作开始检查 | S05 active graph 检查曾延迟，建立 red 后增加边界/遍历取消。不要用预取消通过代替真实中途取消；详细值在 S05。 |
+| Wrapper 所在目录当 DOTNET_ROOT | 固定覆盖率开发工具曾因此失败；从 dotnet runtime 实际路径发现根。工具在 artifacts/tools，不进入产品依赖锁或包。 |
+| 把旧 oracle 当绝对规范 | RuffleTest 的 ECMA advisory count 让旧 reader 失败，保留原 exit 1，再按规范独立核对完整八条内容；不删失败也不篡改样本。 |
+| 验证中修改正式输入 | verify/package/quality 记录不可变输入；运行期间不要改 src/tests/scripts/packaging 等。否则新 run 复验，不能沿用旧绿结果。 |
+
+早期 CA1859、CA1869、CA1513、MSTEST0032 等分析器失败均留在 artifacts/evidence/W01 对应 run；通过修复实现/测试而非禁用分析器完成。first/second/third-native-failure.json 与 fourth-native-attempt.json 保留最关键的原生失败经过。
+
+## 8. 恢复后的下一步，当前不要执行
+
+1. 用户明确恢复后，先核查 pwd、Git 根、`git status --short`，重读根 AGENTS、START、实施方案、状态表及本文件；如触发仓库 reverse 路由，先按要求读外部 precedent-auth/routing，再进入相应技能。保留现场全部内容。
+2. 核验 W01 acceptance-index、final-native/result、package04 的来源输入/19 ARM64/严格签名，以及 source/旧数据复核结果。核验归档，不重复已完成 P00—S05。若现场源码与 manifest 已有用户变更，记录差异，不能覆盖。
+3. 首个顺序任务是 **W02**。先读实施方案 W02、当前 IBrowserSession/BrowserDownloadRequest、AvaloniaNativeWebViewSession 的 Download/NewWindow 实现、MainWindow/PopupWindow、composition root、原有下载 tests 和确定性内容服务，再将 W02 置 IN_PROGRESS。
+4. W01 结束已保存 `docs/provenance/W02-before.json`。读取固定程序集的公开 API 和当前 SDK 的 WKDownload delegate 能力；优先在 Browser.WebKit 的公开原生适配层保留真实请求，不先设计 HttpClient 重新 GET。不要升级依赖或改第三方二进制。
+5. 先建立能暴露现有限制的确定性请求/失败用例：GET/POST+body、Cookie/认证、attachment、download 属性、blob、重定向、一次性 URL、并发、取消、同名/磁盘失败。明确 destination 的临时文件与原子提交、取消不覆盖旧目标。
+6. 实现下载任务及保存面板端口、popup 请求携带用途与所有权；覆盖关闭主窗口后子窗/下载清理。逐个完整落盘核对内容 hash 和原目标不变，不能仅验证弹出面板。
+7. 用新的 W02 run ID 执行最近回归和真实 ARM64 app 验收，保留 red/green、命令、环境、输入、退出码与证据。W02 真正 DONE 后再考虑 W03；U01 是已具备依赖的独立任务，但本轮暂停不启动它。
+
+常规回归模板（恢复后按实际日期选择全新 run ID）：
+
+```sh
+sh scripts/verify.sh --task W02 --run-id w02-baseline-20261028-01 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+```
+
+需要新开发 app 时使用 `scripts/package-development.py`，再用 `run-native.py` 核对归档启动。`--case browser` 是 W01 的真实离线浏览器检查；跨进程 Cookie 测试使用新 evidence run ID 加 `--reuse-test-profile <专用旧 Test ID>`，不能混入 Product、重播 fixture 或复用旧输出。`--inspect-page` 保存完整测试诊断；普通用户日志保持有界摘要。
+
+`docs/evidence/W01/finalize-native.py` 和通用 `docs/evidence/freeze-managed.py` 是证据冻结工具，不是产品构建依赖。前者绑定这批已结束 run，不能直接再次运行覆盖现场；新验收需新目录和实际结果。通用冻结器会做只读原仓库/旧数据保留审计；产品构建、普通运行不调用它。
+
+## 9. 暂停时检查结果
+
+W01 的输入、测试、同包实机证据、来源映射和报告已冻结，任务表已同步。三次最终 FlashMacOS 会话及验证 runner 均已结束，没有本任务后台自动续跑、定时任务或子智能体。用户其他应用不做清理。
+
+README.md 与 HRNESS.md 已创建并同步；本 HANDOFF.md 提供恢复上下文。当前等待用户恢复，下一执行任务仍为 W02 TODO。

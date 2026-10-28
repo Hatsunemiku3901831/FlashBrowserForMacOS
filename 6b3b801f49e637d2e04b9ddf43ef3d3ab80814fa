@@ -1,0 +1,8 @@
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Sol.Managed;
+
+public sealed class SolHeaderInspector : ISolHeaderInspector
+{
+    public SolFileHeader ReadHeader(ReadOnlySpan<byte> source) => SolFileInspector.ReadHeader(source);
+}

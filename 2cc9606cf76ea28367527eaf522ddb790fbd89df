@@ -1,0 +1,416 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using FlashMacOS.Application.Files;
+
+namespace FlashMacOS.Browser.WebKit.Diagnostics;
+
+public sealed record PopupWindowInventory(int RetainedManaged, int[] NativeIds);
+
+public sealed record PopupProbe(IBrowserSession Session, BrowserPurpose Purpose, bool IsVisible, Func<Task> CloseAsync);
+
+public sealed record DownloadVerificationHarness(IBrowserSession Workspace, IBrowserSession Web, IBrowserSession Local, Uri LocalPlayerPage,
+    DownloadManager Downloads, DiagnosticDownloadDestinations Destinations, Func<Task<IReadOnlyList<PopupProbe>>> Popups,
+    Func<int> RetainedSurfaces, Uri Site, string Root, Func<PopupWindowInventory> PopupWindows);
+
+/// <summary>
+/// Test-profile automated destinations: a fixed directory, unique names by default, and explicit per-file plans
+/// (an existing target to replace, or null to decline) set by the native verification.
+/// </summary>
+public sealed class DiagnosticDownloadDestinations(string root) : IDownloadDestinations
+{
+    private readonly ConcurrentDictionary<string, string?> _plans = new(StringComparer.Ordinal);
+    private int _sequence;
+
+    public string Root { get; } = root;
+
+    public void Plan(string suggestedFileName, string? destination) => _plans[suggestedFileName] = destination;
+
+    public ValueTask<string?> ChooseAsync(BrowserDownloadRequest request, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (_plans.TryRemove(request.SuggestedFileName, out var planned)) return ValueTask.FromResult(planned);
+        Directory.CreateDirectory(Root);
+        return ValueTask.FromResult<string?>(Path.Combine(Root, $"{Interlocked.Increment(ref _sequence):D3}-{request.SuggestedFileName}"));
+    }
+}
+
+/// <summary>Explicit Test-profile W02 native evidence; never part of an ordinary product session.</summary>
+public static class DownloadPopupNativeVerification
+{
+    private static readonly JsonSerializerOptions ReportOptions = new() { WriteIndented = true };
+    private static readonly TimeSpan Wait = TimeSpan.FromSeconds(30);
+
+    public static async Task RunAsync(DownloadVerificationHarness h, CancellationToken token)
+    {
+        var directory = Path.Combine(h.Root, "download-verification"); Directory.CreateDirectory(directory);
+        var files = h.Destinations.Root; Directory.CreateDirectory(files);
+        var id = $"{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfffZ}-{Environment.ProcessId}-{Guid.NewGuid():N}";
+        var journal = Path.Combine(directory, id + ".jsonl"); var report = Path.Combine(directory, id + ".json");
+        var checks = new List<object>(); var failed = 0;
+        using var handler = new HttpClientHandler { UseProxy = false, UseCookies = false, AllowAutoRedirect = false };
+        using var http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(10) }; // Observation reader only.
+        var web = h.Web; var site = h.Site; var downloads = (IBrowserDownloads)web;
+
+        async Task Check(string name, string expected, Func<Task<object>> operation)
+        {
+            var watch = Stopwatch.StartNew(); object result;
+            try { result = new { name, expected, status = "PASS", actual = await operation().ConfigureAwait(false), elapsedMs = watch.Elapsed.TotalMilliseconds }; }
+            catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+            catch (Exception exception) { failed++; result = new { name, expected, status = "FAIL", error = exception.ToString(), elapsedMs = watch.Elapsed.TotalMilliseconds }; }
+            checks.Add(result); await File.AppendAllTextAsync(journal, JsonSerializer.Serialize(result) + Environment.NewLine, token).ConfigureAwait(false);
+        }
+        static void Require(bool condition, object actual) { if (!condition) throw new InvalidDataException(actual as string ?? JsonSerializer.Serialize(actual)); }
+        async Task Until(Func<Task<bool>> condition, TimeSpan? limit = null)
+        {
+            using var bounded = CancellationTokenSource.CreateLinkedTokenSource(token); bounded.CancelAfter(limit ?? Wait);
+            while (!await condition().ConfigureAwait(false)) await Task.Delay(50, bounded.Token).ConfigureAwait(false);
+        }
+        async Task Load(IBrowserSession session, Uri uri)
+        {
+            var previous = session.State.NavigationSequence;
+            await session.NavigateAsync(uri, token).ConfigureAwait(false);
+            await Until(() => Task.FromResult(Settled(session) && session.State.NavigationSequence > previous)).ConfigureAwait(false);
+        }
+        async Task<string> Text(IBrowserSession session, string expression)
+            => JsonSerializer.Deserialize<string>(await session.ExecuteScriptAsync("JSON.stringify(" + expression + ")", token).ConfigureAwait(false) ?? "null") ?? "";
+        async Task Script(IBrowserSession session, string script) => await session.ExecuteScriptAsync(script + ";true", token).ConfigureAwait(false);
+        long Last() => h.Downloads.Items.Select(item => item.Sequence).DefaultIfEmpty(0).Max();
+        async Task<DownloadItem> Finished(long after, Func<DownloadItem, bool> match)
+        {
+            DownloadItem? found = null;
+            await Until(() => Task.FromResult((found = h.Downloads.Items.FirstOrDefault(item => item.Sequence > after && match(item) && item.IsTerminal)) is not null)).ConfigureAwait(false);
+            return found!;
+        }
+        async Task<DownloadItem> Running(long after, Func<DownloadItem, bool> match)
+        {
+            DownloadItem? found = null;
+            await Until(() => Task.FromResult((found = h.Downloads.Items.FirstOrDefault(item => item.Sequence > after && match(item)
+                && item.Status == DownloadStatus.Running && item.ReceivedBytes > 0)) is not null)).ConfigureAwait(false);
+            return found!;
+        }
+        async Task<JsonElement[]> Served(string marker)
+        {
+            using var document = JsonDocument.Parse(await http.GetStringAsync(new Uri(site, "observations"), token).ConfigureAwait(false));
+            return document.RootElement.EnumerateArray().Where(o => o.GetProperty("query").GetString()!.Contains(marker, StringComparison.Ordinal))
+                .Select(o => o.Clone()).ToArray();
+        }
+        async Task<PopupProbe> NewPopup(IReadOnlyCollection<IBrowserSession> before)
+        {
+            PopupProbe? found = null;
+            await Until(async () => (found = (await h.Popups().ConfigureAwait(false)).FirstOrDefault(p => !before.Contains(p.Session))) is not null).ConfigureAwait(false);
+            await Until(() => Task.FromResult(Settled(found!.Session))).ConfigureAwait(false);
+            return found!;
+        }
+        async Task<IBrowserSession[]> PopupSessions() => (await h.Popups().ConfigureAwait(false)).Select(p => p.Session).ToArray();
+        async Task Released(int popups, int surfaces)
+            => await Until(async () => (await h.Popups().ConfigureAwait(false)).Count == popups && h.RetainedSurfaces() == surfaces).ConfigureAwait(false);
+        static string Marker() => Guid.NewGuid().ToString("N")[..12];
+        static string Sha(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
+        static string FileSha(string path) => Sha(File.ReadAllBytes(path));
+        static byte[] Pattern(int length) { var b = new byte[length]; for (var i = 0; i < length; i++) b[i] = (byte)((i * 31 + 7) & 255); return b; }
+        string[] Staging() => Directory.EnumerateFiles(files, "*.flashmacos-download", SearchOption.AllDirectories).ToArray();
+        object Page(IBrowserSession s) => new { s.State.Address, s.State.NavigationId, s.State.IsLoading, s.State.Error };
+        void SamePage(object before, IBrowserSession s) => Require(JsonSerializer.Serialize(before) == JsonSerializer.Serialize(Page(s)) && s.State.Error is null,
+            new { before, after = Page(s) });
+        async Task<object> ServedDownload(string relative, string? downloadName, string? expectedName, string? expectedMethod = "GET")
+        {
+            var marker = Marker(); var before = Last(); var page = Page(web);
+            await Script(web, $"__w02.anchor({JsonSerializer.Serialize(relative + (relative.Contains('?', StringComparison.Ordinal) ? "&" : "?") + "check=" + marker)},{JsonSerializer.Serialize(downloadName)},null)").ConfigureAwait(false);
+            var item = await Finished(before, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false);
+            var served = await Served(marker).ConfigureAwait(false);
+            var sha = item.Destination is { } path && File.Exists(path) ? FileSha(path) : null;
+            Require(item.Status == DownloadStatus.Completed && (expectedName is null || item.SuggestedFileName == expectedName) && served.Length == 1
+                && served[0].GetProperty("status").GetInt32() == 200 && served[0].GetProperty("sha256").GetString() == sha
+                && (expectedMethod is null || item.Method == expectedMethod), new { item, served, sha });
+            SamePage(page, web);
+            return new { item, served = served[0], fileSha256 = sha };
+        }
+
+        try
+        {
+            await Check("surfaces-ready", "Web and LocalPlayer surfaces Ready; W02 page committed in both", async () =>
+            {
+                await Task.WhenAll(web.Ready, h.Local.Ready).WaitAsync(Wait, token).ConfigureAwait(false);
+                await Load(web, site).ConfigureAwait(false); await Load(h.Local, site).ConfigureAwait(false);
+                return new { web = Page(web), local = Page(h.Local), surfaces = h.RetainedSurfaces() };
+            }).ConfigureAwait(false);
+            var surfaces = h.RetainedSurfaces();
+            var initialWindows = await NativeWindowDiagnostics.SnapshotAsync().ConfigureAwait(false);
+            await Check("attachment-response-download", "Content-Disposition attachment on a displayable type: the same single GET is saved; page document unchanged",
+                () => ServedDownload("file/attachment", null, "w02-attachment.txt")).ConfigureAwait(false);
+            await Check("unsupported-mime-download", "Main-frame application/octet-stream becomes a download of the same response",
+                () => ServedDownload("file/binary", null, null)).ConfigureAwait(false);
+            await Check("download-attribute", "Same-origin download attribute on text/plain saves under the attribute name",
+                () => ServedDownload("file/plain", "w02-download-attribute.txt", "w02-download-attribute.txt")).ConfigureAwait(false);
+            await Check("blob-download", "blob: URL with download attribute saves the exact in-page bytes", async () =>
+            {
+                var before = Last(); var page = Page(web);
+                await Script(web, "__w02.blob('w02-blob.bin',65536)").ConfigureAwait(false);
+                var item = await Finished(before, i => i.SuggestedFileName == "w02-blob.bin").ConfigureAwait(false);
+                var sha = FileSha(item.Destination!);
+                Require(item.Status == DownloadStatus.Completed && sha == Sha(Pattern(65536)) && item.Address?.Scheme == "blob", new { item, sha });
+                SamePage(page, web); return new { item, fileSha256 = sha };
+            }).ConfigureAwait(false);
+            await Check("data-url-download", "data: URL with download attribute saves the exact bytes", async () =>
+            {
+                var before = Last();
+                await Script(web, "__w02.data('w02-data.bin')").ConfigureAwait(false);
+                var item = await Finished(before, i => i.SuggestedFileName == "w02-data.bin").ConfigureAwait(false);
+                var sha = FileSha(item.Destination!);
+                Require(item.Status == DownloadStatus.Completed && sha == Sha(Pattern(300)), new { item, sha }); return new { item, fileSha256 = sha };
+            }).ConfigureAwait(false);
+            await Check("post-response-download", "Form POST answered with an attachment: one POST, body preserved, no re-request", async () =>
+            {
+                var marker = Marker(); var before = Last(); var page = Page(web);
+                await Script(web, $"__w02.post('file/post?check={marker}',{{game:'mole',note:'W02 POST body'}},null)").ConfigureAwait(false);
+                var item = await Finished(before, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false);
+                var body = "game=mole&note=W02+POST+body"u8.ToArray(); var served = await Served(marker).ConfigureAwait(false);
+                var content = await File.ReadAllTextAsync(item.Destination!, token).ConfigureAwait(false);
+                Require(item.Status == DownloadStatus.Completed && item.Method == "POST" && served.Length == 1 && served[0].GetProperty("method").GetString() == "POST"
+                    && served[0].GetProperty("bodySha256").GetString() == Sha(body) && content == $"method=POST\nbody={Encoding.UTF8.GetString(body)}\nbody-sha256={Sha(body)}\n"
+                    && served[0].GetProperty("sha256").GetString() == FileSha(item.Destination!), new { item, served, content });
+                SamePage(page, web); return new { item, served = served[0], content };
+            }).ConfigureAwait(false);
+            await Check("cookie-authenticated-download", "HttpOnly session cookie set by a POST sign-in is sent by the native download; anonymous request is refused", async () =>
+            {
+                using var anonymous = await http.GetAsync(new Uri(site, "file/private"), token).ConfigureAwait(false);
+                await Script(web, "__w02.login()").ConfigureAwait(false);
+                await Until(async () => await Text(web, "String(__w02.loginStatus)").ConfigureAwait(false) == "200").ConfigureAwait(false);
+                var visible = await Text(web, "document.cookie").ConfigureAwait(false);
+                var result = await ServedDownload("file/private", null, "w02-private.bin").ConfigureAwait(false);
+                Require((int)anonymous.StatusCode == 401 && !visible.Contains("W02-Session", StringComparison.Ordinal), new { anonymous = (int)anonymous.StatusCode, visible });
+                return new { anonymous = (int)anonymous.StatusCode, documentCookie = visible, result };
+            }).ConfigureAwait(false);
+            await Check("cross-origin-redirect-download", "302 from the first origin to the second: final bytes from the second origin, one request each", async () =>
+            {
+                var marker = Marker(); var before = Last(); var page = Page(web);
+                await Script(web, $"__w02.anchor('redirect?check={marker}',null,null)").ConfigureAwait(false);
+                var item = await Finished(before, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false);
+                var served = await Served(marker).ConfigureAwait(false);
+                var redirect = served.Single(o => o.GetProperty("status").GetInt32() == 302); var final = served.Single(o => o.GetProperty("status").GetInt32() == 200);
+                Require(item.Status == DownloadStatus.Completed && served.Length == 2 && redirect.GetProperty("origin").GetString() != final.GetProperty("origin").GetString()
+                    && item.Address!.GetLeftPart(UriPartial.Authority) == final.GetProperty("origin").GetString()
+                    && final.GetProperty("sha256").GetString() == FileSha(item.Destination!), new { item, served });
+                SamePage(page, web); return new { item, served };
+            }).ConfigureAwait(false);
+            await Check("one-time-url-download", "A one-time URL is requested exactly once and its only response is what is saved", async () =>
+            {
+                var nonce = Marker(); var before = Last();
+                await Script(web, $"__w02.anchor('file/once?n={nonce}',null,null)").ConfigureAwait(false);
+                var item = await Finished(before, i => i.Address?.Query.Contains(nonce, StringComparison.Ordinal) == true).ConfigureAwait(false);
+                var first = await Served(nonce).ConfigureAwait(false);
+                using var again = await http.GetAsync(new Uri(site, "file/once?n=" + nonce), token).ConfigureAwait(false);
+                Require(item.Status == DownloadStatus.Completed && first.Length == 1 && first[0].GetProperty("status").GetInt32() == 200
+                    && first[0].GetProperty("sha256").GetString() == FileSha(item.Destination!) && (int)again.StatusCode == 410, new { item, first, again = (int)again.StatusCode });
+                return new { item, served = first[0], secondRequest = (int)again.StatusCode };
+            }).ConfigureAwait(false);
+            await Check("concurrent-downloads", "Three programmatic WKDownloads overlap in time and each saves its own response", async () =>
+            {
+                var markers = Enumerable.Range(0, 3).Select(_ => Marker()).ToArray(); var before = Last();
+                foreach (var marker in markers) await downloads.StartDownloadAsync(new Uri(site, $"file/slow?ms=3000&n={marker}"), token).ConfigureAwait(false);
+                var items = new List<DownloadItem>();
+                foreach (var marker in markers) items.Add(await Finished(before, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false));
+                var served = new List<JsonElement>();
+                foreach (var marker in markers) served.AddRange(await Served(marker).ConfigureAwait(false));
+                var latestStart = served.Max(o => o.GetProperty("startedAt").GetDateTimeOffset()); var earliestEnd = served.Min(o => o.GetProperty("finishedAt").GetDateTimeOffset());
+                Require(items.All(i => i.Status == DownloadStatus.Completed) && items.Select(i => i.Destination).Distinct().Count() == 3 && served.Count == 3
+                    && items.All(i => served.Any(o => o.GetProperty("sha256").GetString() == FileSha(i.Destination!))) && latestStart < earliestEnd, new { items, served });
+                return new { items, served, latestStart, earliestEnd };
+            }).ConfigureAwait(false);
+            await Check("replace-existing-target", "A completed download atomically replaces an existing same-name target chosen for replacement", async () =>
+            {
+                var target = Path.Combine(files, "replace-target.txt"); await File.WriteAllTextAsync(target, "old target", token).ConfigureAwait(false);
+                h.Destinations.Plan("w02-attachment.txt", target);
+                var result = await ServedDownload("file/attachment", null, "w02-attachment.txt").ConfigureAwait(false);
+                Require(new FileInfo(target).Length == 256 * 1024 && Staging().Length == 0, new { target, length = new FileInfo(target).Length, staging = Staging() });
+                return new { target, result };
+            }).ConfigureAwait(false);
+            await Check("cancel-keeps-old-target", "Cancelling a running download keeps the old same-name target and leaves no staging or final file", async () =>
+            {
+                var target = Path.Combine(files, "cancel-target.bin"); var old = "old cancel target"u8.ToArray(); await File.WriteAllBytesAsync(target, old, token).ConfigureAwait(false);
+                h.Destinations.Plan("w02-slow.bin", target); var marker = Marker(); var before = Last();
+                await Script(web, $"__w02.anchor('file/slow?ms=10000&n={marker}',null,null)").ConfigureAwait(false);
+                var running = await Running(before, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false);
+                await h.Downloads.CancelAsync(running.Sequence, token).ConfigureAwait(false);
+                var item = await Finished(before, i => i.Sequence == running.Sequence).ConfigureAwait(false);
+                Require(item.Status == DownloadStatus.Cancelled && FileSha(target) == Sha(old) && Staging().Length == 0, new { running, item, staging = Staging() });
+                return new { running, item, targetSha256 = FileSha(target) };
+            }).ConfigureAwait(false);
+            await Check("network-failure-keeps-old-target", "A connection dropped mid-body fails the download; old target unchanged; no staging left", async () =>
+            {
+                var target = Path.Combine(files, "abort-target.bin"); var old = "old abort target"u8.ToArray(); await File.WriteAllBytesAsync(target, old, token).ConfigureAwait(false);
+                h.Destinations.Plan("w02-abort.bin", target); var marker = Marker(); var before = Last();
+                await Script(web, $"__w02.anchor('file/abort?check={marker}',null,null)").ConfigureAwait(false);
+                var item = await Finished(before, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false);
+                Require(item.Status == DownloadStatus.Failed && item.Error is not null && FileSha(target) == Sha(old) && Staging().Length == 0, new { item, staging = Staging() });
+                return new { item, targetSha256 = FileSha(target) };
+            }).ConfigureAwait(false);
+            await Check("disk-error-keeps-old-target", "A destination WebKit cannot write (read-only folder) fails; old target unchanged; no staging left", async () =>
+            {
+                var folder = Path.Combine(files, "read-only"); Directory.CreateDirectory(folder);
+                var target = Path.Combine(folder, "disk-target.txt"); var old = "old read-only target"u8.ToArray(); await File.WriteAllBytesAsync(target, old, token).ConfigureAwait(false);
+                if (OperatingSystem.IsWindows()) throw new PlatformNotSupportedException();
+                File.SetUnixFileMode(folder, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+                try
+                {
+                    h.Destinations.Plan("w02-attachment.txt", target); var marker = Marker(); var before = Last();
+                    await Script(web, $"__w02.anchor('file/attachment?check={marker}',null,null)").ConfigureAwait(false);
+                    var item = await Finished(before, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false);
+                    Require(item.Status == DownloadStatus.Failed && FileSha(target) == Sha(old) && Directory.GetFiles(folder).Length == 1, new { item, files = Directory.GetFiles(folder) });
+                    return new { item, targetSha256 = FileSha(target) };
+                }
+                finally { File.SetUnixFileMode(folder, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute); }
+            }).ConfigureAwait(false);
+            await Check("decline-download", "Declining the destination cancels the native download and creates no file", async () =>
+            {
+                h.Destinations.Plan("w02-declined.txt", null); var before = Last(); var existing = Directory.GetFiles(files).Length;
+                await Script(web, "__w02.anchor('file/plain?check=decline','w02-declined.txt',null)").ConfigureAwait(false);
+                var item = await Finished(before, i => i.SuggestedFileName == "w02-declined.txt").ConfigureAwait(false);
+                Require(item.Status == DownloadStatus.Cancelled && item.Destination is null && Directory.GetFiles(files).Length == existing, item);
+                return item;
+            }).ConfigureAwait(false);
+
+            await Check("popup-window-open-web-profile", "window.open opens a host popup on the opener's Web data store; window.close releases it", async () =>
+            {
+                await Script(web, "document.cookie='W02-Popup=web;path=/;SameSite=Lax'").ConfigureAwait(false);
+                var before = await PopupSessions().ConfigureAwait(false);
+                await Script(web, "window.open(base+'/popup/child?via=window.open')").ConfigureAwait(false);
+                var popup = await NewPopup(before).ConfigureAwait(false);
+                var cookie = await Text(popup.Session, "document.cookie").ConfigureAwait(false); var opener = await Text(popup.Session, "String(window.opener!==null)").ConfigureAwait(false);
+                Require(popup.Purpose == BrowserPurpose.Web && popup.IsVisible && cookie.Contains("W02-Popup=web", StringComparison.Ordinal)
+                    && popup.Session.State.Address!.Query == "?via=window.open", new { popup.Purpose, popup.IsVisible, cookie, state = popup.Session.State });
+                await Script(popup.Session, "window.close()").ConfigureAwait(false);
+                await Released(before.Length, surfaces).ConfigureAwait(false);
+                return new { purpose = popup.Purpose, address = popup.Session.State.Address, cookie, opener, releasedSurfaces = h.RetainedSurfaces() };
+            }).ConfigureAwait(false);
+            await Check("popup-target-blank-and-nested", "target=_blank and a popup's own window.open each open a separate Web popup; closing both releases both surfaces", async () =>
+            {
+                var before = await PopupSessions().ConfigureAwait(false);
+                await Script(web, "document.getElementById('blank').click()").ConfigureAwait(false);
+                var first = await NewPopup(before).ConfigureAwait(false);
+                await Script(first.Session, "document.getElementById('nested').click()").ConfigureAwait(false);
+                var nested = await NewPopup([.. before, first.Session]).ConfigureAwait(false);
+                Require(first.Purpose == BrowserPurpose.Web && nested.Purpose == BrowserPurpose.Web && first.Session.State.Address!.Query == "?via=target-blank"
+                    && nested.Session.State.Address!.Query == "?via=nested" && h.RetainedSurfaces() == surfaces + 2, new { first = first.Session.State, nested = nested.Session.State });
+                await nested.CloseAsync().ConfigureAwait(false); await first.CloseAsync().ConfigureAwait(false);
+                await Released(before.Length, surfaces).ConfigureAwait(false);
+                return new { first = first.Session.State.Address, nested = nested.Session.State.Address };
+            }).ConfigureAwait(false);
+            await Check("popup-post-preserves-body", "A POST form targeting a new window is replayed by the popup with its method and body", async () =>
+            {
+                var before = await PopupSessions().ConfigureAwait(false);
+                await Script(web, "__w02.post(base+'/popup/echo',{game:'mole',note:'W02 popup POST'},'_blank')").ConfigureAwait(false);
+                var popup = await NewPopup(before).ConfigureAwait(false);
+                var method = await Text(popup.Session, "__w02Popup.method").ConfigureAwait(false); var body = await Text(popup.Session, "__w02Popup.body").ConfigureAwait(false);
+                Require(method == "POST" && body == "game=mole&note=W02+popup+POST", new { method, body });
+                await popup.CloseAsync().ConfigureAwait(false); await Released(before.Length, surfaces).ConfigureAwait(false);
+                return new { method, body };
+            }).ConfigureAwait(false);
+            await Check("popup-attachment-window", "target=_blank to an attachment: the page-less popup completes the download, then closes itself and its surface is released", async () =>
+            {
+                var before = await PopupSessions().ConfigureAwait(false); var marker = Marker(); var last = Last();
+                await Script(web, $"__w02.anchor(base+'/file/attachment?check={marker}',null,'_blank')").ConfigureAwait(false);
+                var item = await Finished(last, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false);
+                var served = await Served(marker).ConfigureAwait(false);
+                await Released(before.Length, surfaces).ConfigureAwait(false);
+                Require(item.Status == DownloadStatus.Completed && served.Length == 1 && served[0].GetProperty("sha256").GetString() == FileSha(item.Destination!), new { item, served });
+                return new { item, served = served[0] };
+            }).ConfigureAwait(false);
+            await Check("popup-download-and-close-cancels", "A popup page downloads via its own surface; closing a popup cancels its running download without leftovers", async () =>
+            {
+                var before = await PopupSessions().ConfigureAwait(false);
+                await Script(web, "window.open(base+'/popup/child?via=downloads')").ConfigureAwait(false);
+                var popup = await NewPopup(before).ConfigureAwait(false); var last = Last();
+                await Script(popup.Session, "document.getElementById('download').click()").ConfigureAwait(false);
+                var saved = await Finished(last, i => i.SuggestedFileName == "w02-popup-download.txt").ConfigureAwait(false);
+                var marker = Marker(); last = Last();
+                await Script(popup.Session, $"location.href='../file/slow?ms=20000&n={marker}'").ConfigureAwait(false);
+                var running = await Running(last, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false);
+                await popup.CloseAsync().ConfigureAwait(false);
+                var cancelled = await Finished(last, i => i.Sequence == running.Sequence).ConfigureAwait(false);
+                await Released(before.Length, surfaces).ConfigureAwait(false);
+                Require(saved.Status == DownloadStatus.Completed && cancelled.Status == DownloadStatus.Cancelled && !File.Exists(cancelled.Destination!) && Staging().Length == 0,
+                    new { saved, cancelled, staging = Staging() });
+                return new { saved, cancelled };
+            }).ConfigureAwait(false);
+            await Check("popup-local-player-profile", "A popup opened by the LocalPlayer surface uses the LocalPlayer data store, not Web", async () =>
+            {
+                await Script(h.Local, "document.cookie='W02-Popup=local;path=/;SameSite=Lax'").ConfigureAwait(false);
+                await h.Workspace.NavigateAsync(h.LocalPlayerPage, token).ConfigureAwait(false);
+                await Until(() => Task.FromResult(Settled(h.Local) && h.Local.State.Address == h.LocalPlayerPage)).ConfigureAwait(false);
+                var before = await PopupSessions().ConfigureAwait(false);
+                await Script(h.Local, $"window.open({JsonSerializer.Serialize(new Uri(site, "popup/child?via=local").AbsoluteUri)})").ConfigureAwait(false);
+                var popup = await NewPopup(before).ConfigureAwait(false);
+                var cookie = await Text(popup.Session, "document.cookie").ConfigureAwait(false);
+                Require(popup.Purpose == BrowserPurpose.LocalPlayer && cookie.Contains("W02-Popup=local", StringComparison.Ordinal) && !cookie.Contains("W02-Popup=web", StringComparison.Ordinal),
+                    new { popup.Purpose, cookie });
+                await popup.CloseAsync().ConfigureAwait(false); await Released(before.Length, surfaces).ConfigureAwait(false);
+                await h.Workspace.NavigateAsync(site, token).ConfigureAwait(false);
+                await Until(() => Task.FromResult(Settled(web) && web.State.Address == site)).ConfigureAwait(false);
+                return new { purpose = popup.Purpose, cookie };
+            }).ConfigureAwait(false);
+            await Check("no-staging-residue", "No hidden staging file remains anywhere under the download directory", () =>
+                Task.FromResult<object>(new { staging = Staging() is { Length: 0 } none ? none : throw new InvalidDataException(string.Join(", ", Staging())) })).ConfigureAwait(false);
+
+            await Check("popup-native-window-release", "50 popup cycles retain no managed windows or WebViews; AppKit current/previous event-window caches retain at most the two most recent closed NSWindows", async () =>
+            {
+                var samples = new List<object>();
+                for (var cycle = 0; cycle < 50; cycle++)
+                {
+                    var before = await PopupSessions().ConfigureAwait(false);
+                    await Script(web, $"window.open(base+'/popup/child?via=cycle-{cycle}')").ConfigureAwait(false);
+                    var popup = await NewPopup(before).ConfigureAwait(false);
+                    await popup.CloseAsync().ConfigureAwait(false);
+                    await Released(before.Length, surfaces).ConfigureAwait(false);
+                    var windows = await NativeWindowDiagnostics.SnapshotAsync().ConfigureAwait(false);
+                    var ids = h.PopupWindows().NativeIds;
+                    var retained = windows.GetProperty("windows").EnumerateArray().Where(w => ids.Contains(w.GetProperty("id").GetInt32())).ToArray();
+                    Require(retained.Length <= 2 && retained.All(w => !w.GetProperty("visible").GetBoolean() && ids.TakeLast(2).Contains(w.GetProperty("id").GetInt32())), windows);
+                    samples.Add(new { cycle, windows });
+                }
+                var beforeFinalization = await NativeWindowDiagnostics.SnapshotAsync().ConfigureAwait(false);
+                GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect();
+                await Task.Delay(250, token).ConfigureAwait(false);
+                var afterFinalization = await NativeWindowDiagnostics.SnapshotAsync().ConfigureAwait(false);
+                var inventory = h.PopupWindows();
+                var remaining = afterFinalization.GetProperty("windows").EnumerateArray()
+                    .Where(w => inventory.NativeIds.Contains(w.GetProperty("id").GetInt32())).ToArray();
+                Require(inventory.RetainedManaged == 0 && remaining.Length <= 2
+                    && remaining.All(w => !w.GetProperty("visible").GetBoolean() && inventory.NativeIds.TakeLast(2).Contains(w.GetProperty("id").GetInt32())),
+                    new { initialWindows, beforeFinalization, afterFinalization, inventory });
+                return new { initialWindows, beforeFinalization, afterFinalization, inventory, samples,
+                    nativeCache = "Bounded AppKit current-event/previous-key-window retention, confirmed by the preserved memory graph; no private API or forced native release used" };
+            }).ConfigureAwait(false);
+
+            await Check("quit-check-prepared", "One popup with a running download stays open for the operator's real Quit; the journal must show both released", async () =>
+            {
+                if (h.Workspace.State.Address != site || !Settled(web))
+                {
+                    await h.Workspace.NavigateAsync(site, token).ConfigureAwait(false);
+                    await Until(() => Task.FromResult(Settled(web) && web.State.Address == site)).ConfigureAwait(false);
+                }
+                var before = await PopupSessions().ConfigureAwait(false);
+                await Script(web, "window.open(base+'/popup/child?via=quit-check')").ConfigureAwait(false);
+                var popup = await NewPopup(before).ConfigureAwait(false); var marker = "quit-" + Marker(); var last = Last();
+                await Script(popup.Session, $"location.href='../file/slow?ms=600000&n={marker}'").ConfigureAwait(false);
+                var running = await Running(last, i => i.Address?.Query.Contains(marker, StringComparison.Ordinal) == true).ConfigureAwait(false);
+                return new { running, popups = (await h.Popups().ConfigureAwait(false)).Count, surfaces = h.RetainedSurfaces() };
+            }).ConfigureAwait(false);
+            var summary = new { status = failed == 0 ? "PASS" : "FAIL", failures = failed, process = Environment.ProcessId, site, files,
+                environment = new { os = Environment.OSVersion.VersionString, architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
+                    runtime = System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription }, checks,
+                manual = "Save panel, replace confirmation, HTTP Basic sheet and quit-with-open-popup are verified by real operation and journal, not inferred here" };
+            await File.WriteAllTextAsync(report, JsonSerializer.Serialize(summary, ReportOptions), token).ConfigureAwait(false);
+            await Script(web, "document.getElementById('host').textContent=" + JsonSerializer.Serialize($"W02 native checks: {(failed == 0 ? "PASS" : "FAIL")} ({checks.Count - failed}/{checks.Count})")).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        { await File.AppendAllTextAsync(journal, JsonSerializer.Serialize(new { status = "CANCELLED", checksCompleted = checks.Count }) + Environment.NewLine, CancellationToken.None).ConfigureAwait(false); }
+        catch (Exception exception)
+        { await File.WriteAllTextAsync(report, JsonSerializer.Serialize(new { status = "FAIL", error = exception.ToString(), checks }), CancellationToken.None).ConfigureAwait(false); }
+    }
+
+    private static bool Settled(IBrowserSession session) => !session.State.IsLoading && session.State.NavigationId is not null && session.State.Error is null;
+}

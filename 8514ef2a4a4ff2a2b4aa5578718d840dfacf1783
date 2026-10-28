@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""Package and archive the imported prototype as ARM64 development evidence."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--run-id', required=True)
+    parser.add_argument('--task', choices=['P02','P03'], default='P02')
+    args = parser.parse_args()
+    if not args.run_id or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in args.run_id):
+        parser.error('run-id must be a simple directory name')
+    root = Path(__file__).resolve().parents[1]
+    bootstrap = root / 'bootstrap/legacy/spike/macos-host'
+    output = root / 'artifacts/evidence' / args.task / args.run_id
+    output.mkdir(parents=True, exist_ok=False)
+    app = bootstrap / 'artifacts/osx-arm64/CefFlashBrowser.app'
+    if app.exists():
+        subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app), str(output / 'previous-app.zip')], check=True)
+    locks = {str(p.relative_to(root)): sha(p) for p in bootstrap.rglob('packages.lock.json')}
+    with (output / 'invalid-rid.log').open('wb') as log:
+        code = subprocess.run(['scripts/package-macos.sh', 'osx-x64'], cwd=bootstrap, stdout=log, stderr=subprocess.STDOUT).returncode
+    if code != 2:
+        raise RuntimeError('The unsupported RID was not rejected before publishing')
+    with (output / 'package.log').open('wb') as log:
+        code = subprocess.run(['scripts/package-macos.sh', 'osx-arm64'], cwd=bootstrap, stdout=log, stderr=subprocess.STDOUT).returncode
+    if code:
+        print(f'Package failed: exit {code}; full log preserved in {output}', flush=True)
+        return code
+    if any(sha(root / p) != h for p, h in locks.items()):
+        raise RuntimeError('Package changed NuGet locks')
+    machos = []
+    for path in (app / 'Contents').rglob('*'):
+        if path.is_file():
+            description = subprocess.check_output(['file', '-b', str(path)]).decode().strip()
+            if 'Mach-O' in description:
+                if 'arm64' not in description or 'x86_64' in description:
+                    raise RuntimeError(f'Non-ARM64 Mach-O: {path}')
+                machos.append({'path': str(path.relative_to(app)), 'description': description, 'sha256': sha(path)})
+    if not machos:
+        raise RuntimeError('Package contains no Mach-O')
+    with (output / 'codesign.log').open('wb') as log:
+        subprocess.run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', str(app)], stdout=log, stderr=subprocess.STDOUT, check=True)
+    archive = output / 'CefFlashBrowser-prototype.zip'
+    subprocess.run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', str(app), str(archive)], check=True)
+    report = {'taskId': args.task, 'runId': args.run_id, 'status': 'PASS', 'coverage': 'Development ARM64 package only; not a product release',
+              'app': str(app.relative_to(root)), 'archive': str(archive.relative_to(root)),
+              'artifactHashes': {'archive': sha(archive), 'locks': locks}, 'machO': machos,
+              'packageExitCode': code, 'codesignExitCode': 0, 'invalidRidExitCode': 2, 'locksUnchanged': True}
+    (output / 'result.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
+    print(json.dumps({'status': 'PASS', 'arm64MachO': len(machos), 'archive': report['archive']}, ensure_ascii=False), flush=True)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

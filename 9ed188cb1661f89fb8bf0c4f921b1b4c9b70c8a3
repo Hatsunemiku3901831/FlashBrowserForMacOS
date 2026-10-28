@@ -1,0 +1,7 @@
+namespace FlashMacOS.Application.Sol;
+
+public interface ISolCodec
+{
+    SolDocument Decode(ReadOnlyMemory<byte> source, AmfLimits? limits = null, CancellationToken cancellationToken = default);
+    byte[] Encode(SolDocument document, AmfLimits? limits = null, CancellationToken cancellationToken = default);
+}

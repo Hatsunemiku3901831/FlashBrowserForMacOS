@@ -1,0 +1,108 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
+using FlashMacOS.Flash.Ruffle.Hosting;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class DownloadValidationSiteTests
+{
+    private static string FixtureRoot => Path.Combine(AppContext.BaseDirectory, "CompatibilityFixtures", "ruffle-v0.4.1");
+    private static readonly Uri RufflePath = new("http://127.0.0.1:12345/token/assets/ruffle/");
+
+    [TestMethod]
+    public async Task DeterministicDownloadsCarryTheirDispositionAndRecordTheServedHash()
+    {
+        await using var host = new CompatibilityContentHost(FixtureRoot);
+        await host.StartAsync(RufflePath);
+        using var client = new HttpClient();
+        var page = host.DownloadValidationUri;
+        Assert.AreEqual(page, host.GetCaseUri("downloads")); Assert.AreEqual(page, host.GetCaseUri("downloads-manual"));
+        StringAssert.Contains(await client.GetStringAsync(page), "__w02");
+
+        using var attachment = await client.GetAsync(new Uri(page, "file/attachment?check=a1"));
+        var bytes = await attachment.Content.ReadAsByteArrayAsync();
+        Assert.AreEqual("attachment", attachment.Content.Headers.ContentDisposition!.DispositionType);
+        Assert.AreEqual("w02-attachment.txt", attachment.Content.Headers.ContentDisposition.FileName);
+        Assert.AreEqual("text/plain", attachment.Content.Headers.ContentType!.MediaType);
+        CollectionAssert.AreEqual(CompatibilityContentHost.DownloadContent("attachment", 256 * 1024), bytes);
+        using var plain = await client.GetAsync(new Uri(page, "file/plain"));
+        Assert.IsNull(plain.Content.Headers.ContentDisposition, "Only a download attribute turns this displayable response into a download.");
+        var observed = host.DownloadObservations.Single(o => o.Query == "?check=a1");
+        Assert.AreEqual(Convert.ToHexStringLower(SHA256.HashData(bytes)), observed.Sha256);
+        Assert.AreEqual(200, observed.Status); Assert.AreEqual("GET", observed.Method);
+    }
+
+    [TestMethod]
+    public async Task OneTimePostCookieBasicAndRedirectEndpointsEnforceTheirRequestSemantics()
+    {
+        await using var host = new CompatibilityContentHost(FixtureRoot);
+        await host.StartAsync(RufflePath);
+        using var handler = new HttpClientHandler { AllowAutoRedirect = false, UseCookies = true, CookieContainer = new CookieContainer() };
+        using var client = new HttpClient(handler);
+        var page = host.DownloadValidationUri;
+
+        Assert.AreEqual(HttpStatusCode.OK, (await client.GetAsync(new Uri(page, "file/once?n=abc"))).StatusCode);
+        Assert.AreEqual(HttpStatusCode.Gone, (await client.GetAsync(new Uri(page, "file/once?n=abc"))).StatusCode);
+
+        var body = "game=mole&note=W02+POST+body";
+        using var post = await client.PostAsync(new Uri(page, "file/post?check=p1"), new StringContent(body, Encoding.UTF8, "application/x-www-form-urlencoded"));
+        var sha = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(body)));
+        Assert.AreEqual($"method=POST\nbody={body}\nbody-sha256={sha}\n", await post.Content.ReadAsStringAsync());
+        Assert.AreEqual(sha, host.DownloadObservations.Single(o => o.Query == "?check=p1").BodySha256);
+
+        Assert.AreEqual(HttpStatusCode.Unauthorized, (await client.GetAsync(new Uri(page, "file/private"))).StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, (await client.PostAsync(new Uri(page, "login"), null)).StatusCode);
+        var cookie = handler.CookieContainer.GetCookies(page).Single(c => c.Name == "W02-Session");
+        Assert.IsTrue(cookie.HttpOnly);
+        using var authorized = await client.GetAsync(new Uri(page, "file/private"));
+        Assert.AreEqual(HttpStatusCode.OK, authorized.StatusCode);
+        Assert.IsTrue(host.DownloadObservations.Last(o => o.Path.EndsWith("/file/private", StringComparison.Ordinal)).SessionCookie);
+
+        using var challenge = await client.GetAsync(new Uri(page, "basic/file"));
+        Assert.AreEqual(HttpStatusCode.Unauthorized, challenge.StatusCode);
+        StringAssert.StartsWith(challenge.Headers.WwwAuthenticate.Single().ToString(), "Basic realm=");
+        using var basic = new HttpRequestMessage(HttpMethod.Get, new Uri(page, "basic/file"));
+        basic.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(
+            CompatibilityContentHost.DownloadBasicUser + ":" + CompatibilityContentHost.DownloadBasicPassword)));
+        using var basicResponse = await client.SendAsync(basic);
+        StringAssert.StartsWith(await basicResponse.Content.ReadAsStringAsync(), "authorized=w02-user\n");
+
+        using var redirect = await client.GetAsync(new Uri(page, "redirect?check=r1"));
+        Assert.AreEqual(HttpStatusCode.Redirect, redirect.StatusCode);
+        Assert.AreEqual(host.SecondOrigin!.Port, redirect.Headers.Location!.Port);
+        Assert.AreEqual("?check=r1", redirect.Headers.Location.Query);
+        using var final = await client.GetAsync(redirect.Headers.Location);
+        Assert.AreEqual("w02-redirected.bin", final.Content.Headers.ContentDisposition!.FileName);
+    }
+
+    [TestMethod]
+    public async Task SlowEndpointStreamsTheCompleteDeterministicBodyAndRecordsItBeforeTheLastBytes()
+    {
+        await using var host = new CompatibilityContentHost(FixtureRoot);
+        await host.StartAsync(RufflePath);
+        using var client = new HttpClient();
+        var bytes = await client.GetByteArrayAsync(new Uri(host.DownloadValidationUri, "file/slow?ms=140&n=t1"));
+        CollectionAssert.AreEqual(CompatibilityContentHost.DownloadContent("slow:t1", 8 * 32 * 1024), bytes);
+        var observed = host.DownloadObservations.Single(o => o.Query == "?ms=140&n=t1");
+        Assert.AreEqual(Convert.ToHexStringLower(SHA256.HashData(bytes)), observed.Sha256);
+    }
+
+    [TestMethod]
+    public async Task AbortEndpointDropsTheConnectionBeforeTheDeclaredLength()
+    {
+        await using var host = new CompatibilityContentHost(FixtureRoot);
+        await host.StartAsync(RufflePath);
+        using var client = new HttpClient();
+        using var response = await client.GetAsync(new Uri(host.DownloadValidationUri, "file/abort"), HttpCompletionOption.ResponseHeadersRead);
+        Assert.AreEqual(1024 * 1024, response.Content.Headers.ContentLength);
+        await using var stream = await response.Content.ReadAsStreamAsync();
+        var buffer = new byte[64 * 1024];
+        var total = 0;
+        var failure = await Assert.ThrowsAsync<Exception>(async () => { int read; while ((read = await stream.ReadAsync(buffer)) > 0) total += read; });
+        Assert.IsTrue(failure is IOException or HttpRequestException, failure.ToString());
+        Assert.IsTrue(total < 1024 * 1024, total.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+}

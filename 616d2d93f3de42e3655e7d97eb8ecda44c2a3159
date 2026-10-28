@@ -1,0 +1,36 @@
+import importlib.util
+from pathlib import Path
+import unittest
+
+ROOT = Path(__file__).resolve().parents[2]
+spec = importlib.util.spec_from_file_location('sol_quality', ROOT / 'scripts/check-sol-quality.py')
+quality = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(quality)
+
+def module(name, hits=100):
+    return {'source.cs': {name: {'method': {'Lines': {'1': 1}, 'Branches': [
+        {'Hits': int(index < hits), 'Line': 1, 'Path': index} for index in range(100)]}}}}
+
+class SolQualityTests(unittest.TestCase):
+    def data(self, hits=100):
+        return {'FlashMacOS.Domain.dll': module('FlashMacOS.Domain.Sol.Graph', hits),
+                'FlashMacOS.Sol.Managed.dll': module('FlashMacOS.Sol.Managed.Codec')}
+
+    def test_each_module_must_meet_ninety_not_only_the_combined_average(self):
+        report, missing = quality.coverage_report(self.data(89), 'synthetic')
+        self.assertEqual('FAIL', report['status'])
+        self.assertEqual(11, len(missing))
+        self.assertEqual('PASS', quality.coverage_report(self.data(90), 'synthetic')[0]['status'])
+
+    def test_empty_or_unrelated_assemblies_cannot_supply_coverage(self):
+        self.assertEqual('FAIL', quality.coverage_report({}, 'synthetic')[0]['status'])
+        data = self.data(); data['Unrelated.dll'] = data.pop('FlashMacOS.Domain.dll')
+        self.assertEqual('FAIL', quality.coverage_report(data, 'synthetic')[0]['status'])
+        data = self.data(); data['FlashMacOS.Domain.dll'] = {}
+        self.assertEqual('FAIL', quality.coverage_report(data, 'synthetic')[0]['status'])
+
+    def test_domain_outside_sol_namespace_is_not_counted_as_the_required_scope(self):
+        data = self.data(); data['FlashMacOS.Domain.dll'] = module('FlashMacOS.Domain.Unrelated')
+        self.assertEqual('FAIL', quality.coverage_report(data, 'synthetic')[0]['status'])
+
+if __name__ == '__main__': unittest.main()

@@ -1,0 +1,53 @@
+namespace FlashMacOS.Application.Sol;
+
+public interface ISolEdit { SolDocument Apply(SolDocument source); }
+
+public sealed record RenameSolDocument(string Name) : ISolEdit
+{
+    public SolDocument Apply(SolDocument source) => new(Name, source.Encoding, source.Graph);
+}
+public sealed record ReplaceSolEntry(int Index, string Name, AmfValue Value) : ISolEdit
+{
+    public SolDocument Apply(SolDocument source)
+    {
+        var entries = source.Graph.Entries.ToList(); entries[Index] = new(Name, Value);
+        return new(source.Name, source.Encoding, new AmfGraph(entries, source.Graph.Nodes.Values));
+    }
+}
+public sealed record InsertSolEntry(int Index, string Name, AmfValue Value) : ISolEdit
+{
+    public SolDocument Apply(SolDocument source)
+    {
+        var entries = source.Graph.Entries.ToList(); entries.Insert(Index, new(Name, Value));
+        return new(source.Name, source.Encoding, new AmfGraph(entries, source.Graph.Nodes.Values));
+    }
+}
+public sealed record RemoveSolEntry(int Index) : ISolEdit
+{
+    public SolDocument Apply(SolDocument source)
+    {
+        var entries = source.Graph.Entries.ToList(); entries.RemoveAt(Index);
+        return new(source.Name, source.Encoding, new AmfGraph(entries, source.Graph.Nodes.Values));
+    }
+}
+public sealed record ReplaceSolNode(AmfNode Node) : ISolEdit
+{
+    public SolDocument Apply(SolDocument source)
+    {
+        if (!source.Graph.Nodes.ContainsKey(Node.Id)) throw new ArgumentException("The edited node no longer exists.", nameof(source));
+        return new(source.Name, source.Encoding, new AmfGraph(source.Graph.Entries,
+            source.Graph.Nodes.Values.Select(node => node.Id == Node.Id ? Node : node)));
+    }
+}
+public sealed record AddSolGraphEntry(int Index, string Name, AmfValue Value, IReadOnlyList<AmfNode> Nodes) : ISolEdit
+{
+    public SolDocument Apply(SolDocument source)
+    {
+        var entries = source.Graph.Entries.ToList(); entries.Insert(Index, new(Name, Value));
+        return new(source.Name, source.Encoding, new AmfGraph(entries, source.Graph.Nodes.Values.Concat(Nodes)));
+    }
+}
+public sealed record ReplaceSolDocument(SolDocument Document) : ISolEdit
+{
+    public SolDocument Apply(SolDocument source) => Document;
+}

@@ -1,0 +1,120 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using FlashMacOS.Domain.Sol;
+using FlashMacOS.Infrastructure.Persistence;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class SolPerformanceTests
+{
+    private sealed record Sample(int Index, string Phase, double ElapsedMs, double CodecMs, double FileMs,
+        long AllocatedBytes, long ObservedHeapDelta, int Gen0Collections, int Gen1Collections, int Gen2Collections);
+
+    [TestMethod]
+    [TestCategory("SolPerformance")]
+    [DataRow("settings.sol")]
+    [DataRow("mao.sol")]
+    [DataRow("pvz.sol")]
+    [DataRow("FBCookie.sol")]
+    [DataRow("RuffleTest.sol")]
+    public async Task ExistingSmallAndGameSolSamplesHaveReproducibleReadWriteProfiles(string name)
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath(name); var input = await File.ReadAllBytesAsync(TestAssets.Sol(name));
+        await File.WriteAllBytesAsync(path,input); var codec = new SolCodec(); var storage = new SolFileStorage(); var document = codec.Decode(input);
+        var revision = new FlashMacOS.Application.Sol.SolFileRevision(true,Hash(input)); var rows = new List<Sample>(); var warmup = new List<Sample>();
+        for(var i=0;i<3;i++) { warmup.Add(await Measure(i,false)); warmup.Add(await Measure(i,true)); }
+        for(var i=0;i<30;i++) { rows.Add(await Measure(i,false)); rows.Add(await Measure(i,true)); }
+        TestEvidence.Write("sol-fixture-performance",new{status="MEASURED",name,inputBytes=input.Length,inputSha256=Hash(input),configuration=Configuration,
+            framework=RuntimeInformation.FrameworkDescription,architecture=RuntimeInformation.ProcessArchitecture.ToString(),
+            scope="Existing frozen small/game samples; no separate allocation-ratio threshold for tiny files. The fixed 10 MiB gate is separate.",
+            method="3 warmups, 30 read/save pairs; full GC outside timing, bounded read+hash+decode and encode+atomic save+backup; GC total allocated deltas across all threads",
+            warmup,samples=rows,readP95Ms=P95(rows.Where(row=>row.Phase=="read").Select(row=>row.ElapsedMs)),saveP95Ms=P95(rows.Where(row=>row.Phase=="save").Select(row=>row.ElapsedMs))});
+        Assert.IsTrue(AmfGraphEquality.Equivalent(document.Graph,codec.Decode(await File.ReadAllBytesAsync(path)).Graph));
+        async Task<Sample> Measure(int index,bool save)
+        {
+            Collect();var heap=GC.GetTotalMemory(false);var allocated=GC.GetTotalAllocatedBytes(true);var collections=Counts();var watch=Stopwatch.StartNew();double codecMs;double fileMs;
+            if(save)
+            { var encoded=codec.Encode(document);codecMs=watch.Elapsed.TotalMilliseconds;revision=await storage.CommitAsync(path,encoded,revision);watch.Stop();fileMs=watch.Elapsed.TotalMilliseconds-codecMs; }
+            else
+            { var image=await storage.ReadAsync(path,AmfLimits.Default.MaximumFileBytes);fileMs=watch.Elapsed.TotalMilliseconds;var read=codec.Decode(image.Bytes);watch.Stop();codecMs=watch.Elapsed.TotalMilliseconds-fileMs;GC.KeepAlive(read); }
+            return new(index,save?"save":"read",watch.Elapsed.TotalMilliseconds,codecMs,fileMs,GC.GetTotalAllocatedBytes(true)-allocated,GC.GetTotalMemory(false)-heap,
+                GC.CollectionCount(0)-collections[0],GC.CollectionCount(1)-collections[1],GC.CollectionCount(2)-collections[2]);
+        }
+    }
+
+    [TestMethod]
+    [TestCategory("SolPerformance")]
+    public async Task TenMiBReadAndAtomicSaveMeetFrozenTimeAndAllocationBudgets()
+    {
+        using var directory = new TemporaryDirectory(); var path = directory.GetPath("ten-mib.sol");
+        var input = TenMiBInput(); await File.WriteAllBytesAsync(path, input);
+        var fixedInputPath = TestEvidence.NewPath("ten-mib-input", ".sol"); await File.WriteAllBytesAsync(fixedInputPath, input);
+        var codec = new SolCodec(); var storage = new SolFileStorage(); var document = codec.Decode(input);
+        Assert.AreEqual(10 * 1024 * 1024, input.Length); Assert.AreEqual("Bench", document.Name);
+        Assert.AreEqual(input.Length - 38, ((AmfByteArrayNode)document.Graph.Nodes[new(0)]).Bytes.Length);
+        CollectionAssert.AreEqual(input, codec.Encode(document));
+        var revision = new FlashMacOS.Application.Sol.SolFileRevision(true, Hash(input));
+        var warmup = new List<Sample>(); var samples = new List<Sample>();
+        for (var i = 0; i < 3; i++) { warmup.Add(await Read(i)); warmup.Add(await Save(i)); }
+        for (var i = 0; i < 30; i++) { samples.Add(await Read(i)); samples.Add(await Save(i)); }
+        var failures = samples.Where(sample => sample.ElapsedMs > 500 || sample.AllocatedBytes > 3L * input.Length).ToArray();
+        TestEvidence.Write("sol-performance", new
+        {
+            status = failures.Length == 0 ? "PASS" : "FAIL", inputBytes = input.Length, inputSha256 = Hash(input), fixedInputPath,
+            structure = "Independently specified SOL3: name Bench, one data ByteArray of 10485722 bytes, xorshift32 seed 0x5eed1234, exact fixed header, total 10 MiB",
+            configuration = Configuration, framework = RuntimeInformation.FrameworkDescription, architecture = RuntimeInformation.ProcessArchitecture.ToString(), os = RuntimeInformation.OSDescription,
+            sourceAssemblySha256 = Hash(await File.ReadAllBytesAsync(typeof(SolCodec).Assembly.Location)),
+            cacheCondition = "3 warmups; same APFS temporary file, warm OS file cache; full managed GC before each timed phase is outside timing",
+            method = "Stopwatch wall time. Allocation is GC.GetTotalAllocatedBytes(precise:true) delta across all managed threads: conservative upper bound on additional live managed peak; no parallel tests or coverage instrumentation.",
+            readBoundary = "bounded file snapshot + SHA256 + full codec decode", saveBoundary = "codec encode + revision checks + flush + atomic replacement + backup",
+            treePresentation = "Not measured here; actual editor UI is U03/Q02", warmup, samples,
+            readP95Ms = P95(samples.Where(sample => sample.Phase == "read").Select(sample => sample.ElapsedMs)),
+            saveP95Ms = P95(samples.Where(sample => sample.Phase == "save").Select(sample => sample.ElapsedMs)),
+            maximumReadAllocation = samples.Where(sample => sample.Phase == "read").Max(sample => sample.AllocatedBytes),
+            maximumSaveAllocation = samples.Where(sample => sample.Phase == "save").Max(sample => sample.AllocatedBytes),
+            percentileMethod = "nearest rank: sorted[ceil(0.95*N)-1]", failures
+        });
+        CollectionAssert.AreEqual(input, await File.ReadAllBytesAsync(path)); CollectionAssert.AreEqual(input, await File.ReadAllBytesAsync(path + ".bak"));
+        Assert.HasCount(0, failures, "A frozen SOL performance budget failed; raw samples were retained.");
+
+        async Task<Sample> Read(int index)
+        {
+            Collect(); var heap = GC.GetTotalMemory(false); var allocated = GC.GetTotalAllocatedBytes(true); var collections = Counts(); var watch = Stopwatch.StartNew();
+            var image = await storage.ReadAsync(path, AmfLimits.Default.MaximumFileBytes); var io = watch.Elapsed.TotalMilliseconds;
+            var decoded = codec.Decode(image.Bytes); watch.Stop();
+            var result = new Sample(index, "read", watch.Elapsed.TotalMilliseconds, watch.Elapsed.TotalMilliseconds - io, io,
+                GC.GetTotalAllocatedBytes(true) - allocated, GC.GetTotalMemory(false) - heap,
+                GC.CollectionCount(0) - collections[0], GC.CollectionCount(1) - collections[1], GC.CollectionCount(2) - collections[2]);
+            Assert.IsTrue(AmfGraphEquality.Equivalent(document.Graph, decoded.Graph)); GC.KeepAlive(decoded); return result;
+        }
+        async Task<Sample> Save(int index)
+        {
+            Collect(); var heap = GC.GetTotalMemory(false); var allocated = GC.GetTotalAllocatedBytes(true); var collections = Counts(); var watch = Stopwatch.StartNew();
+            var bytes = codec.Encode(document); var encode = watch.Elapsed.TotalMilliseconds;
+            revision = await storage.CommitAsync(path, bytes, revision); watch.Stop();
+            return new(index, "save", watch.Elapsed.TotalMilliseconds, encode, watch.Elapsed.TotalMilliseconds - encode,
+                GC.GetTotalAllocatedBytes(true) - allocated, GC.GetTotalMemory(false) - heap,
+                GC.CollectionCount(0) - collections[0], GC.CollectionCount(1) - collections[1], GC.CollectionCount(2) - collections[2]);
+        }
+    }
+    private static byte[] TenMiBInput()
+    {
+        var bytes = new byte[10 * 1024 * 1024];
+        var prefix = Convert.FromHexString("00bf009ffffa5443534f000400000000000542656e63680000000309646174610c84ffffb5");
+        prefix.CopyTo(bytes, 0); uint state = 0x5eed1234;
+        for (var i = prefix.Length; i < bytes.Length - 1; i++) { state ^= state << 13; state ^= state >> 17; state ^= state << 5; bytes[i] = (byte)state; }
+        return bytes;
+    }
+    private static string Hash(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
+    private static double P95(IEnumerable<double> values) { var ordered = values.Order().ToArray(); return ordered[(int)Math.Ceiling(ordered.Length * 0.95) - 1]; }
+    private static void Collect() { GC.Collect(2, GCCollectionMode.Forced, true, true); GC.WaitForPendingFinalizers(); GC.Collect(2, GCCollectionMode.Forced, true, true); }
+    private static int[] Counts() => [GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2)];
+#if DEBUG
+    private const string Configuration = "Debug";
+#else
+    private const string Configuration = "Release";
+#endif
+}

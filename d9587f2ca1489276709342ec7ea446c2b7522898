@@ -1,0 +1,293 @@
+using FlashMacOS.Application.Files;
+
+namespace FlashMacOS.Application.Browser;
+
+public enum DownloadStatus { AwaitingDestination, Running, Completed, Cancelled, Failed }
+
+public sealed record DownloadItem(long Sequence, Uri? Address, string SuggestedFileName, string Method, DownloadStatus Status,
+    long ReceivedBytes, long? ExpectedBytes, string? Destination, string? Error)
+{
+    public bool IsTerminal => Status is DownloadStatus.Completed or DownloadStatus.Cancelled or DownloadStatus.Failed;
+}
+
+/// <summary>
+/// Connects native downloads to the destination policy and the staged-file transaction. WebKit writes a hidden
+/// staging file beside the chosen destination; the final name appears only through IDownloadFiles.CommitAsync after
+/// WebKit finished. Decline, cancellation, network/disk failure and commit errors delete the staging file and never
+/// touch an existing destination. Closing a surface cancels its unfinished downloads.
+/// </summary>
+public sealed class DownloadManager : IAsyncDisposable
+{
+    private const int RetainedItems = 200;
+    private static readonly TimeSpan DrainTimeout = TimeSpan.FromSeconds(5);
+    private readonly IDownloadDestinations _destinations;
+    private readonly IDownloadFiles _files;
+    private readonly TimeProvider _clock;
+    private readonly object _gate = new();
+    private readonly CancellationTokenSource _lifetime = new();
+    private readonly Dictionary<(IBrowserDownloads Source, long Id), Entry> _active = [];
+    private readonly List<DownloadItem> _items = [];
+    private readonly List<Task> _work = [];
+    private readonly List<Registration> _registrations = [];
+    private long _sequence;
+    private Task? _dispose;
+
+    public DownloadManager(IDownloadDestinations destinations, IDownloadFiles files, TimeProvider? clock = null)
+    {
+        _destinations = destinations ?? throw new ArgumentNullException(nameof(destinations));
+        _files = files ?? throw new ArgumentNullException(nameof(files));
+        _clock = clock ?? TimeProvider.System;
+    }
+
+    /// <summary>Raised for every state change, from the UI thread or a background commit.</summary>
+    public event Action<DownloadItem>? Changed;
+
+    public IReadOnlyList<DownloadItem> Items { get { lock (_gate) return _items.ToArray(); } }
+
+    /// <summary>Observes one surface until the returned registration is disposed after the surface closed.</summary>
+    public IDisposable Attach(IBrowserDownloads source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var registration = new Registration(this, source);
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_dispose is not null, this);
+            _registrations.Add(registration);
+        }
+        source.DownloadRequested += registration.OnRequested;
+        source.DownloadUpdated += registration.OnUpdated;
+        return registration;
+    }
+
+    public async ValueTask CancelAsync(long sequence, CancellationToken cancellationToken = default)
+    {
+        Entry? entry;
+        lock (_gate)
+        {
+            entry = _active.Values.FirstOrDefault(value => value.Item.Sequence == sequence);
+            if (entry is null) return;
+            entry.CancelRequested = true;
+        }
+        await entry.Source.CancelDownloadAsync(entry.Id, cancellationToken).ConfigureAwait(false);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_gate) return new ValueTask(_dispose ??= DisposeCoreAsync());
+    }
+
+    private async Task DisposeCoreAsync()
+    {
+        await _lifetime.CancelAsync().ConfigureAwait(false);
+        Entry[] running;
+        lock (_gate) running = _active.Values.ToArray();
+        var failures = new List<Exception>();
+        foreach (var entry in running)
+        {
+            try { await entry.Source.CancelDownloadAsync(entry.Id).ConfigureAwait(false); }
+            catch (ObjectDisposedException) { } // Its surface already closed; the orphan sweep below discards it.
+        }
+        await WaitForQuiescenceAsync().ConfigureAwait(false);
+        Registration[] registrations;
+        lock (_gate) registrations = _registrations.ToArray();
+        foreach (var registration in registrations) registration.Dispose();
+        Task[] work;
+        lock (_gate) work = _work.ToArray();
+        try { await Task.WhenAll(work).WaitAsync(DrainTimeout, _clock).ConfigureAwait(false); }
+        catch (Exception exception) { failures.Add(exception); }
+        _lifetime.Dispose();
+        if (failures.Count != 0) throw new AggregateException("Download cleanup failed.", failures);
+    }
+
+    private async Task WaitForQuiescenceAsync()
+    {
+        var deadline = _clock.GetTimestamp();
+        while (_clock.GetElapsedTime(deadline) < DrainTimeout)
+        {
+            lock (_gate) if (_active.Count == 0) return;
+            await Task.Delay(TimeSpan.FromMilliseconds(25), _clock).ConfigureAwait(false);
+        }
+    }
+
+    private void OnRequested(IBrowserDownloads source, BrowserDownloadRequest request)
+    {
+        Entry? entry = null;
+        lock (_gate)
+        {
+            if (_dispose is null)
+            {
+                entry = new Entry(source, request.Id, new DownloadItem(++_sequence, request.Address, request.SuggestedFileName,
+                    request.Method, DownloadStatus.AwaitingDestination, 0, request.ExpectedBytes, null, null));
+                _active.Add((source, request.Id), entry);
+                Store(entry.Item);
+            }
+        }
+        if (entry is null)
+        {
+            Start(() => DeclineAsync(source, request.Id));
+            return;
+        }
+        Changed?.Invoke(entry.Item);
+        Start(() => ChooseDestinationAsync(entry, request));
+    }
+
+    private async Task ChooseDestinationAsync(Entry entry, BrowserDownloadRequest request)
+    {
+        string? destination = null;
+        try { destination = await _destinations.ChooseAsync(request, _lifetime.Token).ConfigureAwait(false); }
+        catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
+        catch (Exception exception) { entry.DeclineError = "The destination could not be chosen: " + exception.Message; }
+        string? staging = null;
+        DownloadItem item;
+        lock (_gate)
+        {
+            if (entry.Terminated) return; // Its surface cancelled or closed while the save panel was open.
+            if (destination is not null && !entry.CancelRequested && _dispose is null)
+            {
+                staging = entry.Staging = StagingPathFor(destination);
+                entry.Item = entry.Item with { Status = DownloadStatus.Running, Destination = destination };
+                Store(entry.Item);
+            }
+            item = entry.Item;
+        }
+        if (staging is not null) Changed?.Invoke(item);
+        try { await entry.Source.SetDownloadDestinationAsync(entry.Id, staging).ConfigureAwait(false); }
+        catch (ObjectDisposedException) { } // The surface closed; its registration sweep reports the cancellation.
+    }
+
+    private void OnUpdated(IBrowserDownloads source, BrowserDownloadUpdate update)
+    {
+        Entry? entry;
+        DownloadItem item;
+        lock (_gate)
+        {
+            if (!_active.TryGetValue((source, update.Id), out entry)) return;
+            if (update.IsTerminal) { _active.Remove((source, update.Id)); entry.Terminated = true; }
+            else
+            {
+                entry.Item = update.Kind == BrowserDownloadEventKind.Redirected
+                    ? entry.Item with { Address = update.Address }
+                    : entry.Item with { ReceivedBytes = update.ReceivedBytes, ExpectedBytes = update.ExpectedBytes ?? entry.Item.ExpectedBytes };
+                Store(entry.Item);
+            }
+            item = entry.Item;
+        }
+        if (!update.IsTerminal) Changed?.Invoke(item);
+        else if (update.Kind == BrowserDownloadEventKind.Finished) Start(() => CommitAsync(entry));
+        else
+        {
+            var status = update.Kind == BrowserDownloadEventKind.Cancelled && entry.DeclineError is null ? DownloadStatus.Cancelled : DownloadStatus.Failed;
+            Start(() => DiscardAsync(entry, status, entry.DeclineError ?? update.Error));
+        }
+    }
+
+    private async Task CommitAsync(Entry entry)
+    {
+        try
+        {
+            await _files.CommitAsync(entry.Staging!, entry.Item.Destination!, CancellationToken.None).ConfigureAwait(false);
+            Finish(entry, DownloadStatus.Completed, null);
+        }
+        catch (Exception exception)
+        {
+            await DiscardAsync(entry, DownloadStatus.Failed, "The finished download could not be saved: " + exception.Message).ConfigureAwait(false);
+        }
+    }
+
+    private async Task DiscardAsync(Entry entry, DownloadStatus status, string? error)
+    {
+        try
+        {
+            if (entry.Staging is not null) await _files.DeleteAsync(entry.Staging).ConfigureAwait(false);
+            Finish(entry, status, error);
+        }
+        catch (Exception exception)
+        {
+            Finish(entry, DownloadStatus.Failed, (error is null ? "" : error + " ") + "The staging file could not be removed: " + exception.Message);
+        }
+    }
+
+    private void Finish(Entry entry, DownloadStatus status, string? error)
+    {
+        DownloadItem item;
+        lock (_gate)
+        {
+            entry.Item = entry.Item with { Status = status, Error = error };
+            Store(entry.Item);
+            item = entry.Item;
+        }
+        Changed?.Invoke(item);
+    }
+
+    private void Abandon(IBrowserDownloads source)
+    {
+        Entry[] orphaned;
+        lock (_gate)
+        {
+            orphaned = _active.Values.Where(value => ReferenceEquals(value.Source, source)).ToArray();
+            foreach (var entry in orphaned) { _active.Remove((source, entry.Id)); entry.Terminated = true; }
+        }
+        foreach (var entry in orphaned)
+            Start(() => DiscardAsync(entry, DownloadStatus.Cancelled, "The browser window closed before the download finished."));
+    }
+
+    private static string StagingPathFor(string destination)
+    {
+        var name = Path.GetFileName(destination);
+        return Path.Combine(Path.GetDirectoryName(destination)!, $".{name[..Math.Min(name.Length, 96)]}.{Guid.NewGuid():N}.flashmacos-download");
+    }
+
+    // Callers hold _gate.
+    private void Store(DownloadItem item)
+    {
+        var index = _items.FindIndex(value => value.Sequence == item.Sequence);
+        if (index >= 0) { _items[index] = item; return; }
+        _items.Add(item);
+        if (_items.Count > RetainedItems && _items.FindIndex(value => value.IsTerminal) is var oldest and >= 0) _items.RemoveAt(oldest);
+    }
+
+    private static async Task DeclineAsync(IBrowserDownloads source, long id)
+    {
+        try { await source.SetDownloadDestinationAsync(id, null).ConfigureAwait(false); }
+        catch (ObjectDisposedException) { } // A closing surface cancels its own pending downloads.
+    }
+
+    // Event handlers run on the UI thread; queued work never re-enters _gate there. Disposal drains it.
+    private void Start(Func<Task> work)
+    {
+        var task = Task.Run(work);
+        lock (_gate)
+        {
+            _work.RemoveAll(value => value.IsCompleted);
+            _work.Add(task);
+        }
+    }
+
+    private sealed class Entry(IBrowserDownloads source, long id, DownloadItem item)
+    {
+        public IBrowserDownloads Source { get; } = source;
+        public long Id { get; } = id;
+        public DownloadItem Item { get; set; } = item;
+        public string? Staging { get; set; }
+        public bool CancelRequested { get; set; }
+        public string? DeclineError { get; set; }
+        // Set under the manager gate when the single terminal update (or surface closure) arrives.
+        public bool Terminated { get; set; }
+    }
+
+    private sealed class Registration(DownloadManager owner, IBrowserDownloads source) : IDisposable
+    {
+        private int _disposed;
+        public void OnRequested(BrowserDownloadRequest request) => owner.OnRequested(source, request);
+        public void OnUpdated(BrowserDownloadUpdate update) => owner.OnUpdated(source, update);
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+            source.DownloadRequested -= OnRequested;
+            source.DownloadUpdated -= OnUpdated;
+            lock (owner._gate) owner._registrations.Remove(this);
+            owner.Abandon(source);
+        }
+    }
+}

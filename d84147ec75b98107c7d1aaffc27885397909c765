@@ -1,0 +1,17 @@
+namespace FlashMacOS.Application.Sol;
+
+// Synchronous bounded CPU work; callers processing files use a background operation.
+public interface IAmfCodec
+{
+    AmfGraph Decode(ReadOnlyMemory<byte> source, SolEncoding encoding, AmfLimits? limits = null, CancellationToken cancellationToken = default);
+    byte[] Encode(AmfGraph graph, SolEncoding encoding, AmfLimits? limits = null, CancellationToken cancellationToken = default);
+}
+
+public sealed class AmfFormatException(string code, SolEncoding encoding, int offset, byte? marker, string message, Exception? innerException = null)
+    : FormatException($"{code} at byte {offset} ({encoding}, marker {marker?.ToString("X2", System.Globalization.CultureInfo.InvariantCulture) ?? "none"}): {message}", innerException)
+{
+    public string Code { get; } = code;
+    public SolEncoding Encoding { get; } = encoding;
+    public int Offset { get; } = offset;
+    public byte? Marker { get; } = marker;
+}

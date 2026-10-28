@@ -1,0 +1,95 @@
+using FlashMacOS.Infrastructure.Diagnostics;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class JournalLifetimeTests
+{
+    [TestMethod]
+    public async Task FullQueueCountsDropsAndConcurrentCloseSharesTheDrain()
+    {
+        using var directory = new TemporaryDirectory();
+        using var stream = new BlockingStream();
+        var journal = new GateZeroSessionJournal(directory.RootPath, options: new JournalOptions(QueueCapacity: 2), openWrite: _ => stream);
+        await stream.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        for (var index = 0; index < 200; index++) journal.Record("event.example", "untrusted payload");
+        Assert.IsGreaterThan(100L, journal.DroppedRecords);
+        var first = journal.DisposeAsync().AsTask();
+        var second = journal.DisposeAsync().AsTask();
+        Assert.AreSame(first, second);
+        stream.Release.TrySetResult();
+        await Task.WhenAll(first, second);
+        Assert.IsTrue(journal.Completion.IsCompletedSuccessfully);
+        var before = stream.ToArray();
+        journal.Record("event.afterClose");
+        CollectionAssert.AreEqual(before, stream.ToArray());
+    }
+
+    [TestMethod]
+    public async Task RotationBoundsFilesAndNeverRewritesAnOldEvidenceName()
+    {
+        using var directory = new TemporaryDirectory();
+        var evidence = directory.GetPath("gate0-preserved.jsonl");
+        await File.WriteAllTextAsync(evidence, "raw historical evidence");
+        var journal = new GateZeroSessionJournal(directory.RootPath,
+            options: new JournalOptions(QueueCapacity: 512, MaximumFileBytes: 512, RetainedFiles: 3));
+        for (var index = 0; index < 100; index++) journal.Record("rotation.case" + index);
+        await journal.DisposeAsync();
+        var files = Directory.GetFiles(directory.RootPath, "session-*.jsonl");
+        Assert.IsTrue(files.Length is > 0 and <= 3);
+        foreach (var path in files)
+        {
+            Assert.IsLessThanOrEqualTo(512L, new FileInfo(path).Length);
+            foreach (var line in await File.ReadAllLinesAsync(path))
+                using (System.Text.Json.JsonDocument.Parse(line)) { }
+        }
+        Assert.AreEqual("raw historical evidence", await File.ReadAllTextAsync(evidence));
+    }
+
+    [TestMethod]
+    public async Task WriteFailureIsVisibleAndNeverReportedAsSuccessfulDrain()
+    {
+        using var directory = new TemporaryDirectory();
+        var journal = new GateZeroSessionJournal(directory.RootPath, openWrite: _ => new FailingStream());
+        await Assert.ThrowsExactlyAsync<IOException>(async () => await journal.DisposeAsync());
+        Assert.IsInstanceOfType<IOException>(journal.Failure);
+        Assert.IsTrue(journal.Completion.IsFaulted);
+    }
+
+    [TestMethod]
+    public async Task NonCooperatingWriterHasABoundedFailedShutdown()
+    {
+        using var directory = new TemporaryDirectory();
+        using var stream = new BlockingStream();
+        var journal = new GateZeroSessionJournal(directory.RootPath,
+            options: new JournalOptions(ShutdownTimeout: TimeSpan.FromMilliseconds(50)), openWrite: _ => stream);
+        await stream.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        try { await Assert.ThrowsExactlyAsync<TimeoutException>(async () => await journal.DisposeAsync()); }
+        finally
+        {
+            stream.Release.TrySetResult();
+            try { await journal.Completion.WaitAsync(TimeSpan.FromSeconds(5)); }
+            catch (OperationCanceledException) { }
+        }
+        Assert.IsTrue(journal.Completion.IsCompleted);
+    }
+
+    private sealed class BlockingStream : MemoryStream
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            Started.TrySetResult();
+            // Deliberately ignore cancellation until released to exercise the shutdown deadline.
+            await Release.Task.ConfigureAwait(false);
+            await base.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private sealed class FailingStream : MemoryStream
+    {
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+            => ValueTask.FromException(new IOException("Injected log disk failure."));
+    }
+}

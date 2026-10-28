@@ -1,0 +1,14 @@
+namespace FlashMacOS.Application.Flash;
+
+public interface IRuffleSaveStore
+{
+    ValueTask<IReadOnlyList<RuffleSaveEntry>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    ValueTask<RuffleSaveEntry> UpsertAsync(
+        string key,
+        string base64Data,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<bool> RemoveAsync(string key, CancellationToken cancellationToken = default);
+}
+

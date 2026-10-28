@@ -1,0 +1,252 @@
+# macOS vNext 稳定变量与配置登记
+
+状态：当前实现基线
+
+适用范围：`spike/macos-host/` 及其后续正式 vNext 工程
+
+目标平台：Apple Silicon（`osx-arm64`）
+
+本文是 macOS vNext 环境变量、构建参数、稳定常量、路径、持久化字段、路由、Cookie 和 JS bridge 名称的唯一权威登记。它不逐项罗列方法局部变量；局部变量由代码可读性和审查规范约束，强行登记会产生重复事实源。
+
+接口语义见 [`interfaces.zh-CN.md`](interfaces.zh-CN.md)，使用和变更规则见 [`engineering-spec.zh-CN.md`](engineering-spec.zh-CN.md)。若本文与代码不一致，以可验证的代码事实为准，并在同一变更中同步修正。
+
+## 1. 分类与变更级别
+
+| 级别 | 含义 | 变更要求 |
+|---|---|---|
+| 协议 | 外部页面、已有用户数据或不同模块依赖的名称/格式。 | 兼容设计、回归测试；破坏性变更需 ADR 和迁移。 |
+| 产品 | 包标识、版本、默认搜索、路径等用户可观察值。 | 更新本文、打包/功能测试和发布说明。 |
+| 运维 | 构建、签名、诊断相关输入。 | 校验输入；不得隐式改变发布产物。 |
+| 实现 | 可在模块内部调整的性能阈值。 | 有测试；性能相关变更需测量依据。 |
+
+稳定值不得在多个实现中复制为魔法字符串。已有重复值在正式版前应收敛为单一配置对象或常量所有者。
+
+## 2. 目标平台与工具链
+
+| 名称 | 当前值 | 级别 | 所有者/来源 |
+|---|---|---|---|
+| 目标架构 | Apple Silicon ARM64 | 产品 | macOS 移植方案 |
+| 正式 RID | `osx-arm64` | 产品 | 打包脚本/发布流程 |
+| NuGet runtime graph | `osx-arm64` | 运维 | `Directory.Build.props` 的 `RuntimeIdentifiers` |
+| Target Framework | `net10.0` | 产品 | 各 `.csproj` |
+| 固定 SDK | `10.0.301`，`rollForward=latestPatch` | 运维 | [`global.json`](../global.json) |
+| Avalonia | `12.1.0` | 产品 | `Directory.Packages.props` |
+| NativeWebView | `12.0.1` | 产品 | `Directory.Packages.props` |
+| Ruffle Web | `0.4.1` | 产品/协议 | `RuffleAssetManifest` |
+
+硬约束：产品开发、测试、性能基线和发布只允许 `osx-arm64`。`scripts/package-macos.sh` 只接受该 RID，其他输入在 restore、清理或 publish 前以退出码 `2` 拒绝。
+
+NuGet runtime graph 的单一工程来源是 `Directory.Build.props` 的 `RuntimeIdentifiers=osx-arm64`。三份 `packages.lock.json` 均同时包含普通 `net10.0` 图和 `net10.0/osx-arm64` 图，不包含其他 macOS RID。打包脚本先执行 `--locked-mode` restore，再以 `publish --no-restore` 消费同一图；`scripts/verify-arm64-baseline.sh` 对第二次 restore 和 package 前后的 lock file hash 做回归校验。
+
+## 3. 构建与签名输入
+
+| 输入 | 默认值 | 作用域 | 规则 |
+|---|---|---|---|
+| `CONFIGURATION` | `Release` | `scripts/package-macos.sh` | 只接受现有构建配置；正式产物必须为 `Release`。 |
+| 第一个位置参数 `runtime_id` | `osx-arm64` | `scripts/package-macos.sh` | 只允许 `osx-arm64`；其他值在任何产物变更前退出 `2`。 |
+| `CODE_SIGN_IDENTITY` | `-` | `scripts/package-macos.sh` | `-` 表示 ad-hoc 开发签名；正式发布必须是 Developer ID Application。 |
+
+产物路径：`spike/macos-host/artifacts/osx-arm64/CefFlashBrowser.app`。`artifacts/` 是生成目录，不提交版本库。组装 bundle 时使用 `ditto --arch arm64` 裁掉依赖自带通用 Mach-O 的非 ARM64 slice，再进行由内到外签名。
+
+签名身份名称本身不是密码；私钥、Apple ID、app-specific password、App Store Connect key 和 notarization profile 都不得写入仓库、命令示例、日志或 JSON 配置。当前脚本尚未实现公证/staple，不能用 ad-hoc 签名冒充正式发布。
+
+## 4. 应用标识与版本
+
+| 名称 | 当前值 | 来源 | 发布前动作 |
+|---|---|---|---|
+| 产品名 | `CefFlashBrowser` | Desktop 项目/Info.plist | 保持一致。 |
+| Desktop `ApplicationId` | `com.mzying2001.cefflashbrowser.next` | Desktop `.csproj` | 与最终 bundle id 收敛为单一来源。 |
+| Gate 0 `CFBundleIdentifier` | `com.mzying2001.cefflashbrowser.next.gate0` | `packaging/Info.plist` | 当前仅原型；RC 前替换为正式 ID。 |
+| `CFBundleExecutable` | `CefFlashBrowser.MacOS.Spike.Desktop` | `packaging/Info.plist` | 工程重命名时同步修改。 |
+| `CFBundleShortVersionString` | `0.1.0` | `packaging/Info.plist` | RC 前接入唯一版本源。 |
+| `CFBundleVersion` | `1` | `packaging/Info.plist` | 每次发布必须单调递增。 |
+| 应用 User-Agent 后缀 | `CefFlashBrowser/0.1` | `AvaloniaNativeWebViewSession` | 应从同一产品版本源生成。 |
+
+以上三处版本/标识尚未完全收敛，是正式版前的已知工程债；不得在新增代码中再复制第四份。
+
+## 5. 启动参数
+
+当前没有命名式 CLI 选项，启动只读取第一个位置参数：
+
+| 输入 | 行为 |
+|---|---|
+| 无参数 | 打开内置诊断页。 |
+| 现有本地 `.swf` 路径 | 通过 `ILocalContentHost` 登记并用 Ruffle 打开。 |
+| 其他非空文本 | 交给 `NavigationResolver` 解析为 URL 或默认搜索。 |
+
+正式增加命名选项时，应集中到单一解析器，定义退出码和错误输出，不得在 View 或多个入口重复解析 `args`。
+
+## 6. 用户数据与文件路径
+
+默认实现：`MacAppPaths`。
+
+| 名称 | macOS 路径 | 数据性质 |
+|---|---|---|
+| `ApplicationSupportDirectory` | `~/Library/Application Support/CefFlashBrowser` | 持久、需要迁移和备份。 |
+| `CacheDirectory` | `~/Library/Caches/CefFlashBrowser` | 可删除、可重建。 |
+| `LogDirectory` | `~/Library/Logs/CefFlashBrowser` | 诊断数据，需限制敏感内容。 |
+| `RuffleSaveStorePath` | `~/Library/Application Support/CefFlashBrowser/ruffle-saves.v1.json` | 持久 SharedObject 镜像。 |
+| Gate 0 journal | `~/Library/Logs/CefFlashBrowser/gate0-{yyyyMMdd-HHmmss-fff}-{pid}.jsonl` | 原型诊断日志。 |
+
+路径必须经 `IAppPaths` 或明确的资源定位服务获得。`~` 只用于文档展示，代码不得手工展开或硬编码 `/Users/...`。
+
+## 7. SharedObject store
+
+文件格式为 UTF-8 JSON；当前 schema 版本为 `1`。
+
+```json
+{
+  "schemaVersion": 1,
+  "saves": {
+    "<storage-key>": {
+      "base64Data": "<complete-sol-file>",
+      "updatedAt": "<ISO-8601 UTC timestamp>"
+    }
+  }
+}
+```
+
+| 字段/限制 | 值 | 级别 |
+|---|---|---|
+| `schemaVersion` | `1` | 协议 |
+| 根集合 | `saves`，按 storage key 建索引 | 协议 |
+| 持久条目字段 | `base64Data`、`updatedAt` | 协议 |
+| SOL header 编码 | `0` = AMF0，`3` = AMF3；读取时派生，不重复持久化 | 协议 |
+| 单个 SOL 上限 | 64 MiB | 实现/安全 |
+| store 总上限 | 256 MiB | 实现/安全 |
+| 内容编码 | 完整 SOL 文件的 Base64 | 协议 |
+| 写入语义 | 同目录临时文件 + 原子替换 | 协议行为 |
+
+运行时 `RuffleSaveEntry` 的 `key` 来自 `saves` 字典键；`solName`、`encoding`、`byteLength` 从 `base64Data` 解码后的 SOL 内容计算，均不在条目中重复持久化。未知 schema 不得静默覆盖；升级必须先备份并支持幂等预检。
+
+## 8. 浏览器与 JS bridge
+
+### 8.1 WebView 稳定值
+
+| 名称 | 值 | 级别 |
+|---|---|---|
+| 持久 WebKit data store ID | `852984bf-5e1e-4859-9fc3-cbf5f1a71a63` | 协议/用户数据 |
+| bridge handler name | `cefFlashBrowserBridge` | 协议 |
+| bridge JSON 命名 | camelCase | 协议 |
+| `UpgradeKnownHostsToHTTPS` | `true` | 产品/安全 |
+| WebView DevTools | Gate 0 当前为 `true` | 产品/安全；正式 Release 前必须策略化关闭或显式受控。 |
+| 下载复制缓冲区 | 128 KiB | 实现 |
+| HTTP 超时 | 无限，由 `CancellationToken` 控制 | 实现 |
+
+持久 data store ID 不能随意改变；改变会让 WebKit Cookie/站点数据表现为全新应用数据域。
+
+### 8.2 JavaScript 全局名
+
+| 名称 | 所有者 | 用途 |
+|---|---|---|
+| `globalThis.__cefFlashBrowserPost` | document-start 注入 | 向原生 message handler 发送 JSON。 |
+| `globalThis.__cefFlashBrowserDocumentStart` | document-start 注入 | 记录注入版本和时间戳。 |
+| `globalThis.__cefFlashBrowserStoragePatched` | document-start 注入 | 防止重复 patch storage。 |
+| `window.RufflePlayer` | Ruffle | Ruffle 全局配置和播放器入口。 |
+| `window.__cefFlashBrowserPlayer` | 本地播放器页 | 当前 Ruffle player 元素。 |
+| `window.__cefFlashBrowserPlayerApi` | 本地播放器页 | 暂停、恢复、重载、全屏和音量接口。 |
+| `window.__cefFlashBrowserEnsureRuffle` | 本地播放器页与 Gate runner | 确保运行时加载完成。 |
+| `window.CefFlashBrowserExternalInterface` | ExternalInterface Gate runner | 延迟 AS3→JS 回调目标；离开页面时删除。 |
+
+这些名称属于协议变量。重命名必须同时修改脚本生成器、C# 调用方和 bridge 测试，并提供兼容别名或协议升级。
+
+### 8.3 bridge 消息字段与类型
+
+统一字段集合：`type`、`key`、`data`、`url`、`fileName`、`message`、`ruffleAvailable`、`flashElementCount`、`documentStartMilliseconds`。
+
+| `type` | 使用字段 |
+|---|---|
+| `saveChanged` | `key`, `data` |
+| `saveDeleted` | `key` |
+| `savesSnapshot` | `data`（字典的 JSON 字符串） |
+| `trace` | `message` |
+| `playerReady` | `message` 可选 |
+| `diagnostics` | `ruffleAvailable`, `flashElementCount`, `documentStartMilliseconds` |
+| `bridgeError` | `message` |
+| `downloadRequested` | `url`, `fileName` 可选 |
+| `compatibilityResult` | `key`, `message`, `data` |
+
+字段语义与消费者见接口文档。`compatibilityResult` 当前固定 key 为
+`external-interface/v1`，通过摘要为
+`PASS available=true jsToAs=123.4 asToJs=true structured=true`。`data` 可能很大且可能
+包含用户数据，严禁写入日志。
+
+### 8.4 document-start 实现阈值
+
+| 名称 | 当前值 | 说明 |
+|---|---|---|
+| 可见页面 Flash 扫描间隔 | 1,000 ms | 兼容动态插入的 `<object>`/`<embed>`。 |
+| 隐藏页面扫描间隔 | 5,000 ms | 降低后台 CPU 占用。 |
+| Base64 SOL 快速识别 | 解码前 24 字符，首字节 `00 BF` | 仅预筛选；宿主仍做完整 SOL 校验。 |
+
+## 9. Loopback 内容服务
+
+### 9.1 网络与授权变量
+
+| 名称 | 值/格式 | 规则 |
+|---|---|---|
+| 监听地址 | `127.0.0.1` | 禁止绑定 `0.0.0.0`、局域网或公网接口。 |
+| 端口 | 操作系统分配的随机可用端口 | 不得作为永久配置或存档 key。 |
+| 会话 token | 32 随机字节的小写十六进制 | 每次进程重新生成；不得记录。 |
+| 会话 Cookie | `CefFlashBrowser-Loopback-Session` | 只授权当前 token 路由。 |
+| Gate 0 Cookie | `CefFlashBrowser-Gate0` | 诊断持久 Cookie，当前最长 30 天。 |
+| 内容 query 参数 | `session` | 只用于当前会话授权，不得外传。 |
+
+### 9.2 路由模板
+
+`{token}` 是当前会话 token，`{id}` 是当前进程登记的 SWF ID。
+
+| 路由 | 用途 | 稳定性 |
+|---|---|---|
+| `/{token}/health` | 本地健康检查 | Gate 0 |
+| `/{token}/assets/ruffle/{fileName}` | 白名单内 Ruffle 资产 | 协议 |
+| `/{token}/player/{id}` | 本地 SWF 播放器页 | 协议 |
+| `/{token}/diagnostics` | Gate 0 诊断页 | Gate 0 |
+| `/{token}/fixtures/popup` | popup fixture | 测试 |
+| `/{token}/fixtures/download.txt` | 下载 fixture | 测试 |
+| `/{token}/fixtures/external-interface` | ExternalInterface 离线双向 runner | 测试 |
+| `/{token}/fixtures/external-interface/test.swf` | 唯一允许的 ExternalInterface SWF；需会话 Cookie | 测试 |
+| `/content/{id}/{**relativePath}` | SWF 及其相对资源；需 query 或 Cookie 授权 | 协议 |
+
+ExternalInterface 资产 route 是精确白名单，不接受任意文件名或路径。测试/Gate 0 路由不得被
+产品业务依赖。协议路由改变时必须同步内容宿主、脚本生成器和集成测试。
+
+## 10. Ruffle 资产变量
+
+固定资产清单由 `RuffleAssetManifest` 持有，包括：
+
+- 版本：`0.4.1`；
+- 官方归档 URL；
+- 归档 SHA-256；
+- 每个运行文件的文件名与 SHA-256。
+
+具体哈希以源文件为唯一机器可读来源，本文不复制长哈希，避免双重维护。升级时必须固定新版本、来源和所有哈希，先通过离线资产校验、兼容语料和性能回归，再替换旧资产；运行时不得静默联网升级。
+
+ExternalInterface 固定语料目录为
+`Assets/Fixtures/avm2-external-interface/`，保留 Ruffle v0.4.1 tag、commit
+`a1ac4ce8647352ad03044031cad0454a636427b8` 的五个上游原文件；逐文件大小/hash 与许可证
+登记在同级 `Fixtures/THIRD-PARTY.md` 并由测试锁定。runner 是项目自有 HTML，不修改上游
+`index.html` 或 `test.ts`。
+
+## 11. 日志事件名
+
+Gate 0 journal 当前使用以下稳定诊断事件族：
+
+- `process.started`、`process.stopping`；
+- `composition.resources.resolved`、`composition.initialized`、`composition.stopping` 及资源释放事件；
+- `browser.attached`、`browser.environment.requested`、`browser.adapter.created`、`browser.documentStart.injected`；
+- `browser.navigate.requested`、`browser.navigation.started`、`browser.navigation.completed`、`browser.navigation.failed`；
+- `browser.bridge.received`、`browser.bridge.failed`、`browser.adapter.failed`、`browser.disposed`。
+
+journal channel 容量为 `512`，满时丢弃最旧项，单 reader。事件名可用于自动诊断；更名需要同步诊断测试/工具。正式版 detail 不得包含 bridge `data`、会话 token、Cookie、完整本地用户路径或签名凭据。当前 Gate 0 的资源解析和异常 detail 可能含完整路径，属于发布前必须脱敏或策略化关闭的诊断债。
+
+## 12. 变量变更检查表
+
+新增或修改稳定变量时必须：
+
+1. 指定唯一所有者、默认值、合法范围、敏感级别和变更级别。
+2. 删除其他模块中的重复字面量，或记录正式收敛任务。
+3. 更新本文以及读取方、打包脚本/Info.plist/entitlements 中的对应值。
+4. 为默认值、非法值、兼容读取和持久化行为补充测试。
+5. 若影响用户数据、bundle identity、bridge 或 URL，提供迁移和回滚方案。
+6. 确认只生成 `osx-arm64` 产物，没有新增 Intel/x64 路径。

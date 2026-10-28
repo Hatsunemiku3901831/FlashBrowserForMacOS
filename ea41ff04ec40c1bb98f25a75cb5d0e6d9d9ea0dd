@@ -1,0 +1,112 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using FlashMacOS.Application.Configuration;
+using FlashMacOS.Infrastructure.Persistence;
+
+namespace FlashMacOS.Infrastructure.Configuration;
+
+public abstract class JsonConfigurationRepository<T> : IConfigurationRepository<T>, IDisposable
+{
+    private readonly string _path;
+    private readonly long _maximumBytes;
+    private readonly Func<AtomicWriteStage, CancellationToken, ValueTask>? _faultPoint;
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private ConfigurationSnapshot<T>? _current;
+    private JsonObject? _document;
+    private FileRevision _revision = FileRevision.Missing;
+    private bool _disposed;
+
+    protected JsonConfigurationRepository(string path, long maximumBytes,
+        Func<AtomicWriteStage, CancellationToken, ValueTask>? faultPoint = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        _path = Path.GetFullPath(path);
+        _maximumBytes = maximumBytes;
+        _faultPoint = faultPoint;
+    }
+
+    protected abstract T Defaults { get; }
+    protected abstract T PrepareCandidate(T value);
+    protected abstract (T Value, JsonObject Document, bool NeedsUpgrade) Decode(JsonObject document);
+    protected abstract JsonObject Encode(T value, JsonObject document);
+
+    public async ValueTask<ConfigurationSnapshot<T>> LoadAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return _current ?? await ReadCoreAsync(cancellationToken).ConfigureAwait(false); }
+        finally { _gate.Release(); }
+    }
+
+    public async ValueTask<ConfigurationSnapshot<T>> ReloadAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try { return await ReadCoreAsync(cancellationToken).ConfigureAwait(false); }
+        finally { _gate.Release(); }
+    }
+
+    public async ValueTask<ConfigurationSnapshot<T>> SaveAsync(T candidate, string expectedRevision, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentException.ThrowIfNullOrWhiteSpace(expectedRevision);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var current = _current ?? await ReadCoreAsync(cancellationToken).ConfigureAwait(false);
+            if (current.Revision != expectedRevision) throw new PersistenceConflictException("The configuration snapshot is stale.");
+            var prepared = await Task.Run(() => PrepareCandidate(candidate), cancellationToken).ConfigureAwait(false);
+            return await CommitCoreAsync(prepared, cancellationToken).ConfigureAwait(false);
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async ValueTask<ConfigurationSnapshot<T>> UpgradeAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var current = _current ?? await ReadCoreAsync(cancellationToken).ConfigureAwait(false);
+            return current.NeedsUpgrade ? await CommitCoreAsync(current.Value, cancellationToken).ConfigureAwait(false) : current;
+        }
+        finally { _gate.Release(); }
+    }
+
+    private async ValueTask<ConfigurationSnapshot<T>> ReadCoreAsync(CancellationToken cancellationToken)
+    {
+        var file = await AtomicDocumentFile.ReadAsync(_path, _maximumBytes, cancellationToken).ConfigureAwait(false);
+        var decoded = await Task.Run(() => file.Bytes is null
+            ? (Value: PrepareCandidate(Defaults), Document: new JsonObject(), NeedsUpgrade: false)
+            : Decode(ConfigurationJson.ReadObject(file.Bytes, cancellationToken)), cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var result = new ConfigurationSnapshot<T>(decoded.Value, RevisionString(file.Revision), decoded.NeedsUpgrade);
+        _revision = file.Revision; _document = decoded.Document; _current = result;
+        return result;
+    }
+
+    private async ValueTask<ConfigurationSnapshot<T>> CommitCoreAsync(T candidate, CancellationToken cancellationToken)
+    {
+        JsonObject? document = null;
+        using var memory = new MemoryStream();
+        await Task.Run(async () =>
+        {
+            document = Encode(candidate, (JsonObject)_document!.DeepClone());
+            using var limited = new LimitedWriteStream(memory, _maximumBytes);
+            await JsonSerializer.SerializeAsync(limited, document, ConfigurationJson.Options, cancellationToken).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
+        var bytes = memory.GetBuffer().AsMemory(0, checked((int)memory.Length));
+        var revision = FileRevision.FromBytes(bytes.Span);
+        await AtomicFileWriter.WriteAsync(_path, (stream, token) => stream.WriteAsync(bytes, token),
+            new AtomicWriteOptions { MaximumBytes = _maximumBytes, ExpectedRevision = _revision, FaultPoint = _faultPoint }, cancellationToken).ConfigureAwait(false);
+        var result = new ConfigurationSnapshot<T>(candidate, RevisionString(revision), false);
+        _revision = revision; _document = document!; _current = result;
+        return result;
+    }
+
+    private static string RevisionString(FileRevision revision) => revision.Exists ? revision.Sha256! : "missing";
+    public void Dispose() { Dispose(true); GC.SuppressFinalize(this); }
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+        if (disposing) _gate.Dispose();
+        _disposed = true;
+    }
+}

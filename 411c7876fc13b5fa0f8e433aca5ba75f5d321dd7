@@ -1,0 +1,118 @@
+# CefFlashBrowser macOS Gate 0
+
+这是 `Docs/macos-porting-plan.zh-CN.md` 的 Gate 0 独立原型。它不修改、也不参与构建 Windows Legacy solution；当前目标是先验证 macOS 浏览器后端、Ruffle、本地 SWF 与 SharedObject 闭环，再进入正式 vNext 功能迁移。
+
+当前结论：Gate 0 的四项核心退出条件已在 Apple Silicon 真机通过，WKWebView 可作为 vNext 浏览器后端继续推进；H0.2 生命周期/bridge hardening、H0.3A 首份 AVM2 语料以及 H0.R + H0.3B1 播放器可靠性/ExternalInterface 首切片均已验收。播放器控制脚本现在只返回可序列化原始值，冷/热/浏览器 reload/播放器 reload 每个 run 都有唯一 trace，固定 Ruffle v0.4.1 runner 的非重入 JS↔AS3 双向与结构化往返得到精确 PASS。下一任务是 H0.3B2 的输入/渲染/定时、音频和网络/策略文件语料。完整 SWF 兼容语料、纯 C# AMF0/AMF3 编辑器、设置/收藏夹、macOS 平台集成、Developer ID 签名和公证仍属于后续里程碑，不能把本目录视为正式版。macOS 产品只面向 Apple Silicon ARM64，不包含 Intel/x64。
+
+详细证据见：
+
+- [`docs/development-handoff.zh-CN.md`](docs/development-handoff.zh-CN.md)：新会话接手、当前状态和下一任务
+- [`docs/h0.3b1-player-reliability-externalinterface.zh-CN.md`](docs/h0.3b1-player-reliability-externalinterface.zh-CN.md)：已完成的播放器可靠性 + ExternalInterface 合并执行记录
+- [`docs/h0.2-h0.3a-gate0-hardening.zh-CN.md`](docs/h0.2-h0.3a-gate0-hardening.zh-CN.md)：已完成的生命周期/bridge hardening 与首份 AVM2 语料执行记录
+- [`docs/ADR-0001-wkwebview-backend.zh-CN.md`](docs/ADR-0001-wkwebview-backend.zh-CN.md)
+- [`docs/gate0-results.zh-CN.md`](docs/gate0-results.zh-CN.md)
+- [`docs/interfaces.zh-CN.md`](docs/interfaces.zh-CN.md)：端口、事件、bridge 和生命周期契约
+- [`docs/variables.zh-CN.md`](docs/variables.zh-CN.md)：配置、稳定常量、路径和持久化登记
+- [`docs/engineering-spec.zh-CN.md`](docs/engineering-spec.zh-CN.md)：架构、性能、安全、测试和发布规范
+
+在本目录修改前必须按 [`AGENTS.md`](AGENTS.md) 进行硬性路由；同一任务命中多个入口时全部读取。
+
+## 已实现
+
+- .NET 10 + Avalonia 12.1 的原生 macOS 桌面壳。
+- `NativeWebView` / WKWebView 导航、历史、新窗口、JS bridge、持久 WebKit 数据存储与应用接管下载。
+- 通过原生 `WKUserScript` 在 document-start 注入 Ruffle/plugin polyfill。
+- 固定并自托管 Ruffle Web 0.4.1；启动前逐文件校验 SHA-256。
+- 仅监听随机 `127.0.0.1` 端口的 Kestrel 内容服务；每会话令牌、文件白名单、目录穿越与符号链接拒绝、Range/MIME/CSP。
+- 本地 SWF、相对资源基址，以及统一可序列化边界后的暂停、恢复、reload、全屏和音量控制。
+- 固定 Ruffle v0.4.1 ExternalInterface 五文件语料、受认证离线 runner、唯一 SWF allowlist 与 `compatibilityResult` 脱敏结果。
+- Ruffle SharedObject 自动捕获、导入、导出、删除、SOL 头验证及原子 JSON 持久化；随机端口重启后恢复。
+- 可重复验证 document-start、静态/动态 Flash 标签、popup、下载、持久 Cookie 与 SharedObject bridge 的本地诊断页。
+- `osx-arm64` self-contained + ReadyToRun `.app` 打包和由内到外签名脚本；打包前执行 locked restore，bundle 中的通用 Mach-O 会裁为 ARM64。
+
+## 分层边界
+
+```text
+Core
+  Application ports / navigation / Ruffle orchestration
+  SOL validation / save store / loopback content host
+        ↑
+Desktop
+  Avalonia views + view models
+  WKWebView adapter + macOS document-start injector
+  composition root + packaging
+```
+
+`Core` 不引用 Avalonia、WKWebView 或 macOS API；ViewModel 只依赖端口和协调器；WebView、文件对话框与窗口生命周期留在 Desktop 适配层。
+
+## 构建与测试
+
+需要仓库固定的 .NET SDK 10.0.301。在本目录执行：
+
+H0.1 已恢复 ARM64-only 可复现基线。普通开发 restore 使用无 RID 图，发布使用同一锁文件中的 `osx-arm64` 图；publish 不会隐式改写 lock file。
+
+```sh
+dotnet restore CefFlashBrowser.MacOS.Spike.slnx --locked-mode
+dotnet build CefFlashBrowser.MacOS.Spike.slnx --configuration Debug --no-restore --disable-build-servers -m:1
+dotnet test CefFlashBrowser.MacOS.Spike.slnx --configuration Debug --no-build --disable-build-servers -m:1
+```
+
+一条命令复验 locked restore、构建、97 项测试、ARM64 打包、全包 Mach-O 架构、codesign 和 lock file 不变性：
+
+```sh
+scripts/verify-arm64-baseline.sh
+```
+
+直接运行诊断页：
+
+```sh
+dotnet run --project src/CefFlashBrowser.MacOS.Spike.Desktop
+```
+
+诊断页内的 **Open ExternalInterface fixture** 链接运行固定离线双向 Gate；通过时页面与
+原生状态栏都显示
+`PASS available=true jsToAs=123.4 asToJs=true structured=true`。
+
+运行内置官方 Ruffle SharedObject 样例：
+
+```sh
+dotnet run --project src/CefFlashBrowser.MacOS.Spike.Desktop -- \
+  src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/shared-object-avm1.swf
+```
+
+运行固定 Ruffle AVM2/AS3 `Hello world!` 样例：
+
+```sh
+dotnet run --project src/CefFlashBrowser.MacOS.Spike.Desktop -- \
+  src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf
+```
+
+## 打包与签名
+
+默认生成 Hardened Runtime 的 ad-hoc 开发包：
+
+```sh
+scripts/package-macos.sh osx-arm64
+```
+
+产物分别位于：
+
+```text
+artifacts/osx-arm64/CefFlashBrowser.app
+```
+
+有 Developer ID Application 证书时：
+
+```sh
+CODE_SIGN_IDENTITY="Developer ID Application: Example (TEAMID)" \
+  scripts/package-macos.sh osx-arm64
+```
+
+脚本会对 `Contents/MacOS` 内文件逐项签名，再签 bundle 并执行 `codesign --verify --deep --strict`。Developer ID 公证和 staple 不在脚本中伪造；证书与 Apple 凭据就绪后按 Gate 6 发布流程执行。
+
+## 运行数据
+
+- SharedObject store：`~/Library/Application Support/CefFlashBrowser/ruffle-saves.v1.json`
+- Gate 0 journal：`~/Library/Logs/CefFlashBrowser/gate0-*.jsonl`
+
+写入使用临时文件和原子替换。构建产物在 `.gitignore` 中，不应提交。

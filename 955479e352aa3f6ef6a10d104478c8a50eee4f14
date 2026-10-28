@@ -1,0 +1,13 @@
+# P02 fixed Ruffle fixtures
+
+These twelve complete fixture directories (including the original Hello World)
+are copied without modification from
+Ruffle tag v0.4.1, commit a1ac4ce8647352ad03044031cad0454a636427b8.
+The project-authored manifest.json records every upstream path, source URL,
+target path, size, SHA-256 and license. LICENSE_MIT and LICENSE_APACHE are the
+unchanged licenses included in the pinned upstream distribution imported by P00.
+
+The native runner defines its own explicit subsets and tolerances. Passing a
+subset does not mean the entire upstream integration suite or all Flash content
+is compatible. Original expected outputs, source, FLA, SWF and auxiliary files
+remain complete. Runtime version and assets are unchanged.

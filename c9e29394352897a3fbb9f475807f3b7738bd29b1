@@ -1,0 +1,789 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "targetPath": "src/FlashMacOS.Application/Sol/ISolCodec.cs",
+      "beforeSha256": null,
+      "targetSha256": "16c5f0a2ecd2d0c738140171e58e92ff655c0cb5d4b3f2b28cf4bf10f838c8ad",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Sol/ISolFileStorage.cs",
+      "beforeSha256": null,
+      "targetSha256": "6ff1da5fad54cc6ff46095f7e49a6eded715b8988a48e3554a5aecf6b5348536",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Sol/SolEditorSession.cs",
+      "beforeSha256": null,
+      "targetSha256": "9a268761f878e2770a4dbdc4f9a6790368fd8a8cd43d0b75f4e0dbb2937aa23d",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Sol/SolEdits.cs",
+      "beforeSha256": null,
+      "targetSha256": "2458acdccadf2d9875de5f0e20d668df1163dec2680b6b4752748d100fa2fffd",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Sol/SolEncodingConversion.cs",
+      "beforeSha256": null,
+      "targetSha256": "cf3d98bfdbf45c6df0ccaeee731084679496918fa3420be428f9cb3829ed4e62",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Sol/AmfGraphEquality.cs",
+      "beforeSha256": null,
+      "targetSha256": "48b8c66043a1ad6aa2f6f5d5ee6231ba6bffb01611410844f262e4a244c7d97a",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Infrastructure/Persistence/SolFileStorage.cs",
+      "beforeSha256": null,
+      "targetSha256": "6dfb10ce030c1526006c18f27b19373a81accd92c40570fc2ae8044ceaadc14c",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Sol.Managed/AmfCodec.cs",
+      "beforeSha256": "a3fc006ef228f3be9f27d12edfdb4b3f402ed209ed61dd2df2dd42a3dbcfb492",
+      "targetSha256": "1ad140cda0409be70627c2462cb887f3c2f3718eda5f367c67539ff356095a54",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Sol.Managed/AmfReadContext.cs",
+      "beforeSha256": "57c66cbba6cfc4d8736e8da7c8495b2ae36d9de8e2738d8901aaeafaee573bf9",
+      "targetSha256": "533851c01193358f171e9690a4b00d99a98053e06d25ba257da8a7798024e38e",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Sol.Managed/AmfWriteContext.cs",
+      "beforeSha256": "d84e76419a5df3993f6f112f5776ad94a4e474f42cf634f4105ad7ceabf7ff9a",
+      "targetSha256": "cacce7948cea6ef1108ca372529996ca96be9a69773ffc2324c488930245a904",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Sol.Managed/SolCodec.cs",
+      "beforeSha256": null,
+      "targetSha256": "a09ac83e3ee77574aaf8679090144df873446df038621df00370009b969c93b9",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "src/FlashMacOS.Sol.Managed/SolFileInspector.cs",
+      "beforeSha256": "c04bba28148a88e1db7f6eeb607d4b31942e517ce4266e295a0303cc8801d648",
+      "targetSha256": "5900b18085ba871575c8b14b3a456219d53f6aa6adcdb6fe860d7af0e76b40d6",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/SolEditorTransactionTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "fc296db1c5b294a8765ea7eeac7bb510243a5e794ea6623c933c226f9bd10892",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Sol.Managed.Tests/LegacySolValueAssertionsTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "c45ba7072dee81b18de5c7384af8da08b7e4c18ee2ecddb7e6711e0112e0702d",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Sol.Managed.Tests/SolContentTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "4d49377201925066109bd557ccf4e45057c56dcfd6e1a01b99b633ecddad7aef",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Sol.Managed.Tests/SolConversionTests.cs",
+      "beforeSha256": null,
+      "targetSha256": "c8492cfede9070baac3825203982530e725cd913278d4eaf1802ef385e6af3ad",
+      "reason": "S04 implementation and nearest regression; see task report and support contract",
+      "origin": "Project-authored implementation/manual fixture; reference algorithms are not runtime dependencies",
+      "referenceSources": [
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.cpp",
+          "originalSourceSha256": "1bbfafb7ff77d484f0514c7de2d99218f1d649c6d194a86451ff335f7103766a"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/sol.h",
+          "originalSourceSha256": "5641211707e25137ffacc45a5d82a0ac147281b58b6498911e990af5a62413dd"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.cpp",
+          "originalSourceSha256": "7ba9f3ee988443396faac11fde6a111e32f0cfb6d8f5f818568780e45a88e70d"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utils.h",
+          "originalSourceSha256": "bb1c883d367d6b5defb4d04c0f44daf68461869df080bd2916e1a65d6092c19f"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/cli.cpp",
+          "originalSourceSha256": "dc79b6bbc94a982a2951e9383c365da0c7e868ad54d44fe93464d6bdc1001a28"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Sol/utilscli.cpp",
+          "originalSourceSha256": "0b463640677af802de0e6855097a50b366cc5ab6ac5949f951c41462d6d92f32"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/AmfEncodingTests.cs",
+          "originalSourceSha256": "371337b7213cbc1b6cbd0ca46fd009490a37523a6552b70b04af60959acfe192"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/CefFlashBrowser.Tests/SolFileReadWriteTests.cs",
+          "originalSourceSha256": "1a9cc0279b373cb67f78e99273cceaa8e833c73fd91b920dd4cbd182ec677bee"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf0-file-format-specification.pdf",
+          "originalSourceSha256": "77fedf179ab595cdff3bce6658421700100d4207898740cb5c135869f08f4f12"
+        },
+        {
+          "originalSourcePath": "/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser/Docs/amf3-file-format-spec.pdf",
+          "originalSourceSha256": "a17ef10f8cd28d9a6ac4bab0940f0867b050274fc867a3c8868dec3ece4e9b61"
+        }
+      ]
+    }
+  ]
+}

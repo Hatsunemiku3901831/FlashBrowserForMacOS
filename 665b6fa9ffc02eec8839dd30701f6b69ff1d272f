@@ -1,0 +1,1171 @@
+{
+  "schemaVersion": 1,
+  "sourceRun": "pristine-20261028-01",
+  "destinationRun": "isolated-profile-20261028-02",
+  "tests": [
+    {
+      "testName": "PlayerCommandsUseOneSerializableResultBoundary",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+      "methodName": "PlayerCommandsUseOneSerializableResultBoundary",
+      "destination": {
+        "testName": "PlayerCommandsUseOneSerializableResultBoundary",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "PlayerCommandsUseOneSerializableResultBoundary"
+      }
+    },
+    {
+      "testName": "RemoveAsyncReportsWhetherEntryExisted",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleSaveStoreTests",
+      "methodName": "RemoveAsyncReportsWhetherEntryExisted",
+      "destination": {
+        "testName": "RemoveAsyncReportsWhetherEntryExisted",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleSaveStoreTests",
+        "methodName": "RemoveAsyncReportsWhetherEntryExisted"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"  \",\"message\":\"PASS\",\"data\":\"{}\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"  \",\"message\":\"PASS\",\"data\":\"{}\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"saveDeleted\",\"key\":\"save-key\"}\",\"saveDeleted\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseAcceptsEachMinimalKnownMessage",
+      "destination": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"saveDeleted\",\"key\":\"save-key\"}\",\"saveDeleted\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"downloadRequested\",\"url\":\"  \"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"downloadRequested\",\"url\":\"  \"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ResolveRegularFileAllowsOnlyRegularFilesInsideRoot",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.PathSafetyTests",
+      "methodName": "ResolveRegularFileAllowsOnlyRegularFilesInsideRoot",
+      "destination": {
+        "testName": "ResolveRegularFileAllowsOnlyRegularFilesInsideRoot",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.PathSafetyTests",
+        "methodName": "ResolveRegularFileAllowsOnlyRegularFilesInsideRoot"
+      }
+    },
+    {
+      "testName": "CompatibilityResultDescriptionUsesOnlyTheShortMessage",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "CompatibilityResultDescriptionUsesOnlyTheShortMessage",
+      "destination": {
+        "testName": "CompatibilityResultDescriptionUsesOnlyTheShortMessage",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "CompatibilityResultDescriptionUsesOnlyTheShortMessage"
+      }
+    },
+    {
+      "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"42\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+      "destination": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"42\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      }
+    },
+    {
+      "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"test.toml\",\"fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes",
+      "destination": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"test.toml\",\"fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes"
+      }
+    },
+    {
+      "testName": "CompatibilityResultProjectsOnlyItsShortMessageToStatus",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+      "methodName": "CompatibilityResultProjectsOnlyItsShortMessageToStatus",
+      "destination": {
+        "testName": "CompatibilityResultProjectsOnlyItsShortMessageToStatus",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "CompatibilityResultProjectsOnlyItsShortMessageToStatus"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"example.com/path\",True)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"example.com/path\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"flashElementCount\":0,\"documentStartMilliseconds\":0}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"flashElementCount\":0,\"documentStartMilliseconds\":0}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"output.txt\",\"0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes",
+      "destination": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"output.txt\",\"0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"hello world\",False)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"hello world\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"abc:abc\",False)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"abc:abc\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "ReadHeaderReusesLegacyFixtures (\"settings.sol\",\"settings\",0)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+      "methodName": "ReadHeaderReusesLegacyFixtures",
+      "destination": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"settings.sol\",\"settings\",0)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"ftp://files.example.com\",True)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"ftp://files.example.com\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "UpsertAsyncInvalidBase64DoesNotOverwriteExistingStore",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleSaveStoreTests",
+      "methodName": "UpsertAsyncInvalidBase64DoesNotOverwriteExistingStore",
+      "destination": {
+        "testName": "UpsertAsyncInvalidBase64DoesNotOverwriteExistingStore",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleSaveStoreTests",
+        "methodName": "UpsertAsyncInvalidBase64DoesNotOverwriteExistingStore"
+      }
+    },
+    {
+      "testName": "Avm2HelloWorldExpectedOutputNormalizesExactly",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "Avm2HelloWorldExpectedOutputNormalizesExactly",
+      "destination": {
+        "testName": "Avm2HelloWorldExpectedOutputNormalizesExactly",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldExpectedOutputNormalizesExactly"
+      }
+    },
+    {
+      "testName": "ResolvePlainTextUsesSelectedSearchEngineAndEncodesKeyword",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "ResolvePlainTextUsesSelectedSearchEngineAndEncodesKeyword",
+      "destination": {
+        "testName": "ResolvePlainTextUsesSelectedSearchEngineAndEncodesKeyword",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "ResolvePlainTextUsesSelectedSearchEngineAndEncodesKeyword"
+      }
+    },
+    {
+      "testName": "DisposeAsyncIsIdempotentBeforeStart",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+      "methodName": "DisposeAsyncIsIdempotentBeforeStart",
+      "destination": {
+        "testName": "DisposeAsyncIsIdempotentBeforeStart",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "DisposeAsyncIsIdempotentBeforeStart"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"http://example.com\",True)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"http://example.com\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "ResolveDomainWithoutSchemeAddsHttpScheme",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "ResolveDomainWithoutSchemeAddsHttpScheme",
+      "destination": {
+        "testName": "ResolveDomainWithoutSchemeAddsHttpScheme",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "ResolveDomainWithoutSchemeAddsHttpScheme"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"123\",False)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"123\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"  \",\"data\":\"{}\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"  \",\"data\":\"{}\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"playerReady\"}\",\"playerReady\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseAcceptsEachMinimalKnownMessage",
+      "destination": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"playerReady\"}\",\"playerReady\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"message\":\"PASS\",\"data\":\"{}\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"message\":\"PASS\",\"data\":\"{}\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "StartAndRegisterThrowAfterDispose",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+      "methodName": "StartAndRegisterThrowAfterDispose",
+      "destination": {
+        "testName": "StartAndRegisterThrowAfterDispose",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "StartAndRegisterThrowAfterDispose"
+      }
+    },
+    {
+      "testName": "DescribeTruncatesMessageAndKeyContextsWithAnExplicitMarker",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "DescribeTruncatesMessageAndKeyContextsWithAnExplicitMarker",
+      "destination": {
+        "testName": "DescribeTruncatesMessageAndKeyContextsWithAnExplicitMarker",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "DescribeTruncatesMessageAndKeyContextsWithAnExplicitMarker"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"https://example.com/path?q=flash\",True)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"https://example.com/path?q=flash\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.swf\",2308,\"d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+      "destination": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.swf\",2308,\"d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      }
+    },
+    {
+      "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"\"PRIVATE_BODY_SENTINEL\"\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+      "destination": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"\"PRIVATE_BODY_SENTINEL\"\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"localhost:8080\",True)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"localhost:8080\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "RepeatedStartAsyncKeepsTheSameBaseUri",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+      "methodName": "RepeatedStartAsyncKeepsTheSameBaseUri",
+      "destination": {
+        "testName": "RepeatedStartAsyncKeepsTheSameBaseUri",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "RepeatedStartAsyncKeepsTheSameBaseUri"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"savesSnapshot\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"savesSnapshot\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"Test.as\",\"b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes",
+      "destination": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"Test.as\",\"b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"3.14\",False)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"3.14\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "ImportAndDeleteDoNotReturnPromisesToTheNativeWebView",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+      "methodName": "ImportAndDeleteDoNotReturnPromisesToTheNativeWebView",
+      "destination": {
+        "testName": "ImportAndDeleteDoNotReturnPromisesToTheNativeWebView",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "ImportAndDeleteDoNotReturnPromisesToTheNativeWebView"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"data\":\"value\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"data\":\"value\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "DisposeAsyncWaitsForAnAcceptedBridgeWriteToFinish",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+      "methodName": "DisposeAsyncWaitsForAnAcceptedBridgeWriteToFinish",
+      "destination": {
+        "testName": "DisposeAsyncWaitsForAnAcceptedBridgeWriteToFinish",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "DisposeAsyncWaitsForAnAcceptedBridgeWriteToFinish"
+      }
+    },
+    {
+      "testName": "ReadHeaderReusesLegacyFixtures (\"mao.sol\",\"mao\",3)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+      "methodName": "ReadHeaderReusesLegacyFixtures",
+      "destination": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"mao.sol\",\"mao\",3)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      }
+    },
+    {
+      "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.ts\",11769,\"ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+      "destination": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.ts\",11769,\"ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      }
+    },
+    {
+      "testName": "ParseRejectsMissingNullOrBlankType (\"{}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMissingNullOrBlankType",
+      "destination": {
+        "testName": "ParseRejectsMissingNullOrBlankType (\"{}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMissingNullOrBlankType"
+      }
+    },
+    {
+      "testName": "UpsertAsyncPersistsAtomicallyAndSurvivesReload",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleSaveStoreTests",
+      "methodName": "UpsertAsyncPersistsAtomicallyAndSurvivesReload",
+      "destination": {
+        "testName": "UpsertAsyncPersistsAtomicallyAndSurvivesReload",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleSaveStoreTests",
+        "methodName": "UpsertAsyncPersistsAtomicallyAndSurvivesReload"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"hello\",False)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"hello\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"192.168.1.1:8080\",True)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"192.168.1.1:8080\",True)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "ConcurrentDisposeAsyncCallsCompleteWithinFiveSeconds",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+      "methodName": "ConcurrentDisposeAsyncCallsCompleteWithinFiveSeconds",
+      "destination": {
+        "testName": "ConcurrentDisposeAsyncCallsCompleteWithinFiveSeconds",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "ConcurrentDisposeAsyncCallsCompleteWithinFiveSeconds"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"key\":\"key\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"key\":\"key\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"bridgeError\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"bridgeError\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"  \t\r\n\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+      "destination": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"  \t\r\n\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      }
+    },
+    {
+      "testName": "ReadHeaderRejectsUnsupportedEncoding",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+      "methodName": "ReadHeaderRejectsUnsupportedEncoding",
+      "destination": {
+        "testName": "ReadHeaderRejectsUnsupportedEncoding",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderRejectsUnsupportedEncoding"
+      }
+    },
+    {
+      "testName": "ParseRejectsMissingNullOrBlankType (\"{\"type\":null}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMissingNullOrBlankType",
+      "destination": {
+        "testName": "ParseRejectsMissingNullOrBlankType (\"{\"type\":null}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMissingNullOrBlankType"
+      }
+    },
+    {
+      "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"saveChanged\",\"key\":\"save-key\",\"data\":\"\"}\",\"saveChanged\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseAcceptsEachMinimalKnownMessage",
+      "destination": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"saveChanged\",\"key\":\"save-key\",\"data\":\"\"}\",\"saveChanged\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"data\":\"{}\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"data\":\"{}\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":false,\"flashElementCount\":0,\"documentStartMilliseconds\":0}\",\"diagnostics\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseAcceptsEachMinimalKnownMessage",
+      "destination": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":false,\"flashElementCount\":0,\"documentStartMilliseconds\":0}\",\"diagnostics\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      }
+    },
+    {
+      "testName": "IsLocalFileWithExtensionRequiresExistingMatchingFile",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "IsLocalFileWithExtensionRequiresExistingMatchingFile",
+      "destination": {
+        "testName": "IsLocalFileWithExtensionRequiresExistingMatchingFile",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "IsLocalFileWithExtensionRequiresExistingMatchingFile"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"downloadRequested\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"downloadRequested\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "DataNeverAppearsInDescriptionsOrValidationErrors",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "DataNeverAppearsInDescriptionsOrValidationErrors",
+      "destination": {
+        "testName": "DataNeverAppearsInDescriptionsOrValidationErrors",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "DataNeverAppearsInDescriptionsOrValidationErrors"
+      }
+    },
+    {
+      "testName": "ExternalInterfaceFixtureCarriesThePinnedBidirectionalOracle",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "ExternalInterfaceFixtureCarriesThePinnedBidirectionalOracle",
+      "destination": {
+        "testName": "ExternalInterfaceFixtureCarriesThePinnedBidirectionalOracle",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFixtureCarriesThePinnedBidirectionalOracle"
+      }
+    },
+    {
+      "testName": "BridgeStoreFailureRaisesFaultExactlyOnceAndIsObserved",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+      "methodName": "BridgeStoreFailureRaisesFaultExactlyOnceAndIsObserved",
+      "destination": {
+        "testName": "BridgeStoreFailureRaisesFaultExactlyOnceAndIsObserved",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "BridgeStoreFailureRaisesFaultExactlyOnceAndIsObserved"
+      }
+    },
+    {
+      "testName": "ReadHeaderReusesLegacyFixtures (\"pvz.sol\",\"pvz\",3)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+      "methodName": "ReadHeaderReusesLegacyFixtures",
+      "destination": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"pvz.sol\",\"pvz\",3)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      }
+    },
+    {
+      "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"bridgeError\",\"message\":\"\"}\",\"bridgeError\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseAcceptsEachMinimalKnownMessage",
+      "destination": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"bridgeError\",\"message\":\"\"}\",\"bridgeError\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveDeleted\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveDeleted\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (null)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+      "destination": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (null)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      }
+    },
+    {
+      "testName": "SharedObjectFixturesMatchPinnedUpstreamHashes",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "SharedObjectFixturesMatchPinnedUpstreamHashes",
+      "destination": {
+        "testName": "SharedObjectFixturesMatchPinnedUpstreamHashes",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "SharedObjectFixturesMatchPinnedUpstreamHashes"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"key\":\"  \",\"data\":\"value\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"saveChanged\",\"key\":\"  \",\"data\":\"value\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ReadHeaderReusesLegacyFixtures (\"FBCookie.sol\",\"FBCookie\",3)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+      "methodName": "ReadHeaderReusesLegacyFixtures",
+      "destination": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"FBCookie.sol\",\"FBCookie\",3)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      }
+    },
+    {
+      "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.fla\",4804,\"1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+      "destination": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"test.fla\",4804,\"1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      }
+    },
+    {
+      "testName": "MessagesPublishedAfterDisposeStartsAreIgnored",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+      "methodName": "MessagesPublishedAfterDisposeStartsAreIgnored",
+      "destination": {
+        "testName": "MessagesPublishedAfterDisposeStartsAreIgnored",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "MessagesPublishedAfterDisposeStartsAreIgnored"
+      }
+    },
+    {
+      "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+      "destination": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      }
+    },
+    {
+      "testName": "HostServesPinnedAssetsAndConfinedContentOverAuthenticatedLoopback",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+      "methodName": "HostServesPinnedAssetsAndConfinedContentOverAuthenticatedLoopback",
+      "destination": {
+        "testName": "HostServesPinnedAssetsAndConfinedContentOverAuthenticatedLoopback",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "HostServesPinnedAssetsAndConfinedContentOverAuthenticatedLoopback"
+      }
+    },
+    {
+      "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"[]\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+      "destination": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"[]\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      }
+    },
+    {
+      "testName": "ReadHeaderRejectsInvalidMagic",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+      "methodName": "ReadHeaderRejectsInvalidMagic",
+      "destination": {
+        "testName": "ReadHeaderRejectsInvalidMagic",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderRejectsInvalidMagic"
+      }
+    },
+    {
+      "testName": "BuildPageBootstrapUsesValidComputedBridgeMemberAccess",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleDocumentStartScriptBuilderTests",
+      "methodName": "BuildPageBootstrapUsesValidComputedBridgeMemberAccess",
+      "destination": {
+        "testName": "BuildPageBootstrapUsesValidComputedBridgeMemberAccess",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleDocumentStartScriptBuilderTests",
+        "methodName": "BuildPageBootstrapUsesValidComputedBridgeMemberAccess"
+      }
+    },
+    {
+      "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"index.html\",1906,\"e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+      "destination": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"index.html\",1906,\"e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      }
+    },
+    {
+      "testName": "ReadHeaderReusesLegacyFixtures (\"RuffleTest.sol\",\"RuffleTest\",0)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+      "methodName": "ReadHeaderReusesLegacyFixtures",
+      "destination": {
+        "testName": "ReadHeaderReusesLegacyFixtures (\"RuffleTest.sol\",\"RuffleTest\",0)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderReusesLegacyFixtures"
+      }
+    },
+    {
+      "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"Test.as\",5715,\"d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream",
+      "destination": {
+        "testName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream (\"Test.as\",5715,\"d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "ExternalInterfaceFilesAreCopiedUnchangedFromPinnedUpstream"
+      }
+    },
+    {
+      "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"{\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+      "destination": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"{\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      }
+    },
+    {
+      "testName": "AcceptedBridgeWritesCompleteInArrivalOrder",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+      "methodName": "AcceptedBridgeWritesCompleteInArrivalOrder",
+      "destination": {
+        "testName": "AcceptedBridgeWritesCompleteInArrivalOrder",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RufflePlayerCoordinatorTests",
+        "methodName": "AcceptedBridgeWritesCompleteInArrivalOrder"
+      }
+    },
+    {
+      "testName": "BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleDocumentStartScriptBuilderTests",
+      "methodName": "BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode",
+      "destination": {
+        "testName": "BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.RuffleDocumentStartScriptBuilderTests",
+        "methodName": "BuildEmbedsPinnedRuntimeAndBridgeBeforePageCode"
+      }
+    },
+    {
+      "testName": "ParseRejectsMissingNullOrBlankType (\"{\"type\":\"  \"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMissingNullOrBlankType",
+      "destination": {
+        "testName": "ParseRejectsMissingNullOrBlankType (\"{\"type\":\"  \"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMissingNullOrBlankType"
+      }
+    },
+    {
+      "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"downloadRequested\",\"url\":\"https://example.test/file\",\"fileName\":\"file.bin\"}\",\"downloadRequested\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseAcceptsEachMinimalKnownMessage",
+      "destination": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"downloadRequested\",\"url\":\"https://example.test/file\",\"fileName\":\"file.bin\"}\",\"downloadRequested\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      }
+    },
+    {
+      "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"savesSnapshot\",\"data\":\"\"}\",\"savesSnapshot\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseAcceptsEachMinimalKnownMessage",
+      "destination": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"savesSnapshot\",\"data\":\"\"}\",\"savesSnapshot\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      }
+    },
+    {
+      "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"test.swf\",\"708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes",
+      "destination": {
+        "testName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes (\"test.swf\",\"708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldFilesAreCopiedAndMatchPinnedHashes"
+      }
+    },
+    {
+      "testName": "ReadHeaderRejectsMismatchedChunkLength",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+      "methodName": "ReadHeaderRejectsMismatchedChunkLength",
+      "destination": {
+        "testName": "ReadHeaderRejectsMismatchedChunkLength",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.SolFileInspectorTests",
+        "methodName": "ReadHeaderRejectsMismatchedChunkLength"
+      }
+    },
+    {
+      "testName": "DisposeAsyncIsIdempotentAfterStart",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+      "methodName": "DisposeAsyncIsIdempotentAfterStart",
+      "destination": {
+        "testName": "DisposeAsyncIsIdempotentAfterStart",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.LoopbackContentHostTests",
+        "methodName": "DisposeAsyncIsIdempotentAfterStart"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"trace\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"trace\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ParsePreservesUnknownNonEmptyTypeForForwardCompatibility",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParsePreservesUnknownNonEmptyTypeForForwardCompatibility",
+      "destination": {
+        "testName": "ParsePreservesUnknownNonEmptyTypeForForwardCompatibility",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParsePreservesUnknownNonEmptyTypeForForwardCompatibility"
+      }
+    },
+    {
+      "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"null\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody",
+      "destination": {
+        "testName": "ParseRejectsMalformedRootsWithoutEchoingTheBody (\"null\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsMalformedRootsWithoutEchoingTheBody"
+      }
+    },
+    {
+      "testName": "Avm2HelloWorldSourceAndSwfCarryDeterministicEvidence",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+      "methodName": "Avm2HelloWorldSourceAndSwfCarryDeterministicEvidence",
+      "destination": {
+        "testName": "Avm2HelloWorldSourceAndSwfCarryDeterministicEvidence",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.GateZeroFixtureTests",
+        "methodName": "Avm2HelloWorldSourceAndSwfCarryDeterministicEvidence"
+      }
+    },
+    {
+      "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\",\"data\":\"{}\"}\",\"compatibilityResult\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseAcceptsEachMinimalKnownMessage",
+      "destination": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\",\"data\":\"{}\"}\",\"compatibilityResult\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      }
+    },
+    {
+      "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"trace\",\"message\":\"\"}\",\"trace\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseAcceptsEachMinimalKnownMessage",
+      "destination": {
+        "testName": "ParseAcceptsEachMinimalKnownMessage (\"{\"type\":\"trace\",\"message\":\"\"}\",\"trace\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseAcceptsEachMinimalKnownMessage"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\"}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"compatibilityResult\",\"key\":\"external-interface/v1\",\"message\":\"PASS\"}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"flashElementCount\":0}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"flashElementCount\":0}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"file:///tmp/movie.swf\",False)",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+      "methodName": "LooksLikeWebAddressMatchesLegacyBehavior",
+      "destination": {
+        "testName": "LooksLikeWebAddressMatchesLegacyBehavior (\"file:///tmp/movie.swf\",False)",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.NavigationResolverTests",
+        "methodName": "LooksLikeWebAddressMatchesLegacyBehavior"
+      }
+    },
+    {
+      "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"documentStartMilliseconds\":0}\")",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+      "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields",
+      "destination": {
+        "testName": "ParseRejectsKnownMessagesWithMissingRequiredFields (\"{\"type\":\"diagnostics\",\"ruffleAvailable\":true,\"documentStartMilliseconds\":0}\")",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.WebBridgeProtocolTests",
+        "methodName": "ParseRejectsKnownMessagesWithMissingRequiredFields"
+      }
+    },
+    {
+      "testName": "ResolveRegularFileRejectsSymbolicLinkEscape",
+      "outcome": "Passed",
+      "className": "CefFlashBrowser.MacOS.Spike.Tests.PathSafetyTests",
+      "methodName": "ResolveRegularFileRejectsSymbolicLinkEscape",
+      "destination": {
+        "testName": "ResolveRegularFileRejectsSymbolicLinkEscape",
+        "outcome": "Passed",
+        "className": "CefFlashBrowser.MacOS.Spike.Tests.PathSafetyTests",
+        "methodName": "ResolveRegularFileRejectsSymbolicLinkEscape"
+      }
+    }
+  ]
+}

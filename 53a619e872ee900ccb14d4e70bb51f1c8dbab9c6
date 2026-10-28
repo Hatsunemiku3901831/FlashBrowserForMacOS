@@ -1,0 +1,110 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using FlashMacOS.Infrastructure.Persistence;
+
+namespace FlashMacOS.Infrastructure.Configuration;
+
+internal static class ConfigurationJson
+{
+    public static JsonSerializerOptions Options { get; } = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true,
+        MaxDepth = 64,
+        NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+    };
+
+    public static JsonObject ReadObject(byte[] bytes, CancellationToken cancellationToken)
+    {
+        ReadOnlySpan<byte> json = bytes;
+        if (json.StartsWith("\uFEFF"u8)) json = json[3..];
+        try
+        {
+            JsonDocumentGuard.Validate(json, cancellationToken);
+            return JsonNode.Parse(json, documentOptions: new JsonDocumentOptions { MaxDepth = 64 }) as JsonObject
+                ?? throw new InvalidDataException("Configuration must have an object root.");
+        }
+        catch (JsonException exception) { throw new InvalidDataException("Configuration JSON is malformed.", exception); }
+    }
+
+    public static JsonNode? Get(JsonObject source, string name)
+    {
+        var found = source.Where(x => x.Key.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (found.Length > 1) throw new InvalidDataException("Ambiguous configuration field casing: " + name);
+        return found.Length == 0 ? null : found[0].Value;
+    }
+
+    public static bool Has(JsonObject source, string name) => source.Any(x => x.Key.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+    public static int Schema(JsonObject root)
+    {
+        var schema = Get(root, "schemaVersion");
+        if (schema is null)
+        {
+            if (Has(root, "schemaVersion")) throw new InvalidDataException("Configuration schema cannot be null.");
+            return 1;
+        }
+        if (schema is not JsonValue value || !value.TryGetValue<int>(out var version) || version is not (1 or 2))
+            throw new InvalidDataException("Unsupported configuration schema version.");
+        return version;
+    }
+
+    public static JsonObject RequiredObject(JsonObject parent, string name) => Get(parent, name) as JsonObject
+        ?? throw new InvalidDataException("Missing configuration object: " + name);
+
+    public static JsonObject Child(JsonObject parent, string name)
+    {
+        if (parent[name] is JsonObject child) return child;
+        if (parent[name] is not null) throw new InvalidDataException("Expected configuration object: " + name);
+        child = new JsonObject(); parent[name] = child; return child;
+    }
+
+    public static JsonObject Canonicalize(JsonObject source, JsonObject defaults)
+    {
+        var result = new JsonObject();
+        foreach (var property in defaults)
+        {
+            var value = Get(source, property.Key);
+            if (value is null) continue; // Missing/null known fields retain constructor defaults.
+            result[property.Key] = value is JsonObject nested && property.Value is JsonObject nestedDefaults
+                ? Canonicalize(nested, nestedDefaults) : value.DeepClone();
+        }
+        return result;
+    }
+
+    public static void CanonicalNames(JsonObject source, JsonObject shape)
+    {
+        foreach (var property in shape)
+        {
+            var matches = source.Where(x => x.Key.Equals(property.Key, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (matches.Length > 1) throw new InvalidDataException("Ambiguous configuration field casing: " + property.Key);
+            if (matches.Length == 0) continue;
+            var found = matches[0];
+            if (found.Key != property.Key)
+            {
+                var clone = found.Value?.DeepClone(); source.Remove(found.Key); source[property.Key] = clone;
+            }
+            if (source[property.Key] is JsonObject nested && property.Value is JsonObject childShape) CanonicalNames(nested, childShape);
+        }
+    }
+
+    public static void Merge(JsonObject target, JsonObject known, JsonObject preserved, string prefix)
+    {
+        foreach (var property in known)
+        {
+            var path = prefix + "/" + property.Key;
+            if (property.Value is JsonObject nested)
+            {
+                var child = target[property.Key] as JsonObject ?? preserved[path]?.DeepClone() as JsonObject ?? new JsonObject();
+                if (child.Parent is null) target[property.Key] = child;
+                Merge(child, nested, preserved, path);
+            }
+            else
+            {
+                if (property.Value is null && target[property.Key] is { } old) preserved[path] = old.DeepClone();
+                target[property.Key] = property.Value?.DeepClone();
+            }
+        }
+    }
+}

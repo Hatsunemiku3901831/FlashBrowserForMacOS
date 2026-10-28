@@ -1,0 +1,428 @@
+# CefFlashBrowser macOS 移植方案、目标框架与任务规划
+
+独立仓库交接：用户已选择方案一，计划在 `/Users/umisonoda/PycharmProjects/flash/flashMacOS` 开发。可复制的 [FlashMacOS 任务文档包](flashMacOS-task-pack/START-HERE.zh-CN.md) 定义新仓库的来源快照、完整任务和验收；本文继续保留原仓库原型的历史规划与基线，新仓库执行状态只在文档包的状态表维护。
+
+> 状态：Gate 0 核心退出条件已通过；完整 M0.1 兼容语料未完成，尚未进入生产级 Alpha 移植
+>
+> 技术基线日期：2026-08-09
+>
+> 目标：在保留现有 Windows 版本可维护性的前提下，交付可签名、可公证、原生运行于 Apple Silicon macOS（arm64）的 CefFlashBrowser vNext。
+>
+> 范围约束（2026-08-07）：macOS 只交付 `osx-arm64`。不构建、不测试、不发布 macOS Intel/x64 包；Windows Legacy 中的 x86/x64 仍按现状维护，不属于本次 macOS 目标。
+>
+> 当前工程基线：H0.1、H0.2、H0.3A 与 H0.R + H0.3B1 已完成；locked restore、Debug build、97 项测试、ARM64-only package、Mach-O/codesign/lock 门禁可复现。播放器命令序列化边界、AVM2 冷/热/两种 reload 唯一 trace，以及固定 ExternalInterface 非重入双向/结构化 runner 已在签名 WKWebView 通过；下一任务为 H0.3B2。
+
+## 1. 执行摘要
+
+推荐采用“旁路重构、逐项迁移”的方式，而不是在现有 WPF 工程中堆叠条件编译：
+
+- 运行时升级到 **.NET 10 LTS**。
+- 桌面 UI 使用 **Avalonia 12.1.x**，保留 C#/XAML/MVVM 的开发方式。
+- macOS 浏览器主后端使用 Avalonia `NativeWebView`，其底层为 **WKWebView**。
+- Flash 内容使用随应用固定版本、自托管的 **Ruffle Web**；不再移植 Windows `pepflashplayer.dll`。
+- 本地 SWF 通过应用内部受控源加载；网页中的 `<object>` / `<embed>` 通过文档起始阶段注入 Ruffle polyfill 替换。
+- SOL/AMF0/AMF3 解析按现有 C++ 算法与现有测试迁移为 **纯 C#**，移除 C++/CLI 运行时边界。
+- 现有 Windows 工程在 vNext 达到功能门槛前保持原状；新代码通过端口/适配器隔离 UI、浏览器、Flash、存储和平台能力。
+
+这条路线优先满足四个目标：macOS 原生可运行、最大化业务资产复用、降低平台耦合、避免继续绑定已经停止演进的 Pepper Flash/旧版 CEF。
+
+## 2. 当前仓库结论
+
+当前仓库约有 19,038 行 C#/XAML/C++/C++ 头文件代码，其中：
+
+| 区域 | 现状 | macOS 策略 |
+|---|---|---|
+| 主 UI | .NET Framework 4.6.2、WPF、HandyControl | 视图重写为 Avalonia XAML；交互与布局意图复用 |
+| 浏览器 | CefSharp 84、WinForms、WPF `HwndHost` | 以浏览器端口隔离，macOS 首选 WKWebView |
+| Flash | Windows x86/x64 `pepflashplayer.dll` | 替换为 Ruffle；原二进制不能复用 |
+| SOL | 约 1,500 行可移植 C++ 核心 + C++/CLI 包装 | 复用格式算法、规范、测试与夹具，迁移为纯 C# |
+| 单实例/激活 | C++/CLI、隐藏 Win32 窗口、`WM_COPYDATA` | 重新实现跨平台激活端口与 macOS 适配器 |
+| 设置/收藏夹 | 静态 `GlobalData` + Newtonsoft.Json | 保留 JSON 兼容性，迁移到仓储与版本化设置模型 |
+| 日志 | 自有文件日志 | 复用行为，接入标准日志抽象并改为缓冲写入 |
+| 资源 | SVG、PNG、语言字符串、SWF HTML | 资源内容可复用；WPF 资源字典需转换 |
+| 测试 | MSTest；SOL、URL、设置、日志已有较完整测试 | 测试语义与夹具复用，目标框架升级至 `net10.0` |
+
+明确的平台绑定点包括：
+
+- `System.Windows`、WPF XAML、HandyControl 与 WPF behaviors。
+- CefSharp、WinForms、`HWND`、Win32 消息循环和窗口样式操作。
+- C++/CLI（macOS 不支持）以及 Visual C++ 工具链项目。
+- `IWshRuntimeLibrary` 和 `.lnk` 快捷方式。
+- Windows 注册表主题检测、`Microsoft.Win32` 文件对话框。
+- Windows 专用构建后处理、`.exe` 子进程、`.dll` 与 x86 资产。
+
+因此，直接把当前主工程改成多目标项目会产生大量 `#if`、使浏览器类型继续泄漏到 ViewModel，并且无法解决 C++/CLI 与 WPF 的根本约束。
+
+## 3. 范围与能力边界
+
+### 3.1 首个 macOS 正式版必须具备
+
+- Apple Silicon（macOS arm64）原生运行；不承诺 Intel/x64 版本。
+- 打开本地 `.swf`，支持暂停、恢复、重载、缩放、全屏、音量和状态提示。
+- 普通网页浏览：地址/搜索、前进、后退、刷新、停止、新窗口、下载、收藏夹、UA。
+- 对网页内静态和动态 Flash 标签启用 Ruffle 替换。
+- 打开、创建、编辑、保存 AMF0/AMF3 `.sol` 文件。
+- 管理 Ruffle SharedObject，并支持导入旧 Pepper Flash SOL 文件。
+- 设置、收藏夹、语言、主题、窗口状态和日志。
+- `.swf` / `.sol` 文件关联、拖放打开、第二次启动参数转交。
+- `.app` 与 `.dmg` 的签名、公证、校验和发布产物。
+
+### 3.2 兼容性口径
+
+“支持 Flash”定义为由 Ruffle 实现的兼容运行，不承诺与 Adobe Pepper Flash 二进制逐指令一致。兼容性分级如下：
+
+| 等级 | 含义 |
+|---|---|
+| A | 画面、输入、声音、存档和网络行为通过回归用例 |
+| B | 核心流程可用，存在非阻塞的视觉或音频差异 |
+| C | 能加载但关键 API、视频、Stage3D 或网络行为不完整 |
+| D | 无法运行；记录最小复现与上游状态 |
+
+发布门槛以项目维护的 SWF 兼容性语料库为准，不能只以“播放器窗口能打开”作为验收。
+
+### 3.3 首版不承诺
+
+- 加载原 Adobe/Google Pepper Flash 插件。
+- 完全复刻 CEF DevTools 的嵌入式 HWND 布局；macOS 使用 Web Inspector 或独立调试入口。
+- 应用内独立代理栈。MVP 继承 macOS 系统代理；自定义代理在浏览器后端验证后单独排期。
+- Mac App Store 上架。首发采用 Developer ID 签名、公证的站外 `.dmg`；App Sandbox 适配可作为后续里程碑。
+
+## 4. 技术选型
+
+### 4.1 选择 .NET 10 LTS
+
+- 当前为活跃 LTS，支持期至 2028-11-14。
+- 当前开发机已经安装 .NET SDK 10.0.301 和 Xcode 26.5，可直接建立 macOS 原型。
+- 新工程统一启用 nullable、隐式 using、集中包版本与锁文件。
+
+### 4.2 选择 Avalonia 12.1.x，而不是继续 WPF
+
+- Avalonia 12 支持 macOS arm64，XAML/MVVM 迁移成本明显低于 Swift/AppKit 全量重写。
+- `NativeWebView` 已在 Avalonia 12 开源，可在 macOS 使用 WKWebView，不需要随应用分发完整 Chromium。
+- 现有 WPF XAML 不是语法级直接兼容：资源、触发器、第三方控件、窗口行为和代码后置仍需按视图重写。
+- 不采用商业 XPF 作为主路线，避免把可移植性绑定到兼容层和商业运行时；若工期优先级发生变化，可单独做 XPF 成本验证。
+
+### 4.3 浏览器后端：WKWebView 主选，CefGlue 预留降级
+
+主选 `Avalonia.Controls.WebView.NativeWebView`：
+
+- macOS 使用系统 WKWebView，安装体积和常驻内存通常低于内置 Chromium。
+- 支持导航、新窗口、JS/C# 消息、资源请求、Cookie、打印和平台句柄访问。
+- 通过 `IBrowserView` / `IBrowserSession` 隔离，ViewModel 不引用 Avalonia 控件或 WebKit 类型。
+
+架构验证阶段必须证明：
+
+1. 能在 document-start 注入 Ruffle，早于站点 Flash 插件检测。
+2. 能加载应用内 Ruffle JS/WASM 并保持正确 MIME 类型。
+3. 能处理 popup、下载、Cookie、持久化存储与开发工具。
+4. 不因 NativeView airspace 限制破坏查找栏、弹层和全屏布局。
+
+如果其中任一硬门槛无法满足，则只替换浏览器适配器为 `CefGlue.Avalonia`；领域、应用、SOL、Ruffle 页面和 UI 层不变。不要在正式版中同时维护两套后端，除非兼容语料证明有持续价值。
+
+### 4.4 Flash 后端：固定版本的自托管 Ruffle
+
+- 将 Ruffle self-hosted JS/WASM 作为有版本、有哈希的应用资产，而不是运行时引用 CDN。
+- 本地 SWF 使用专用播放器页和应用内部 HTTP 源，避免 `file:` 的 MIME、同源和持久化差异。
+- 网页 Flash 通过 Ruffle polyfill 替换 `<object>` / `<embed>`。
+- 默认让 Ruffle选择可用的最佳渲染器；只在兼容性配置中覆盖 WebGPU/WGPU-WebGL/WebGL/Canvas。
+- `allowScriptAccess`、网络访问、凭据域和 URL 重写按游戏配置显式控制。
+- Ruffle 版本升级必须经过固定 SWF 语料、SharedObject 与性能回归，不能自动跟随 nightly。
+
+### 4.5 SOL 后端：纯 C# 行为等价迁移
+
+虽然 `sol.cpp` / `utils.cpp` 的大部分代码可由 clang 编译，但 C++/CLI 包装不能在 macOS 使用。为复杂对象图另造 C ABI 会引入句柄生命周期、跨堆内存、原生库签名和序列化开销，因此采用纯 C# 迁移：
+
+- 保留 AMF0/AMF3 解析/写入算法、类型语义、错误用例与所有 fixture。
+- 使用 `ReadOnlySpan<byte>`、`Span<byte>`、`BinaryPrimitives`、`ArrayBufferWriter<byte>`。
+- 用明确的判别联合模型替代 `object` + 运行时类型猜测。
+- 保留未知/未定义/null、引用表、稠密/关联数组、typed object、XML、日期和二进制等差异。
+- 对现有 fixture 做读取断言、语义往返和可确定场景下的字节级往返。
+
+该模块不依赖 UI、浏览器或平台 API，可独立测试、基准和复用。
+
+## 5. 目标架构
+
+```mermaid
+flowchart LR
+    UI["Desktop UI<br/>Avalonia Views"] --> APP["Application<br/>Use Cases + Ports"]
+    APP --> DOMAIN["Domain<br/>Models + Rules"]
+    UI --> COMPOSE[Composition Root]
+    COMPOSE --> APP
+    COMPOSE --> WEB["Browser Adapter<br/>NativeWebView / WKWebView"]
+    COMPOSE --> FLASH["Flash Adapter<br/>Ruffle + Local Content Host"]
+    COMPOSE --> SOL["SOL Adapter<br/>Managed AMF0/AMF3"]
+    COMPOSE --> INFRA["Infrastructure<br/>JSON + Logs + Paths"]
+    COMPOSE --> MAC["Platform Adapter<br/>macOS Activation + Files"]
+    WEB -. implements .-> APP
+    FLASH -. implements .-> APP
+    SOL -. implements .-> APP
+    INFRA -. implements .-> APP
+    MAC -. implements .-> APP
+```
+
+依赖纪律：
+
+- `Domain` 只依赖 BCL。
+- `Application` 只依赖 `Domain`，并拥有端口接口。
+- 所有适配器依赖 `Application`，适配器之间不互相引用。
+- `Desktop` 只处理展示和用户输入；具体实现只在 Composition Root 注册。
+- ViewModel 不接收 `WKWebView`、`NativeWebView`、`Window`、文件对话框或静态 `GlobalData`。
+- 平台差异通过能力接口表达，不通过散落的 `OperatingSystem.IsMacOS()` 和条件编译表达。
+
+## 6. 建议工程骨架
+
+迁移期间不移动旧工程，先在 `src/` 与 `tests/` 建立 vNext：
+
+```text
+src/
+  CefFlashBrowser.Domain/
+    Browser/ Favorites/ Settings/ Sol/ Flash/
+  CefFlashBrowser.Application/
+    Ports/ UseCases/ Validation/
+  CefFlashBrowser.Infrastructure/
+    Persistence/ Logging/ Paths/ Migration/
+  CefFlashBrowser.Sol.Managed/
+    Amf0/ Amf3/ Codec/ Model/
+  CefFlashBrowser.Browser.Avalonia/
+    NativeWebView/ Downloads/ Popups/ Scripts/
+  CefFlashBrowser.Flash.Ruffle/
+    Assets/ Player/ Injection/ Storage/ LocalHost/
+  CefFlashBrowser.Platform.MacOS/
+    Activation/ FileAssociations/ Shortcuts/ SystemTheme/
+  CefFlashBrowser.Desktop/
+    Views/ ViewModels/ Themes/ Localization/ Composition/
+tests/
+  CefFlashBrowser.Domain.Tests/
+  CefFlashBrowser.Application.Tests/
+  CefFlashBrowser.Sol.Managed.Tests/
+  CefFlashBrowser.IntegrationTests/
+  CefFlashBrowser.Desktop.Tests/
+benchmarks/
+  CefFlashBrowser.Benchmarks/
+```
+
+建议保留现有 `CefFlashBrowser.slnx` 作为 Windows Legacy 入口，新增 `CefFlashBrowser.Next.slnx`。在 vNext 达到发布门槛前，不批量移动或重命名旧项目。
+
+## 7. 核心端口
+
+接口应围绕业务能力，而不是围绕某个 UI 控件设计。当前已实现端口、模型、事件、bridge 协议和生命周期的唯一权威说明见 [`../spike/macos-host/docs/interfaces.zh-CN.md`](../spike/macos-host/docs/interfaces.zh-CN.md)；稳定名称、配置、路径和 schema 见 [`../spike/macos-host/docs/variables.zh-CN.md`](../spike/macos-host/docs/variables.zh-CN.md)。
+
+当前基线已经具备 `IBrowserSession`、`ILocalContentHost`、`IRuffleSaveStore` 和 `IAppPaths`。后续 M1–M4 按用例需要补充纯 C# `ISolCodec`、设置仓储和激活协调器；新增端口时先更新接口文档和契约测试，不在本计划复制可能漂移的 C# 签名。
+
+UI 需要持有实际 NativeView 时，由 View 层实现很薄的 host；会话状态和命令仍通过端口进入应用层。
+
+## 8. 复用与重写清单
+
+| 资产 | 处理 | 说明 |
+|---|---|---|
+| `UrlHelper` 与测试 | 直接迁移后小改 | 去除条件编译式本地化异常 |
+| Settings、Favorites、Website 等模型 | 结构复用、模型升级 | 增加 schema version，分离平台设置 |
+| 设置/收藏夹 JSON | 格式兼容 | 首次运行迁移，保存为 v2 |
+| SOL C++ 算法 | 行为迁移 | 不保留 C++/CLI 二进制边界 |
+| SOL 测试与四个 fixture | 高比例直接复用 | 升级目标框架和命名空间 |
+| ViewModel 的业务动作 | 用例级复用 | 移除 CefSharp、WindowManager、静态 Messenger |
+| WPF XAML | 视觉/交互复用，代码重写 | Avalonia 控件、样式、窗口生命周期不同 |
+| SVG/PNG/表情资源 | 直接复用 | 重新声明 Avalonia Asset URI |
+| 五种语言内容 | 文本复用 | 迁移至 RESX 或独立字符串目录 |
+| FileLogger 行为 | 重构复用 | 标准日志接口、Channel 缓冲、批量 flush |
+| `pepflashplayer_*.tar.gz` | vNext 淘汰 | Windows DLL，macOS 不可用 |
+| `libcef_*.tar.gz`、CefSharp 桥 | vNext 淘汰 | 只保留在 Legacy Windows 构建 |
+| `Singleton` C++/CLI | 重写适配器 | 文件锁/本地 socket/应用激活 |
+| `Win32.cs`、`HwndHelper`、`HwndContainer` | 不迁移 | 由 Avalonia/WebView 平台适配替代 |
+| `.lnk` COM 快捷方式 | 重写 | macOS 生成 `.webloc` 或交由系统分享入口 |
+| `publish.bat` / Windows post-build | Legacy 保留 | vNext 使用 `dotnet publish` + macOS 打包流水线 |
+
+这里的“复用”以复用已验证行为和测试为优先，不以强行保留每一行平台代码为目标。
+
+## 9. 数据、路径与存档迁移
+
+### 9.1 macOS 路径
+
+通过 `IAppPaths` 统一解析，业务层不拼接反斜杠：
+
+```text
+~/Library/Application Support/CefFlashBrowser/  settings、favorites、迁移元数据
+~/Library/Caches/CefFlashBrowser/               Web/Ruffle 缓存
+~/Library/Logs/CefFlashBrowser/                 日志
+```
+
+应用资源只读，位于 `.app/Contents/Resources/`。运行时数据绝不写入 `.app` 包内部。
+
+### 9.2 设置与收藏夹
+
+- 读取旧 Newtonsoft.Json 输出，未知字段保留或忽略而不导致启动失败。
+- 新格式增加 `schemaVersion`，迁移步骤必须幂等。
+- 设置保存采用同目录临时文件、flush、原子替换；升级前保留时间戳备份。
+- 删除 Windows 专用设置时不丢弃原字段，放入 `legacy` 节点以便回退。
+
+### 9.3 SharedObject 与 SOL 编辑器
+
+Ruffle Web 将 SharedObject 存入 WebView 的 origin-scoped Web Storage。需要 `IRuffleSaveStore`：
+
+1. 通过受控 JS bridge 枚举 Ruffle 存档键和值。
+2. Base64 解码后交给 `ISolCodec`。
+3. 编辑前暂停播放器并建立备份。
+4. 写回后使播放器重载，避免内存态覆盖磁盘态。
+5. 支持从旧 Pepper 目录批量导入，并显示目标 origin/path 映射预览。
+
+这项能力必须在架构验证阶段完成最小闭环，因为它决定“存档管理器”能否与嵌入式 Ruffle 使用同一份实时数据。
+
+## 10. 性能设计与预算
+
+### 10.1 设计措施
+
+- 使用系统 WKWebView，避免默认随应用携带 Chromium。
+- Avalonia 使用编译绑定；ViewModel 使用源生成属性/命令，避免反射式绑定热路径。
+- Ruffle 按需初始化；主窗口启动时不预热 WASM，播放器打开后只保留一个可复用热实例。
+- 不强制 Ruffle 渲染后端，让其按能力选择；为故障游戏保存逐游戏覆盖设置。
+- SOL 解析为 span-based 单遍读取，写入使用可增长缓冲；设置最大深度、最大集合项和最大文件大小。
+- 大型 SOL 树采用延迟展开和虚拟化；搜索与文件扫描在后台执行，UI 线程只发布批次结果。
+- 日志通过有界 Channel 单写者批量落盘，严重错误显式 flush；避免当前每行同步 flush。
+- 设置变更防抖保存；应用退出只等待有界时间，不做无期限同步阻塞。
+- 首版使用 self-contained + ReadyToRun；暂不启用 NativeAOT 和激进 trimming，待 WebView/XAML/反射兼容验证后再评估。
+
+### 10.2 初始性能门槛
+
+以下门槛在 M0 基准后固化，测试基准机为至少 8 GB 的 Apple Silicon Mac：
+
+| 指标 | 初始目标 |
+|---|---|
+| 无浏览器主壳冷启动 P95 | ≤ 2.0 秒 |
+| 常用 UI 操作主线程停顿 P95 | < 50 ms |
+| 10 MiB SOL 读取/保存 | 各 ≤ 500 ms，峰值托管分配 ≤ 输入 3 倍 |
+| 第二次打开同一 SWF | 比首次加载至少快 25% |
+| 60 FPS 内容的应用层附加帧延迟 | P95 < 8 ms，不包含 SWF 自身脚本耗时 |
+| 30 分钟播放 | 无持续增长的会话、WebView、事件订阅或文件句柄 |
+
+若真实语料与预算冲突，先记录分位数和瓶颈，再调整预算；禁止通过降低测试覆盖或静默禁用功能达标。
+
+## 11. 可靠性与发布设计
+
+- 内部资源服务仅绑定 `127.0.0.1` 随机端口，使用每会话随机路径令牌，拒绝目录穿越与任意文件访问。
+- Ruffle 资产带版本、来源、许可证和 SHA-256；升级由依赖 PR 和兼容回归驱动。
+- 外部网页与本地玩家使用独立 WebView 数据存储标识，避免 Cookie 和存档串域。
+- 所有文件写入先备份并原子替换；编辑中的 SOL 崩溃后可恢复。
+- macOS 发布只产出 `osx-arm64` 原生包，不依赖 Rosetta。
+- `.app` 内每个 Mach-O/辅助进程按由内到外顺序签名，启用 Hardened Runtime，随后公证并 staple。
+- CI 保存 SBOM、依赖锁、测试报告、兼容矩阵、基准对比、签名验证与 `spctl` 结果。
+
+## 12. 任务规划
+
+工作量为一名熟悉 C#、Avalonia、WebView 和二进制格式的工程师的净人日估算，不含等待证书、外部评审或上游修复时间。
+
+### 12.1 当前 Gate 0 收口队列
+
+下表是当前执行队列，不改变后续 M1–M6 的净人日口径。Codex 连续执行小时与人类净人日不是同一估算单位。
+
+| ID | 状态 | 当前边界 | 退出/下一步 |
+|---|---|---|---|
+| H0.1 | 已完成 | ARM64-only locked restore/build/test/package 与签名门禁 | 后续任务持续运行 `verify-arm64-baseline.sh`，不得恢复 Intel graph。 |
+| H0.2 + H0.3A | 已完成 | lifecycle/bridge/coordinator 缺陷已关闭；Ruffle v0.4.1 `avm2/hello_world` 的来源、hash、自动化与 WKWebView trace 已通过 | 完成证据见 [合并执行记录](../spike/macos-host/docs/h0.2-h0.3a-gate0-hardening.zh-CN.md)与 Gate 报告。 |
+| H0.R + H0.3B1 | 已完成 | 玩家命令返回值与热导航 trace 回归已关闭；Ruffle v0.4.1 ExternalInterface 固定非重入双向语料已通过 | 完成证据见 [播放器可靠性 + ExternalInterface 执行记录](../spike/macos-host/docs/h0.3b1-player-reliability-externalinterface.zh-CN.md)与 Gate 报告。 |
+| H0.3B2 | **当前下一工作包** | 输入/渲染/定时、音频、网络/策略文件的剩余确定性矩阵 | H0.3 总体仍按 2–4 净人日估算；兼容矩阵无“未测试”后进入 H0.4。 |
+| H0.4 | 待执行 | 重跑 Gate 0 自动化/真机、同步证据并重新估算 | Gate 0 收口后才进入 M1。 |
+
+### 12.2 总体里程碑任务表
+
+| ID | 任务 | 依赖 | 交付物与完成条件 | 估算 |
+|---|---|---|---|---:|
+| M0.1 | 冻结现状与兼容语料 | 无 | 功能清单；至少覆盖 AS1/2、AS3、声音、网络、ExternalInterface、SharedObject 的样本及预期结果 | 2–3 人日 |
+| M0.2 | Avalonia + NativeWebView 原型 | M0.1 | Apple Silicon 上可导航、JS bridge、popup、下载、持久 Cookie；记录启动/内存基线 | 2–3 人日 |
+| M0.3 | Ruffle 本地播放器原型 | M0.2 | 自托管 JS/WASM；本地 SWF、相对资源、音频、全屏可用；重启后存档仍在 | 2–3 人日 |
+| M0.4 | 网页 Flash 注入与存档闭环 | M0.2–M0.3 | document-start polyfill 通过插件检测页；SharedObject 可导出、修改、导回并被游戏读取 | 3–5 人日 |
+| M0.5 | 浏览器后端决策门 | M0.4 | ADR：WKWebView 通过全部硬门槛，或以数据决定切换 CefGlue；之后冻结后端 | 1 人日 |
+| M1.1 | vNext 工程骨架 | M0.5 | 新 solution、集中包管理、格式化、nullable、DI、CI 编译矩阵 | 2–3 人日 |
+| M1.2 | Domain/Application 抽取 | M1.1 | 导航、收藏、设置、Flash、SOL 用例与端口；无 Avalonia/CefSharp 引用 | 4–6 人日 |
+| M1.3 | 持久化与路径 | M1.2 | macOS 路径、设置 v2、收藏夹、原子写、旧 JSON 兼容、日志适配器 | 4–6 人日 |
+| M2.1 | SOL 类型系统与 AMF0 | M1.1 | 纯 C# AMF0 读取/写入；相关 fixture 和边界测试通过 | 4–6 人日 |
+| M2.2 | AMF3、引用表与 SOL 文件 | M2.1 | 全部现有 SOL/AMF 测试迁移通过；无 C++/CLI 依赖 | 6–9 人日 |
+| M2.3 | SOL 基准与模糊/恶意输入测试 | M2.2 | 性能预算、深度/尺寸限制、截断/损坏输入不崩溃 | 2–4 人日 |
+| M3.1 | Avalonia 应用壳与设计系统 | M1.2 | 主题、语言、原生菜单、导航、窗口生命周期、通用对话框 | 5–7 人日 |
+| M3.2 | 主窗口、设置、收藏夹 | M1.3、M3.1 | 对应功能验收与 ViewModel 单测；无静态 GlobalData/Messenger | 5–8 人日 |
+| M3.3 | SOL 编辑器与存档管理器 UI | M2.2、M3.1 | 大树延迟展开、编辑/撤销、导入导出、备份恢复 | 7–10 人日 |
+| M4.1 | Browser Avalonia 适配器 | M0.5、M3.1 | 导航、状态、popup、下载、UA、查找、打印、外部打开、调试入口 | 6–9 人日 |
+| M4.2 | Ruffle 正式适配器 | M0.4、M4.1 | 本地播放器、网页 polyfill、配置、错误分级、版本/哈希清单 | 6–9 人日 |
+| M4.3 | Ruffle 存档适配器 | M2.2、M4.2 | live SharedObject 编辑、事务备份、重载同步、Pepper 导入 | 4–7 人日 |
+| M5.1 | macOS 平台集成 | M3、M4 | 文件关联、拖放、单实例激活、`.webloc`、系统主题、菜单快捷键 | 4–7 人日 |
+| M5.2 | 数据迁移向导 | M1.3、M4.3 | Windows 数据目录/压缩包预检、映射预览、幂等导入、迁移报告 | 3–5 人日 |
+| M6.1 | 自动化测试与兼容矩阵 | M2–M5 | 核心覆盖率门槛；SWF A/B/C/D 报告；macOS arm64 冒烟 | 4–6 人日 |
+| M6.2 | 性能与泄漏治理 | M6.1 | 达到第 10 节预算；基准报告纳入 CI 对比 | 3–5 人日 |
+| M6.3 | 签名、公证与发布 | M5、M6.1 | arm64 `.app`/`.dmg`；签名、公证、staple、升级/卸载验证 | 3–5 人日 |
+
+ARM-only 总量级约 **82–127 人日**，相比双架构目标减少跨架构构建、Intel 硬件验证和发布校验工作；AMF、UI、Ruffle 兼容和 macOS 平台集成的主体工作量不变。其中 M0 是必须先完成的技术验证门，预计 **10–15 人日**；通过后才能对完整移植工期做第二次收敛。若首个里程碑只交付“本地 SWF + SOL 编辑器 + 基础设置”，可在 M0 后优先执行 M1、M2、M3.1、M3.3、M4.2 的子集。
+
+## 13. 里程碑与退出条件
+
+### Gate 0：可行性确认
+
+- WKWebView/Ruffle 本地 SWF 可运行。
+- 网页 document-start 注入可用，或已经用数据选择 CefGlue。
+- SharedObject 编辑闭环可用。
+- 已取得至少一份签名开发包的启动结果。
+
+Gate 0 未通过时不进入大规模 UI 移植。
+
+### Alpha：功能骨架
+
+- 主窗口、本地 SWF、设置/收藏夹、SOL 编辑器在 Apple Silicon 运行。
+- 核心项目无 WPF、CefSharp、Win32、C++/CLI 引用。
+- 旧设置与 SOL fixture 全部通过迁移测试。
+
+### Beta：功能对齐
+
+- 网页 Flash、下载、popup、live save、数据迁移、文件关联完成。
+- 兼容语料全部有等级和已知差异，不允许“未测试”。
+- arm64 包完成独立安装和升级测试。
+
+### Release Candidate
+
+- 测试、性能、泄漏和崩溃恢复门槛通过。
+- `.app` 和 `.dmg` 均完成签名、公证与 Gatekeeper 验证。
+- 发布说明明确列出 Ruffle 版本、兼容矩阵和数据迁移方式。
+
+## 14. 测试策略
+
+- `Domain` / `Application`：用例级单测，目标行覆盖率不低于 85%。
+- `Sol.Managed`：目标分支覆盖率不低于 90%；现有全部测试与 fixture 必须迁移。
+- Persistence：旧/新 JSON、断电式临时文件残留、权限错误、并发保存。
+- Browser：使用本地确定性测试站点，不依赖公网；覆盖 popup、下载、JS dialog、CSP、Cookie 和导航历史。
+- Ruffle：固定 SWF 语料和固定引擎版本；截图/音频只作为辅助，核心行为用 JS bridge 与存档断言。
+- UI：ViewModel 单测 + Avalonia headless；NativeWebView、全屏、快捷键和文件对话框在真实 macOS 会话中跑冒烟。
+- 发布：干净用户账户首次启动、升级、数据导入、离线启动、应用移动目录、Gatekeeper 隔离属性。
+
+## 15. 主要风险与应对
+
+| 风险 | 影响 | 前置应对 |
+|---|---|---|
+| 特定 AS3/Stage3D/视频内容在 Ruffle 未完整实现 | 核心游戏不可用 | M0 建立真实语料；兼容分级；逐游戏配置；必要时向上游提交最小复现 |
+| WKWebView 无法足够早地注入 polyfill | 网页 Flash 检测失败 | M0 验证 `WKUserScript` document-start；失败则切换浏览器适配器到 CefGlue |
+| Ruffle Web 存档位于 origin-scoped localStorage | 现有文件扫描器看不到实时存档 | M0 完成 JS bridge 导出/导入闭环；应用层只依赖 `IFlashSaveStore` |
+| NativeWebView airspace | 浮层被浏览器表面遮挡 | 浏览器区域不叠加 Avalonia popup；工具条/查找栏使用独立布局区域 |
+| WKWebView 自定义代理能力不足 | 旧代理设置无法等价迁移 | MVP 使用系统代理；独立 spike 后决定平台 API 或 CEF 后端能力 |
+| SOL 纯 C# 迁移出现细微格式差异 | 存档损坏 | fixture、字节级回归、写前备份、差分解析、限制发布门 |
+| arm64 嵌套组件签名错误 | Gatekeeper 阻止启动 | M0 做签名烟测；流水线逐项签名、验证、公证、staple |
+| 一次性重写导致 Windows 回归 | 现有用户受影响 | Legacy 工程冻结在原位置；vNext 独立 solution；达到门槛后再讨论 Windows 合流 |
+
+## 16. 参考基线
+
+- [.NET 官方支持策略](https://dotnet.microsoft.com/en-us/platform/support/policy)
+- [Avalonia 支持平台](https://docs.avaloniaui.net/docs/supported-platforms)
+- [Avalonia macOS 部署](https://docs.avaloniaui.net/docs/deployment/macos)
+- [Avalonia NativeWebView](https://docs.avaloniaui.net/controls/web/nativewebview)
+- [Avalonia WebView 开源说明](https://avaloniaui.net/blog/the-avalonia-webview-is-going-open-source)
+- [Ruffle 下载与 self-hosted 发行](https://ruffle.rs/downloads)
+- [Ruffle JavaScript API](https://ruffle.rs/js-docs/master/index.html)
+- [Ruffle 加载配置](https://ruffle.rs/js-docs/master/interfaces/Config.BaseLoadOptions.html)
+- [Apple WKWebView](https://developer.apple.com/documentation/webkit/wkwebview/)
+- [Apple document-start 注入](https://developer.apple.com/documentation/webkit/wkuserscriptinjectiontime/atdocumentstart)
+- [Apple macOS 公证流程](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)
+
+## 17. 建议的下一步
+
+Gate 0 已证明 WKWebView、Ruffle 和 SharedObject 最小闭环可行，并通过 ADR-0001 冻结默认浏览器后端。H0.1、H0.2/H0.3A 与 H0.R/H0.3B1 均已验收，播放器可靠性回归和 ExternalInterface 首切片已关闭。下一步不立即迁移全部 UI，而是：
+
+1. 执行 H0.3B2，在 Apple Silicon 真机补齐输入/渲染/定时、音频和网络/策略文件语料，关闭 M0.1。
+2. 执行 H0.4，更新 Gate 0 证据并重新估算。
+3. Gate 0 收口后再依次进入 M1 正式骨架和 M2 Managed SOL/AMF。
+
+当前工作树、阻塞、逐任务输入/输出和验收步骤见 [`../spike/macos-host/docs/development-handoff.zh-CN.md`](../spike/macos-host/docs/development-handoff.zh-CN.md)。

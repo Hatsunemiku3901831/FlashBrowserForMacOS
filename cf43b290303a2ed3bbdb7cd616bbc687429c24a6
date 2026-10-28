@@ -1,0 +1,72 @@
+using System.Collections.ObjectModel;
+
+namespace FlashMacOS.Domain.Sol;
+
+public sealed class AmfGraph
+{
+    public AmfGraph(IEnumerable<AmfProperty> entries, IEnumerable<AmfNode>? nodes = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Entries = AmfCollections.Freeze(entries, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        var map = new Dictionary<AmfNodeId, AmfNode>();
+        foreach (var node in AmfCollections.Freeze(nodes ?? [], cancellationToken))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!map.TryAdd(node.Id, node)) throw new ArgumentException("Node IDs must be unique.", nameof(nodes));
+        }
+        Nodes = new ReadOnlyDictionary<AmfNodeId, AmfNode>(map);
+        // Freeze and sealed AmfProperty constructors already guarantee non-null entries, names and values.
+        var pending = new Stack<AmfValue>(Entries.Select(x => x.Value).Concat(map.Values.SelectMany(x => x.Children))
+            .Select(value => { cancellationToken.ThrowIfCancellationRequested(); return value; }));
+        while (pending.TryPop(out var value))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (value is null) throw new ArgumentException("AMF values use explicit AmfNull, never a C# null.");
+            if (value is AmfReference reference && !map.ContainsKey(reference.Target)) throw new ArgumentException("A reference points to a missing node.");
+            if (value is AmfAvmPlus avm) pending.Push(avm.Value);
+        }
+    }
+    public IReadOnlyList<AmfProperty> Entries { get; }
+    public IReadOnlyDictionary<AmfNodeId, AmfNode> Nodes { get; }
+
+    public IReadOnlyList<AmfUnsupported> FindUnsupported(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var found = new List<AmfUnsupported>();
+        var seen = new HashSet<AmfNodeId>();
+        var pending = new Stack<AmfValue>(Entries.Select(x => { cancellationToken.ThrowIfCancellationRequested(); return x.Value; }));
+        while (pending.TryPop(out var value))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            switch (value)
+            {
+                case AmfUnsupported unsupported: found.Add(unsupported); break;
+                case AmfAvmPlus avm: pending.Push(avm.Value); break;
+                case AmfReference reference when seen.Add(reference.Target):
+                    var node = Nodes[reference.Target];
+                    if (node is AmfObjectNode { Traits.IsExternalizable: true } external &&
+                        (string.IsNullOrEmpty(external.ExternalCodecId) || external.ExternalData is null))
+                        found.Add(new AmfUnsupported(SolEncoding.Amf3, 0x0a, 0,
+                            "An externalizable class requires an installed codec: " + external.Traits.ClassName));
+                    foreach (var child in node.Children) { cancellationToken.ThrowIfCancellationRequested(); pending.Push(child); }
+                    break;
+            }
+        }
+        return found.AsReadOnly();
+    }
+}
+
+public sealed record SolDocument
+{
+    public SolDocument(string name, SolEncoding encoding, AmfGraph graph)
+    {
+        Name = name ?? throw new ArgumentNullException(nameof(name));
+        if (!Enum.IsDefined(encoding)) throw new ArgumentOutOfRangeException(nameof(encoding));
+        Encoding = encoding; Graph = graph ?? throw new ArgumentNullException(nameof(graph));
+    }
+    public string Name { get; }
+    public SolEncoding Encoding { get; }
+    public AmfGraph Graph { get; }
+    public bool CanEditAndSave => Graph.FindUnsupported().Count == 0;
+}

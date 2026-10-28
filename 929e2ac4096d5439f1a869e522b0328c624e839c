@@ -1,0 +1,137 @@
+using System.Buffers.Binary;
+using System.Text;
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Sol.Managed;
+
+internal sealed partial class AmfReadContext
+{
+    private static readonly UTF8Encoding Utf8 = new(false, true);
+    private readonly ReadOnlyMemory<byte> _source;
+    private readonly CancellationToken _cancellationToken;
+    private readonly IAmf3ValueCodec _amf3;
+    private readonly Dictionary<AmfNodeId, AmfNode> _nodes = [];
+    private readonly List<AmfNodeId> _objects0 = [];
+    private int _nextNode;
+    private int _elements;
+
+    public AmfReadContext(ReadOnlyMemory<byte> source, SolEncoding encoding, AmfLimits limits,
+        IAmf3ValueCodec amf3, CancellationToken cancellationToken)
+    {
+        limits.Validate(); _source = source; Encoding = encoding; Limits = limits;
+        _cancellationToken = cancellationToken; _amf3 = amf3;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (source.Length > limits.MaximumFileBytes) throw Error("FileLimit", "Input exceeds the maximum AMF size.");
+    }
+    public SolEncoding Encoding { get; private set; }
+    public AmfLimits Limits { get; }
+    public int Position { get; private set; }
+    public int Remaining => _source.Length - Position;
+    public void Skip(int length) { Require(length); Position += length; }
+    public string ReadEntryName() => Encoding == SolEncoding.Amf0 ? ReadShortString() : ReadString3();
+    public AmfGraph Graph(IEnumerable<AmfProperty> entries) => new(entries, _nodes.Values, _cancellationToken);
+    public AmfFormatException Error(string code, string message, int? offset = null, byte? marker = null) =>
+        new(code, Encoding, offset ?? Position, marker, message);
+
+    public void Require(int count)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        if (count < 0 || count > Remaining) throw Error("Truncated", "Declared content is not available in the input.");
+    }
+    public byte ReadByte() { Require(1); return _source.Span[Position++]; }
+    public ushort ReadUInt16() { Require(2); var value = BinaryPrimitives.ReadUInt16BigEndian(_source.Span[Position..]); Position += 2; return value; }
+    public uint ReadUInt32() { Require(4); var value = BinaryPrimitives.ReadUInt32BigEndian(_source.Span[Position..]); Position += 4; return value; }
+    public AmfNumber ReadNumber() { Require(8); var value = AmfNumber.FromBits(BinaryPrimitives.ReadInt64BigEndian(_source.Span[Position..])); Position += 8; return value; }
+    public byte[] ReadBytes(int length) { Require(length); var value = _source.Span.Slice(Position, length).ToArray(); Position += length; return value; }
+    public string ReadUtf8(int length)
+    {
+        Require(length);
+        try { var value = Utf8.GetString(_source.Span.Slice(Position, length)); Position += length; return value; }
+        catch (DecoderFallbackException) { throw Error("InvalidUtf8", "AMF strings require valid UTF-8."); }
+    }
+    public string ReadShortString() => ReadUtf8(ReadUInt16());
+    public string ReadLongString()
+    {
+        var length = ReadUInt32();
+        if (length > int.MaxValue) throw Error("LengthLimit", "String length exceeds the input bound.");
+        return ReadUtf8((int)length);
+    }
+    public void CountValue(int depth)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        if (depth > Limits.MaximumDepth) throw Error("DepthLimit", "AMF nesting exceeds the configured limit.");
+        if (++_elements > Limits.MaximumElements) throw Error("ElementLimit", "AMF element budget is exhausted.");
+    }
+    public int CheckCount(uint count, int minimumBytes, int valuesPerItem = 1)
+    {
+        if (count > (Limits.MaximumElements - _elements) / valuesPerItem) throw Error("ElementLimit", "Declared collection exceeds the remaining element budget.");
+        if (count > Remaining / minimumBytes) throw Error("Truncated", "Declared collection cannot fit in the remaining input.");
+        return (int)count;
+    }
+    public void CountItems(int count)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        if (count < 0 || count > Limits.MaximumElements - _elements) throw Error("ElementLimit", "AMF element budget is exhausted.");
+        _elements += count;
+    }
+    public AmfNodeId ReserveNode(bool amf0Referenceable = false)
+    {
+        if (_nextNode >= Limits.MaximumNodes) throw Error("NodeLimit", "AMF node budget is exhausted.");
+        var id = new AmfNodeId(_nextNode++);
+        if (amf0Referenceable) _objects0.Add(id);
+        return id;
+    }
+    public AmfReference Complete(AmfNode node) { _nodes.Add(node.Id, node); return new(node.Id); }
+
+    public AmfValue ReadAmf0(int depth)
+    {
+        CountValue(depth);
+        var offset = Position; var marker = ReadByte();
+        switch (marker)
+        {
+            case 0x00: return ReadNumber();
+            case 0x01: return new AmfBoolean(ReadByte() != 0);
+            case 0x02: return new AmfString(ReadShortString());
+            case 0x03: return ReadObject0(depth, false);
+            case 0x05: return AmfNull.Instance;
+            case 0x06: return AmfUndefined.Instance;
+            case 0x07:
+                var index = ReadUInt16();
+                if (index >= _objects0.Count) throw Error("InvalidReference", "AMF0 object reference is out of range.", offset, marker);
+                return new AmfReference(_objects0[index]);
+            case 0x08:
+                var id = ReserveNode(true); var declared = ReadUInt32();
+                return Complete(new AmfArrayNode(id, AmfArrayKind.Amf0Ecma, associative: ReadProperties0(depth), declaredAssociativeCount: declared));
+            case 0x0a:
+                id = ReserveNode(true); var count = CheckCount(ReadUInt32(), 1);
+                var values = new List<AmfValue>(count);
+                for (var i = 0; i < count; i++) values.Add(ReadAmf0(depth + 1));
+                return Complete(new AmfArrayNode(id, AmfArrayKind.Amf0Strict, values));
+            case 0x0b:
+                id = ReserveNode(); var milliseconds = ReadNumber(); var timezone = unchecked((short)ReadUInt16());
+                return Complete(new AmfDateNode(id, milliseconds, timezone));
+            case 0x0c: return new AmfString(ReadLongString());
+            case 0x0f: id = ReserveNode(); return Complete(new AmfXmlNode(id, ReadLongString(), true));
+            case 0x10: return ReadObject0(depth, true);
+            case 0x11: return new AmfAvmPlus(_amf3.Read(this, depth + 1));
+            default: throw Error("UnsupportedMarker", "Reserved, unsupported, or unknown AMF0 marker.", offset, marker);
+        }
+    }
+    private AmfReference ReadObject0(int depth, bool typed)
+    {
+        var id = ReserveNode(true);
+        var className = typed ? ReadShortString() : "";
+        return Complete(new AmfObjectNode(id, new AmfTraits(className, true), properties: ReadProperties0(depth),
+            objectKind: typed ? AmfObjectKind.Amf0TypedObject : AmfObjectKind.Amf0Object));
+    }
+    private List<AmfProperty> ReadProperties0(int depth)
+    {
+        var properties = new List<AmfProperty>();
+        while (true)
+        {
+            var name = ReadShortString(); Require(1);
+            if (name.Length == 0 && _source.Span[Position] == 0x09) { Position++; return properties; }
+            properties.Add(new(name, ReadAmf0(depth + 1)));
+        }
+    }
+}

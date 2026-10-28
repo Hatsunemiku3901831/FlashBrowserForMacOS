@@ -1,0 +1,130 @@
+using System.Buffers.Binary;
+using System.Text;
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Sol.Managed;
+
+internal sealed partial class AmfWriteContext : IDisposable
+{
+    private static readonly UTF8Encoding Utf8 = new(false, true);
+    private readonly AmfBuffer _stream = new();
+    private readonly CancellationToken _cancellationToken;
+    private readonly IAmf3ValueCodec _amf3;
+    private readonly Dictionary<AmfNodeId, int> _objects0 = [];
+    private readonly HashSet<AmfNodeId> _nonReferenceable0 = [];
+    private readonly HashSet<AmfNodeId> _writtenNodes = [];
+    private readonly Dictionary<AmfNodeId, SolEncoding> _nodeEncodings = [];
+    private int _elements;
+
+    public AmfWriteContext(AmfGraph graph, SolEncoding encoding, AmfLimits limits, IAmf3ValueCodec amf3, CancellationToken cancellationToken)
+    { limits.Validate(); Graph = graph; Encoding = encoding; Limits = limits; _cancellationToken = cancellationToken; _amf3 = amf3; cancellationToken.ThrowIfCancellationRequested(); }
+    public AmfGraph Graph { get; }
+    public SolEncoding Encoding { get; private set; }
+    public AmfLimits Limits { get; }
+    public int Position => checked((int)_stream.Length);
+    public AmfFormatException Error(string code, string message, byte? marker = null) => new(code, Encoding, Position, marker, message);
+    public byte[] ToArray() => _stream.ToArray();
+    public void WriteEntryName(string value) { if (Encoding == SolEncoding.Amf0) WriteShortString(value); else WriteString3(value); }
+    public void Dispose() => _stream.Dispose();
+    private void Require(int length)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        if (length < 0 || length > Limits.MaximumFileBytes - Position) throw Error("FileLimit", "Encoded AMF exceeds the configured maximum size.");
+    }
+    public void WriteByte(byte value) { Require(1); _stream.WriteByte(value); }
+    public void WriteUInt16(ushort value) { Span<byte> bytes = stackalloc byte[2]; BinaryPrimitives.WriteUInt16BigEndian(bytes, value); WriteBytes(bytes); }
+    public void WriteUInt32(uint value) { Span<byte> bytes = stackalloc byte[4]; BinaryPrimitives.WriteUInt32BigEndian(bytes, value); WriteBytes(bytes); }
+    public void WriteNumber(AmfNumber value) { Span<byte> bytes = stackalloc byte[8]; BinaryPrimitives.WriteInt64BigEndian(bytes, value.RawBits); WriteBytes(bytes); }
+    public void WriteBytes(ReadOnlySpan<byte> bytes) { Require(bytes.Length); _stream.Write(bytes); }
+    public byte[] Utf8Bytes(string value)
+    {
+        try { var length = Utf8.GetByteCount(value); Require(length); return Utf8.GetBytes(value); }
+        catch (EncoderFallbackException) { throw Error("InvalidUtf16", "An AMF string contains an invalid UTF-16 surrogate."); }
+    }
+    public void WriteShortString(string value)
+    {
+        var bytes = Utf8Bytes(value);
+        if (bytes.Length > ushort.MaxValue) throw Error("StringLength", "An AMF0 name or class alias exceeds 65535 UTF-8 bytes.");
+        WriteUInt16((ushort)bytes.Length); WriteBytes(bytes);
+    }
+    public void CountValue(int depth)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        if (depth > Limits.MaximumDepth) throw Error("DepthLimit", "AMF nesting exceeds the configured limit.");
+        if (++_elements > Limits.MaximumElements) throw Error("ElementLimit", "AMF element budget is exhausted.");
+    }
+    public AmfNode Node(AmfNodeId id)
+    {
+        if (_nodeEncodings.TryGetValue(id, out var previous) && previous != Encoding)
+            throw Error("ConversionRequired", "A shared node cannot span the independent AMF0 and AMF3 reference tables.");
+        _nodeEncodings[id] = Encoding;
+        if (_writtenNodes.Add(id) && _writtenNodes.Count > Limits.MaximumNodes) throw Error("NodeLimit", "AMF node budget is exhausted.");
+        return Graph.Nodes[id];
+    }
+    public void CountItems(int count)
+    {
+        _cancellationToken.ThrowIfCancellationRequested();
+        if (count < 0 || count > Limits.MaximumElements - _elements) throw Error("ElementLimit", "AMF element budget is exhausted.");
+        _elements += count;
+    }
+    public void WriteAmf0(AmfValue value, int depth)
+    {
+        CountValue(depth);
+        switch (value)
+        {
+            case AmfNumber number: WriteByte(0); WriteNumber(number); break;
+            case AmfBoolean boolean: WriteByte(1); WriteByte(boolean.Value ? (byte)1 : (byte)0); break;
+            case AmfString text:
+                var bytes = Utf8Bytes(text.Value);
+                if (bytes.Length <= ushort.MaxValue) { WriteByte(2); WriteUInt16((ushort)bytes.Length); }
+                else { WriteByte(0x0c); WriteUInt32((uint)bytes.Length); }
+                WriteBytes(bytes); break;
+            case AmfNull: WriteByte(5); break;
+            case AmfUndefined: WriteByte(6); break;
+            case AmfAvmPlus avm: WriteByte(0x11); _amf3.Write(this, avm.Value, depth + 1); break;
+            case AmfReference reference: WriteNode0(reference.Target, depth); break;
+            default: throw Error("ConversionRequired", "This value has no lossless direct AMF0 representation.");
+        }
+    }
+    private void WriteNode0(AmfNodeId id, int depth)
+    {
+        var node = Node(id);
+        var referenceable = node is AmfObjectNode or AmfArrayNode;
+        if (referenceable)
+        {
+            if (_objects0.TryGetValue(id, out var index))
+            {
+                if (index > ushort.MaxValue) throw Error("ReferenceLimit", "AMF0 reference index exceeds U16.");
+                WriteByte(7); WriteUInt16((ushort)index); return;
+            }
+            _objects0.Add(id, _objects0.Count);
+        }
+        else if (!_nonReferenceable0.Add(id)) throw Error("ConversionRequired", "AMF0 cannot preserve shared identity for this node type.");
+        switch (node)
+        {
+            case AmfObjectNode item:
+                if (item.ObjectKind == AmfObjectKind.Amf3Object || item.Traits.IsExternalizable || item.SealedValues.Count != 0 ||
+                    !item.Traits.IsDynamic || (item.ObjectKind == AmfObjectKind.Amf0Object && item.Traits.ClassName.Length != 0))
+                    throw Error("ConversionRequired", "AMF3 object traits require explicit conversion before AMF0 encoding.");
+                WriteByte(item.ObjectKind == AmfObjectKind.Amf0TypedObject ? (byte)0x10 : (byte)3);
+                if (item.ObjectKind == AmfObjectKind.Amf0TypedObject) WriteShortString(item.Traits.ClassName);
+                WriteProperties0(item.Properties, depth); break;
+            case AmfArrayNode array when array.ArrayKind == AmfArrayKind.Amf0Strict:
+                WriteByte(0x0a); WriteUInt32((uint)array.Dense.Count);
+                foreach (var child in array.Dense) WriteAmf0(child, depth + 1);
+                break;
+            case AmfArrayNode array when array.ArrayKind == AmfArrayKind.Amf0Ecma:
+                WriteByte(8); WriteUInt32(array.DeclaredAssociativeCount ?? (uint)array.Associative.Count); WriteProperties0(array.Associative, depth); break;
+            case AmfDateNode date:
+                WriteByte(0x0b); WriteNumber(date.Milliseconds); WriteUInt16(unchecked((ushort)(date.ReservedAmf0Timezone ?? 0))); break;
+            case AmfXmlNode { IsDocument: true } xml:
+                WriteByte(0x0f); var bytes = Utf8Bytes(xml.Text); WriteUInt32((uint)bytes.Length); WriteBytes(bytes); break;
+            default: throw Error("ConversionRequired", "This node type has no lossless direct AMF0 representation.");
+        }
+    }
+    private void WriteProperties0(IReadOnlyList<AmfProperty> properties, int depth)
+    {
+        foreach (var property in properties) { WriteShortString(property.Name); WriteAmf0(property.Value, depth + 1); }
+        WriteUInt16(0); WriteByte(9);
+    }
+}

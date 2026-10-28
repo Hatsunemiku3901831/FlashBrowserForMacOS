@@ -1,0 +1,83 @@
+{
+  "name": "RuffleTest",
+  "encoding": 0,
+  "values": {
+    "saved": {
+      "type": 3,
+      "value": true
+    },
+    "num": {
+      "type": 5,
+      "bits": "4024000000000000"
+    },
+    "str": {
+      "type": 6,
+      "value": "hello"
+    },
+    "array": {
+      "type": 9,
+      "associative": {
+        "0": {
+          "type": 6,
+          "value": "elem0"
+        },
+        "4": {
+          "type": 6,
+          "value": "elem4"
+        },
+        "prop": {
+          "type": 6,
+          "value": "property"
+        },
+        "-1": {
+          "type": 6,
+          "value": "elem negative one"
+        }
+      },
+      "dense": []
+    },
+    "denseArray": {
+      "type": 9,
+      "associative": {
+        "0": {
+          "type": 5,
+          "bits": "3ff0000000000000"
+        },
+        "1": {
+          "type": 5,
+          "bits": "4000000000000000"
+        },
+        "2": {
+          "type": 5,
+          "bits": "4008000000000000"
+        }
+      },
+      "dense": []
+    },
+    "date": {
+      "type": 8,
+      "bits": "41dfffffffc00000"
+    },
+    "testxml": {
+      "type": 7,
+      "value": "<test>Test</test>"
+    },
+    "o": {
+      "type": 10,
+      "className": "",
+      "dynamic": true,
+      "externalizable": false,
+      "sealedNames": [],
+      "properties": {
+        "b": {
+          "type": 6,
+          "value": "b"
+        },
+        "a": {
+          "type": 6,
+          "value": "a"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "changes": [
+    {
+      "targetPath": "scripts/package-development.py",
+      "beforeSha256": "6c1a7da086626b1f5dc10acd4cc3ad24e3c14630b574d0650d7e8efc3a7a8f01",
+      "targetSha256": "63a544c5fc05ecedec1c1c66ae9dbe1c52165f07da7bb0aa246b6437c2430eea",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "scripts/tests/ruffle-lifecycle.cjs",
+      "beforeSha256": null,
+      "targetSha256": "5ada2405195d989d4dc903023fd341f4f3f3e4f70536927c6f1169543175f5ab",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Flash/IFlashPlayer.cs",
+      "beforeSha256": "2c50c840b91ab7232def76a747d1c0ea9c13d52008474346017c4a1b39bdf98e",
+      "targetSha256": "00f20719af484f34a5dc12b17e1a2114046d25917ba269339c6ba86d6809533c",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Flash/ILocalContentHost.cs",
+      "beforeSha256": "a4b57d3b733fd4d7291d9f8bffffbf46e92cd6f29c9464146367ddd7aec92b6e",
+      "targetSha256": "f372b1a6c88c582afca090ec9d5e00a2632d8c34cc7d4269748c2354595fe693",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Flash/IRuffleScriptBuilder.cs",
+      "beforeSha256": "ffaf441158d06c363c1f1253e12cf06509e5d13076fd313472389683a431a6ac",
+      "targetSha256": "17088fd3f202a5b0995c92349ecd1f3112abc7d4e277014314df9af98523b18e",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Application/Flash/RufflePlayerCoordinator.cs",
+      "beforeSha256": "404f44b6f11ba172864b22b52379382584a15574ce82e558eafcbe7dbc304122",
+      "targetSha256": "ec12da8e8e97e86bfceca7805782eb3a2060bdb38f5508b93aa5f73e867b2202",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Browser.WebKit/Diagnostics/RuffleNativeVerification.cs",
+      "beforeSha256": null,
+      "targetSha256": "e1ab1845f07c5ee8490e385cfee32f6b4f6cf663db21e459f331e30617dd7d86",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Composition/CompositionRoot.cs",
+      "beforeSha256": "8c88e5cdcc1775a9ca4a7a02d53c1a9be58ac39a7f217d0aeaf2ba21b7559114",
+      "targetSha256": "f3549a3730cecc09a5f832a06b5cd80386df4dc6e1d1d5f9723075002b24c9a1",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/ViewModels/MainWindowViewModel.cs",
+      "beforeSha256": "a1a353b6befbe039354e73de917736317a14022aaeb875369b40181e60912766",
+      "targetSha256": "191b04264ce80e3a0faf6929e4441856ec327c4ae9cdc19db986659728600812",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Desktop/Views/MainWindow.axaml",
+      "beforeSha256": "42555f62f1a071d4bc66b078e4b0f680d10b0faec832d9b03aac58b895de0f2f",
+      "targetSha256": "b504b1c14bfeb978a024902b372646b58ffb52977ba736d573fe53300c34f5f4",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Domain/Flash/RuffleGameConfiguration.cs",
+      "beforeSha256": null,
+      "targetSha256": "63d3e7b1ea252e4286209e0aa1d3daaf30e0bb039a2446887468414af249cf00",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/FlashMacOS.Flash.Ruffle.csproj",
+      "beforeSha256": "a88922b5d8aeb9f6d212ff0b63166db4521c9793cb254aead37debc6a86ac890",
+      "targetSha256": "26c3bbdcc6cd8c27ce5bed1a0fea8d585b6b71afb18d449fd9467fa30d1f3de1",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Hosting/CompatibilityContentHost.cs",
+      "beforeSha256": "632f289ae3b7a17f71d55fa883d6d16d6b28b39e1bc1eb4ed65a9cae25d0f769",
+      "targetSha256": "9dee7987028ebf5f92eeea054a4ce995e3ed808db9cb44a3ae1f5e459ce31fce",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Hosting/LoopbackContentHost.cs",
+      "beforeSha256": "da7af6771d62782781a1d1cf7a9fa1d1afbee7026879e00793c3a90d7db30b5f",
+      "targetSha256": "f9ec6b9b5eae89d19ab48b5038d77dbd2fcbe9191ee3ac4183c975d6ff40267b",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Hosting/RuffleValidationSite.cs",
+      "beforeSha256": null,
+      "targetSha256": "4557fe72c5e3348a4ce3f580f6a7568de4a2325ab7145c5e257ef6aa02c3cb65",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleControls.js",
+      "beforeSha256": null,
+      "targetSha256": "41f28f419942e25e321d0d826251085f778654f29e4b365f03a5837780d366f7",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleDocumentStartScriptBuilder.cs",
+      "beforeSha256": "0c5e3073efab0aad83c7f166b8f8b94df99b6fd937db2f8520d8b783871729a4",
+      "targetSha256": "45e72ccbe3918d856c5f86235053b1118d5d615b27e9997a37d5b505e8c1f031",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleGameProfiles.cs",
+      "beforeSha256": null,
+      "targetSha256": "9eed6829dc969ef642c85125107678bc6b7541138c6d892bfa406af24b58b3ba",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleMetadata.js",
+      "beforeSha256": null,
+      "targetSha256": "c45c3115b962beaa76c4a21e43222338f47e4d75be2d316a73ae7b1872ca16c4",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleScriptBuilder.cs",
+      "beforeSha256": "d78d993099bcc381f79a2d6503fcb55a5e8e19028c64f6f6629daea246ce93dc",
+      "targetSha256": "2dce5adc7b8132428a3a0eff85d73afd8f82a67967e8fce09f7c04aba46529af",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "src/FlashMacOS.Flash.Ruffle/Runtime/RuffleStorageObserver.js",
+      "beforeSha256": null,
+      "targetSha256": "465e2f34110a4eea2c3ad1fda81db584254597e0b0656c74c96e352235d0a155",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.Application.Tests/CoordinatorLifetimeTests.cs",
+      "beforeSha256": "3a3723d12110dbedff4d1e03051f4ea9197d1087caad2f5db86fd446bf71f03e",
+      "targetSha256": "6ebd8fe02b3565e6dd68fd22c91501ca4784ae203ef6a52abfdf57f36b0ea823",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/LoopbackContentHostTests.cs",
+      "beforeSha256": "cd151ca8a77fa2d35aaf251c8a741833d17608b8f560612610c1e2115e6e8569",
+      "targetSha256": "1bfb76ab7d884fec3e9664f5c73859e1754197badbd38a380062c1c3e55965f4",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/RuffleDocumentStartScriptBuilderTests.cs",
+      "beforeSha256": "a71782f7461e6b554778dce6f07516f6ca59700a237356e5af1534920bed6b80",
+      "targetSha256": "8c04246ee47269fad99765f67fb735c3360157a410b54ab688d488af014a6b44",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "tests/FlashMacOS.IntegrationTests/RufflePlayerCoordinatorTests.cs",
+      "beforeSha256": "3f76fb7835d967833c4e1314d750e222c7accac0006436c4f3dd268916999af3",
+      "targetSha256": "c691759a76785f7f0b47949804c5cc9991a4a6174cd731da477573e3071bc4da",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    },
+    {
+      "targetPath": "tests/tooling/test_ruffle_lifecycle.py",
+      "beforeSha256": null,
+      "targetSha256": "0976130f047f6fc42f3275151d45c4485c9e108abd0a3b63afe052eae707f8fa",
+      "origin": "Project-authored W03 implementation; no upstream code copied",
+      "referenceSources": [],
+      "reason": "Ruffle configuration/state, real completion protocol, lifecycle cleanup, separate product resources and nearest regressions; see ADR 0004 and W03 report"
+    }
+  ],
+  "apiConsulted": {
+    "version": "0.4.1",
+    "commit": "a1ac4ce8647352ad03044031cad0454a636427b8",
+    "originals": "artifacts/evidence/W03/runtime-api-research-20261028-01",
+    "codeCopied": false
+  }
+}

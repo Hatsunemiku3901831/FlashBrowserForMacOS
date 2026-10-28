@@ -1,0 +1,67 @@
+namespace FlashMacOS.Tests;
+
+internal static class TestAssets
+{
+    public static string Sol(string fileName) =>
+        Path.Combine(AppContext.BaseDirectory, "TestData", fileName);
+
+    public static string RuffleDirectory =>
+        Path.Combine(AppContext.BaseDirectory, "Assets", "Ruffle");
+
+    public static string ExternalInterfaceDirectory =>
+        Path.Combine(AppContext.BaseDirectory, "TestData", "avm2-external-interface");
+}
+
+internal sealed class TemporaryDirectory : IDisposable
+{
+    private bool _disposed;
+
+    public TemporaryDirectory()
+    {
+        RootPath = Path.Combine(
+            Path.GetTempPath(),
+            "FlashMacOS.Tests",
+            Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(RootPath);
+    }
+
+    public string RootPath { get; }
+
+    public string GetPath(string relativePath) => Path.Combine(RootPath, relativePath);
+
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        if (Directory.Exists(RootPath))
+        {
+            Directory.Delete(RootPath, recursive: true);
+        }
+
+        GC.SuppressFinalize(this);
+    }
+}
+
+internal static class TestEvidence
+{
+    private static readonly System.Text.Json.JsonSerializerOptions Options = new() { WriteIndented = true };
+    public static string DirectoryPath => Environment.GetEnvironmentVariable("FLASHMACOS_TEST_EVIDENCE_DIRECTORY")
+        ?? Path.Combine(AppContext.BaseDirectory, "TestResults", "evidence");
+    public static string Write(string name, object value)
+    {
+        Directory.CreateDirectory(DirectoryPath);
+        var path = Path.Combine(DirectoryPath, name + "-" + Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N") + ".json");
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write);
+        System.Text.Json.JsonSerializer.Serialize(stream, value, Options);
+        Console.WriteLine("Evidence: " + path); return path;
+    }
+    public static string NewPath(string name, string extension)
+    {
+        Directory.CreateDirectory(DirectoryPath);
+        return Path.Combine(DirectoryPath, name + "-" + Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N") + extension);
+    }
+}

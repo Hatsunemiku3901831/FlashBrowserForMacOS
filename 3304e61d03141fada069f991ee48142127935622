@@ -1,0 +1,284 @@
+# macOS vNext 接口与协议契约
+
+状态：当前实现基线
+
+适用范围：`spike/macos-host/` 及其后续正式 vNext 工程
+
+目标平台：Apple Silicon（`osx-arm64`）
+
+本文是 macOS vNext 跨层接口、事件、生命周期和 Web bridge 协议的唯一权威文档。里程碑与交付范围见 [`../../../Docs/macos-porting-plan.zh-CN.md`](../../../Docs/macos-porting-plan.zh-CN.md)，稳定变量与持久化字段见 [`variables.zh-CN.md`](variables.zh-CN.md)，实现约束见 [`engineering-spec.zh-CN.md`](engineering-spec.zh-CN.md)。
+
+若本文与代码不一致，以可构建、可测试的代码事实为准，并在同一变更中修正文档；不得只改一侧。
+
+## 1. 依赖方向
+
+```text
+View
+  ↓ 绑定/命令
+ViewModel / Application use cases
+  ↓ 仅依赖端口与领域模型
+Core ports: IBrowserSession / ILocalContentHost / IRuffleSaveStore / IAppPaths
+  ↑ 由 composition root 注入
+Desktop / macOS adapters: WKWebView / Avalonia / 文件对话框 / 平台路径
+```
+
+- `Core` 不引用 Avalonia、WKWebView、AppKit、窗口句柄或文件对话框。
+- 平台适配器实现 Core 端口；适配器之间不得绕过用例层互相调用。
+- `CompositionRoot` 是对象图、资源所有权和释放顺序的唯一组装点。
+- `IDocumentStartInjector` 因参数包含 `IPlatformHandle`，属于 Desktop 内部平台端口，不得下沉到 Core。
+
+## 2. 通用契约
+
+### 2.1 异步、取消与线程
+
+- 可能等待 WebView、网络、磁盘或进程生命周期的 API 使用 `Task`/`ValueTask`，并接收 `CancellationToken`。
+- 调用方取消时应终止尚未完成的工作并传播 `OperationCanceledException`；不得将取消报告为业务故障。
+- Core 不假定事件回调线程。需要更新 Avalonia UI 的订阅方必须切换到 UI 线程。
+- WebView 操作由 `IBrowserSession` 的适配器负责封送到 UI 线程，调用方不得持有原生 WebView。
+- bridge 存档写入按到达顺序串行化；不得让同一 key 的旧写入覆盖新写入。
+
+### 2.2 错误、空值与资源所有权
+
+- 参数非法使用 `ArgumentException` 系列；资源不存在使用 `FileNotFoundException`；格式不合法使用 `InvalidDataException`；生命周期错误使用 `InvalidOperationException` 或 `ObjectDisposedException`。
+- `Faulted` 事件用于异步回调边界中无法直接返回给调用方的异常，不得吞掉异常后伪造成功。
+- 可空字段只表示协议允许缺省；必填字段缺失时，消费者必须忽略该消息或报告明确故障。
+- `IAsyncDisposable` 的所有者负责且只负责释放一次。释放必须幂等，并取消事件订阅。
+- 事件发布方不拥有订阅方；长生命周期订阅必须在 `Dispose`/`DisposeAsync` 中成对解除。
+
+### 2.3 兼容性
+
+- C# 记录类型新增可空字段可以兼容；删除、重命名、改变含义或收紧空值属于破坏性变更。
+- Web bridge 消息按 `type` 判别。新增类型必须允许旧消费者忽略；现有类型改名或改变字段语义需要协议版本和迁移期。
+- 持久化结构的破坏性变更必须先提供幂等迁移、备份和回滚路径。
+
+## 3. Core 端口
+
+### 3.1 `IBrowserSession`
+
+源文件：[`BrowserContracts.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs)
+
+浏览器会话是应用层唯一可见的浏览器能力入口。
+
+| 成员 | 契约 |
+|---|---|
+| `State` | 最近一次浏览器状态快照；初始化为 `BrowserState.Empty`。 |
+| `Ready` | 原生适配器创建、document-start 脚本注入完成后成功；初始化失败时以异常结束。 |
+| `StateChanged` | 地址、标题、加载状态或前进后退能力变化时发布完整快照。 |
+| `PopupRequested` | 原生新窗口被应用接管后发布目标绝对 URI。 |
+| `DownloadRequested` | 页面下载被应用接管后发布 URL 和可选建议文件名。 |
+| `BridgeMessageReceived` | 收到并成功解析、且未被下载分支消费的 bridge 消息。 |
+| `Faulted` | 原生回调、消息解析或导航完成处理中的非取消错误。 |
+| `NavigateAsync` | 等待 `Ready` 后导航到非空 URI。 |
+| `GoBackAsync` / `GoForwardAsync` | 等待 `Ready` 后调用原生历史导航。 |
+| `ReloadAsync` / `StopAsync` | 等待 `Ready` 后重载或停止当前导航。 |
+| `ExecuteScriptAsync` | 执行非空脚本，返回原生层可序列化结果；脚本不得把未解析 `Promise` 作为最终值。 |
+| `DownloadAsync` | 携带 WebView Cookie 下载到调用方指定路径，采用流式复制和原子替换。 |
+| `DisposeAsync` | 解除全部原生事件，取消未完成的 `Ready`，此后所有操作失败。 |
+
+相关模型：
+
+```csharp
+BrowserState(Uri? Address, string Title, bool IsLoading, bool CanGoBack, bool CanGoForward)
+BrowserDownloadRequest(Uri Address, string? SuggestedFileName)
+WebBridgeMessage(string Type, string? Key, string? Data, string? Url,
+                 string? FileName, string? Message, bool? RuffleAvailable,
+                 int? FlashElementCount, double? DocumentStartMilliseconds)
+```
+
+当前适配器：`AvaloniaNativeWebViewSession`。`Attach` 是适配器初始化 API，只允许一次，不属于 Core 端口。
+
+### 3.2 `ILocalContentHost`
+
+源文件：[`LocalContentContracts.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LocalContentContracts.cs)
+
+| 成员 | 契约 |
+|---|---|
+| `BaseUri` | 启动后本次随机 loopback 监听地址；启动前或释放后为 `null`。 |
+| `DiagnosticsUri` | 带当前会话授权信息的诊断页地址；未启动时为 `null`。 |
+| `RufflePublicPath` | 自托管 Ruffle 资源目录 URL；未启动时为 `null`。 |
+| `StartAsync` | 启动一次，仅绑定 `127.0.0.1` 的随机端口；释放前重复调用幂等，释放后抛 `ObjectDisposedException`。 |
+| `RegisterSwfAsync` | 校验并登记现有 `.swf` 文件，返回当前会话可访问的播放器和资源 URI；释放后抛 `ObjectDisposedException`。 |
+| `DisposeAsync` | 停止监听并清空登记状态与全部 URI；未启动、重复和并发调用均幂等。 |
+
+`LocalSwfSource` 字段：
+
+| 字段 | 含义 |
+|---|---|
+| `Id` | 本次进程内登记 ID，不作为永久主键。 |
+| `FilePath` | 已规范化的本地 SWF 绝对路径。 |
+| `PlayerUri` | 受当前会话保护的播放器页 URI。 |
+| `SwfUri` | 受当前会话保护的 SWF URI。 |
+| `StoragePrefix` | 将当前 SWF 与 Ruffle SharedObject key 关联的稳定前缀。 |
+
+实现必须维持目录边界、常规文件、符号链接拒绝、Range、MIME 和 CSP 约束。具体路由和 Cookie 名见 [`variables.zh-CN.md`](variables.zh-CN.md)。
+
+### 3.3 `IRuffleSaveStore`
+
+源文件：[`RuffleSaveStore.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Storage/RuffleSaveStore.cs)
+
+| 成员 | 契约 |
+|---|---|
+| `GetAllAsync` | 返回按 key 稳定排序的只读快照。 |
+| `UpsertAsync` | 校验 key、Base64 和 SOL 头后插入或替换；返回从内容解析出的规范化条目。 |
+| `RemoveAsync` | 删除 key；存在并删除返回 `true`，不存在返回 `false`。 |
+
+`RuffleSaveEntry` 包含 `Key`、`Base64Data`、`SolName`、`Encoding`、`ByteLength`、`UpdatedAt`。其中 `SolName`、`Encoding` 和 `ByteLength` 必须由 SOL 内容推导，不信任外部输入。
+
+实现必须原子写入并限制单文件及总存储大小；数值见变量文档。
+
+### 3.4 `IAppPaths`
+
+源文件：[`AppPaths.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Infrastructure/Paths/AppPaths.cs)
+
+| 成员 | 契约 |
+|---|---|
+| `ApplicationSupportDirectory` | 持久用户数据根目录。 |
+| `CacheDirectory` | 可重建缓存根目录。 |
+| `LogDirectory` | 诊断日志根目录。 |
+| `RuffleSaveStorePath` | SharedObject JSON store 的完整路径。 |
+| `EnsureCreated` | 只创建所需目录，不写默认业务数据。 |
+
+业务代码只依赖此端口，不自行拼接 `~/Library`，也不通过当前工作目录决定数据位置。
+
+## 4. Desktop 平台端口
+
+### 4.1 `IDocumentStartInjector`
+
+源文件：[`IDocumentStartInjector.cs`](../src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/IDocumentStartInjector.cs)
+
+```csharp
+void Inject(IPlatformHandle webViewHandle, string script);
+```
+
+- 输入必须是可识别的 macOS `WKWebView` 平台句柄和非空脚本。
+- 注入时机为 document start，作用于所有 frame。
+- 必须在首次页面导航前完成；成功后浏览器会话才可完成 `Ready`。
+- 平台不支持、句柄不匹配或 Objective-C 调用失败时必须显式失败。
+
+### 4.2 `DocumentStartScriptSource`
+
+该类型负责脚本的“一次准备、多次只读”：先启动本地内容服务，再读取已固定版本并校验过的 `ruffle.js`，最后生成注入脚本。`GetRequiredScript` 在 `PrepareAsync` 之前调用必须失败；释放后不得继续使用。
+
+## 5. 应用服务
+
+### 5.1 `RufflePlayerCoordinator`
+
+源文件：[`RufflePlayerCoordinator.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs)
+
+协调器把浏览器、内容服务和存档仓储组合为 Flash 用例，不暴露 WebView：
+
+- `OpenSwfAsync`：登记本地 SWF 并导航播放器页。
+- `GetSavesAsync` / `CapturePageSavesAsync`：读取宿主 store 或要求页面上报快照。
+- `ImportAsync` / `ExportAsync` / `DeleteAsync`：SOL 校验、原子文件 I/O、页面 `localStorage` 同步。
+- `PauseAsync` / `ResumeAsync` / `ReloadAsync` / `RequestFullscreenAsync` / `SetVolumeAsync`：通过受控脚本调用播放器 API。
+- `CurrentSource`：当前本地 SWF；未打开时为 `null`。
+- `SaveChanged`、`SaveDeleted`、`TraceReceived`、`StatusChanged`、`Faulted`：面向 ViewModel 的结果事件。
+
+浏览器事件入口接收的 bridge 工作由协调器拥有，并通过串行 task tail 按到达顺序消费。
+`DisposeAsync` 先原子停止接收并解除事件订阅，再排空已接收工作；释放开始后的消息被忽略，
+已接收工作失败则只通过 `Faulted` 报告一次。
+
+所有播放器控制命令（暂停、恢复、重载、全屏和音量）必须经过同一个脚本结果边界：读取
+`window.__cefFlashBrowserPlayerApi`，以 `void` 丢弃 API 返回对象/`Promise`，并同步返回原始值
+`true`。播放器 API 尚未建立时同样返回 `true`；同步 JavaScript 异常不得吞掉。导入或删除
+后的页面 reload 继续遵守同一 fire-and-forget 语义。
+
+播放器页在每次初始 load 或 API reload 的 `loadedmetadata` 同步点重新安装 trace observer，并在
+操作完成后再次确认绑定；导航离开时清除 player/API 两侧 observer。该生命周期保证冷启动、
+同一 WebView 热导航、浏览器 reload 与播放器 reload 的每个新 run 只转发该 run 自身的 trace。
+
+### 5.2 纯函数/校验边界
+
+| API | 职责 | 禁止扩展的职责 |
+|---|---|---|
+| `NavigationResolver` | 地址、文件和搜索词解析；默认 Bing。 | 发起网络请求或访问 UI。 |
+| `SolFileInspector.ReadHeader` | 校验 SOL 魔数、长度、名称、AMF 编码头。 | 修改或保存用户文件。 |
+| `RuffleAssetManifest.ValidateAsync` | 校验固定 Ruffle 资产清单与 SHA-256。 | 自动联网升级依赖。 |
+| `RuffleDocumentStartScriptBuilder` | 生成 document-start 和本地播放器 bootstrap。 | 读取磁盘或控制 WebView。 |
+| `WebBridgeProtocol.Parse` / `Describe` | 解析、验证 bridge JSON 并生成有界脱敏描述。 | 依赖 Avalonia/WebKit、执行下载或写入存档。 |
+| `AtomicFileWriter.WriteAsync` | 同目录临时文件写入后原子替换。 | 决定业务格式或吞掉写入异常。 |
+
+## 6. Web bridge 协议
+
+bridge 名称和 JavaScript 全局名属于稳定变量，统一登记在 [`variables.zh-CN.md`](variables.zh-CN.md)。消息使用 JSON 对象，字段名按 Web JSON 规则映射为 camelCase。
+
+### 6.1 页面到宿主
+
+| `type` | 必填字段 | 消费者 | 语义 |
+|---|---|---|---|
+| `saveChanged` | `key`, `data` | `RufflePlayerCoordinator` | `data` 是完整 Base64 SOL；校验后 upsert。 |
+| `saveDeleted` | `key` | `RufflePlayerCoordinator` | 删除宿主 store 中相同 key。 |
+| `savesSnapshot` | `data` | `RufflePlayerCoordinator` | `data` 是 `Dictionary<string,string>` 的 JSON 字符串。 |
+| `trace` | `message` | `RufflePlayerCoordinator` | Ruffle trace 文本。 |
+| `playerReady` | `message` 可选 | `RufflePlayerCoordinator` | 本地播放器 API 已建立。 |
+| `diagnostics` | `ruffleAvailable`, `flashElementCount`, `documentStartMilliseconds` | `RufflePlayerCoordinator` | Gate 0 与运行诊断数据。 |
+| `bridgeError` | `message` | `RufflePlayerCoordinator` | 页面桥接失败，转换为 `Faulted`。 |
+| `downloadRequested` | `url`; `fileName` 可选 | `IBrowserSession` 适配器 | 接管 HTML `download` 下载，不再转发给协调器。 |
+| `compatibilityResult` | `key`, `message`, `data` | `RufflePlayerCoordinator` | Gate 兼容 runner 的机器结果；协调器只把短 `message` 投影到状态。 |
+
+规则：
+
+- 未知 `type` 当前被忽略，以允许前向兼容。
+- `WebBridgeProtocol.Parse` 是唯一 JSON serializer/validation 边界，使用 Web camelCase 规则；Desktop 不维护第二份 serializer options。
+- null/空白 body、JSON null、数组/标量根、无效 JSON、缺失/null/空白 `type` 触发一次 `Faulted`。
+- 已知类型在解析边界验证必填字段存在性；缺失时不发布下载或普通 bridge 事件，也不得执行部分写入。
+- `downloadRequested.url` 的绝对 URI 校验留在 Desktop 分派；失败同样只触发一次 `Faulted`。
+- `compatibilityResult` 的 `key`、`message` 必须非空白，`data` 必须存在；ExternalInterface 当前 key 为 `external-interface/v1`。
+- `key`、`message` 等诊断上下文写日志时最多保留 2,048 字符；任何 `data`（包括结构化兼容结果）、Base64 内容与会话令牌不得写日志。
+- `saveChanged`、`saveDeleted`、`savesSnapshot` 由协调器串行消费。
+
+### 6.2 宿主到页面
+
+宿主不另建第二套 RPC 协议，而通过 `ExecuteScriptAsync` 调用稳定全局：
+
+| JavaScript API | 用途 |
+|---|---|
+| `window.__cefFlashBrowserPlayerApi.suspend()` | 暂停本地播放器。 |
+| `window.__cefFlashBrowserPlayerApi.resume()` | 恢复本地播放器。 |
+| `window.__cefFlashBrowserPlayerApi.reload()` | 重载当前 SWF。 |
+| `window.__cefFlashBrowserPlayerApi.requestFullscreen()` | 请求全屏。 |
+| `window.__cefFlashBrowserPlayerApi.volume = 0..1` | 设置规范化音量。 |
+| `localStorage.setItem/removeItem` | 导入或删除 Ruffle SharedObject 镜像。 |
+
+所有动态字符串必须先用 JSON 序列化再嵌入脚本，禁止直接拼接用户输入。上述播放器 API
+可能返回对象或 `Promise`，宿主调用脚本不得把它们作为 `ExecuteScriptAsync` 的结果。
+
+## 7. 生命周期
+
+```text
+CompositionRoot.CreateMainWindow
+  → 创建路径、save store、loopback host、脚本源、浏览器、协调器、ViewModel
+  → DocumentStartScriptSource.PrepareAsync
+      → ILocalContentHost.StartAsync
+      → 读取并生成固定 Ruffle 注入脚本
+  → View 挂载 NativeWebView
+  → AvaloniaNativeWebViewSession.Attach
+  → AdapterCreated
+      → IDocumentStartInjector.Inject
+      → Ready 完成
+  → 首次 NavigateAsync
+```
+
+关闭顺序由 `CompositionRoot` 所有：先停止产生新操作并释放 ViewModel/协调器；协调器解除 browser 事件并排空已接收 bridge 工作后，再释放 browser、停止 loopback host，最后释放日志等基础设施。新增长生命周期资源必须在同一 composition root 注册对称释放。
+
+## 8. 当前实现差距
+
+`LIFE-001` 与 `BRIDGE-001` 已于 2026-08-08 按
+[`H0.2 + H0.3A` 合并执行计划](h0.2-h0.3a-gate0-hardening.zh-CN.md)关闭：生命周期、
+协议边界和协调器排空语义均有失败回归与并发测试，Apple Silicon WKWebView 也已复验。
+
+仍保留的接口级差距：
+
+- `IDocumentStartInjector` 当前是 macOS Objective-C 直接绑定，尚无独立契约测试；必须继续保留 Apple Silicon 真实 WKWebView smoke 作为发布门禁。
+
+## 9. 接口变更检查表
+
+变更以下任一项时，必须同步更新本文、[`variables.zh-CN.md`](variables.zh-CN.md) 中对应登记、调用方和测试：
+
+- Core 端口的方法、事件、模型字段、空值或异常语义；
+- bridge `type`、字段、JavaScript 全局或消息处理顺序；
+- loopback 路由、授权方式或内容边界；
+- 持久化 schema、key 生成或 SOL 上限；
+- 初始化、`Ready`、线程封送或释放顺序。
+
+破坏性变更还必须新增 ADR，说明迁移、兼容窗口和回滚方式。View 私有控件名、方法局部变量、临时诊断文案和测试内部 helper 不属于稳定接口，不登记为契约。

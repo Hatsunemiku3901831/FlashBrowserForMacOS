@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "kind": "project-authored-P02",
+  "fixtures": {
+    "project-network": "NetworkProbe.as",
+    "project-audio": "AudioProbe.as"
+  },
+  "files": [
+    {
+      "fixtureId": "project-network",
+      "relativePath": "project-network/NetworkProbe.as",
+      "targetPath": "test-assets/flash/p02-project/project-network/NetworkProbe.as",
+      "size": 4247,
+      "sha256": "c797c06e9e8bd695cb7638740dcecf15d666528e337fcb13cec5d3c5ba4d051a",
+      "license": "Project-authored; same terms as FlashMacOS",
+      "source": "NetworkProbe.as / AudioProbe.as; generated 440 Hz, 3 second PCM source for audio",
+      "modification": "New deterministic fixture; no upstream fixture modified"
+    },
+    {
+      "fixtureId": "project-network",
+      "relativePath": "project-network/output.txt",
+      "targetPath": "test-assets/flash/p02-project/project-network/output.txt",
+      "size": 21,
+      "sha256": "e2b60bc0708ad09374784515294d7509a1f74c31b5a5077f7e183f9379c950e3",
+      "license": "Project-authored; same terms as FlashMacOS",
+      "source": "NetworkProbe.as / AudioProbe.as; generated 440 Hz, 3 second PCM source for audio",
+      "modification": "New deterministic fixture; no upstream fixture modified"
+    },
+    {
+      "fixtureId": "project-network",
+      "relativePath": "project-network/test.swf",
+      "targetPath": "test-assets/flash/p02-project/project-network/test.swf",
+      "size": 1822,
+      "sha256": "97c1b5e916272c491dd5a9cfd339920b055977d41c708022de2070a98892c697",
+      "license": "Project-authored; same terms as FlashMacOS",
+      "source": "NetworkProbe.as / AudioProbe.as; generated 440 Hz, 3 second PCM source for audio",
+      "modification": "New deterministic fixture; no upstream fixture modified"
+    },
+    {
+      "fixtureId": "project-audio",
+      "relativePath": "project-audio/AudioProbe.as",
+      "targetPath": "test-assets/flash/p02-project/project-audio/AudioProbe.as",
+      "size": 2732,
+      "sha256": "4b8d51d7fc49d56eee0bc1a2a41eedf0476c1fa68f39cd58ec0df231276948a8",
+      "license": "Project-authored; same terms as FlashMacOS",
+      "source": "NetworkProbe.as / AudioProbe.as; generated 440 Hz, 3 second PCM source for audio",
+      "modification": "New deterministic fixture; no upstream fixture modified"
+    },
+    {
+      "fixtureId": "project-audio",
+      "relativePath": "project-audio/output.txt",
+      "targetPath": "test-assets/flash/p02-project/project-audio/output.txt",
+      "size": 16,
+      "sha256": "4e4804a4f4908423fdfb85f6aa6bc454d724aa15723383f324a04c47104f80bb",
+      "license": "Project-authored; same terms as FlashMacOS",
+      "source": "NetworkProbe.as / AudioProbe.as; generated 440 Hz, 3 second PCM source for audio",
+      "modification": "New deterministic fixture; no upstream fixture modified"
+    },
+    {
+      "fixtureId": "project-audio",
+      "relativePath": "project-audio/test.swf",
+      "targetPath": "test-assets/flash/p02-project/project-audio/test.swf",
+      "size": 1178,
+      "sha256": "8b43c155ad67cef327fcd92096e80e112cd2d852e94d4809f198b1ef656c646f",
+      "license": "Project-authored; same terms as FlashMacOS",
+      "source": "NetworkProbe.as / AudioProbe.as; generated 440 Hz, 3 second PCM source for audio",
+      "modification": "New deterministic fixture; no upstream fixture modified"
+    },
+    {
+      "fixtureId": "project-audio",
+      "relativePath": "project-audio/tone.mp3",
+      "targetPath": "test-assets/flash/p02-project/project-audio/tone.mp3",
+      "size": 48944,
+      "sha256": "dd39d9bbe7cc46f9f2077f2d364cdf9dddb0edc1ff73376495b910b6828c06ca",
+      "license": "Project-authored; same terms as FlashMacOS",
+      "source": "NetworkProbe.as / AudioProbe.as; generated 440 Hz, 3 second PCM source for audio",
+      "modification": "New deterministic fixture; no upstream fixture modified"
+    },
+    {
+      "fixtureId": "project-audio",
+      "relativePath": "project-audio/tone.wav",
+      "targetPath": "test-assets/flash/p02-project/project-audio/tone.wav",
+      "size": 264644,
+      "sha256": "2f5b9ff1c33b25192e42907d1f686e8090f2666bca9cf12f50780a0facfa9531",
+      "license": "Project-authored; same terms as FlashMacOS",
+      "source": "NetworkProbe.as / AudioProbe.as; generated 440 Hz, 3 second PCM source for audio",
+      "modification": "New deterministic fixture; no upstream fixture modified"
+    }
+  ],
+  "compiler": {
+    "ApacheFlex": "4.16.1",
+    "SDKArchiveSha256": "17fda7ac8d3e476cad3127f345455ef316acfb87c6f4322e5897bd8d9b09388e",
+    "playerglobalSha256": "2bbd5ffff3bb20c117db7206080079479b04c4b55d68dd21ab31b6566c99fb6b",
+    "targetPlayer": "11.1",
+    "swfVersion": 14,
+    "optionalRegenerationToolingOnly": true,
+    "regenerationScript": "scripts/regenerate-p02-fixtures.py",
+    "networkRebuildEvidence": "artifacts/evidence/P02/project-fixture-build-20261028-03/result.json",
+    "omitTraceStatements": false,
+    "rebuildEvidence": "artifacts/evidence/P02/project-fixture-build-20261028-04/result.json"
+  },
+  "audioSource": {
+    "frequencyHz": 440,
+    "sampleRate": 44100,
+    "seconds": 3,
+    "peakAmplitude": 0.2
+  }
+}

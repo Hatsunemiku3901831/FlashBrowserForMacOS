@@ -1,0 +1,20 @@
+using System.Reflection;
+
+namespace FlashMacOS.Domain.Identity;
+
+/// <summary>Build metadata is generated from Product.props; no runtime file or source checkout is read.</summary>
+public static class ProductIdentity
+{
+    private static readonly Dictionary<string, string?> Values = typeof(ProductIdentity).Assembly
+        .GetCustomAttributes<AssemblyMetadataAttribute>().ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal);
+
+    public static string Name => Required("ProductName");
+    public static string BundleId => Required("ProductBundleId");
+    public static string Version => Required("ProductVersion");
+    public static string Build => Required("ProductBuild");
+    public static string MinimumMacOS => Required("ProductMinimumMacOS");
+    public static string UserAgentProduct => Name + "/" + Version;
+
+    private static string Required(string key) => Values.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value)
+        ? value : throw new InvalidOperationException("Missing product build metadata: " + key);
+}

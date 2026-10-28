@@ -1,0 +1,55 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class VersionedBridgeTests
+{
+    [TestMethod]
+    public void EnvelopeKeepsPayloadAndDocumentRunOriginMetadata()
+    {
+        var envelope = Envelope();
+        var actual = WebBridgeProtocol.Parse(envelope.ToJsonString());
+        Assert.AreEqual(1, actual.ProtocolVersion);
+        Assert.AreEqual(envelope["navigationId"]!.GetValue<string>(), actual.NavigationId);
+        Assert.AreEqual(envelope["runId"]!.GetValue<string>(), actual.RunId);
+        Assert.AreEqual("trace", actual.Type); Assert.AreEqual("fixture trace", actual.Message);
+        Assert.AreEqual("https://example.test", actual.Origin); Assert.IsTrue(actual.IsMainFrame);
+    }
+
+    [TestMethod]
+    [DataRow("protocolVersion")]
+    [DataRow("navigationId")]
+    [DataRow("runId")]
+    [DataRow("messageType")]
+    [DataRow("origin")]
+    [DataRow("href")]
+    [DataRow("isMainFrame")]
+    [DataRow("payload")]
+    public void MalformedEnvelopeIsRejectedWithoutEchoingItsPayload(string property)
+    {
+        var envelope = Envelope();
+        envelope["payload"]!["message"] = "PRIVATE_BODY_SENTINEL";
+        if (property == "protocolVersion") envelope[property] = 999;
+        else if (property == "navigationId" || property == "runId") envelope[property] = "invalid";
+        else envelope.Remove(property);
+        var exception = Assert.ThrowsExactly<JsonException>(() => WebBridgeProtocol.Parse(envelope.ToJsonString()));
+        Assert.IsFalse(exception.ToString().Contains("PRIVATE_BODY_SENTINEL", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void EnvelopeAndPayloadTypesCannotDisagree()
+    {
+        var envelope = Envelope(); envelope["payload"]!["type"] = "saveChanged";
+        Assert.ThrowsExactly<JsonException>(() => WebBridgeProtocol.Parse(envelope.ToJsonString()));
+    }
+
+    private static JsonObject Envelope() => new()
+    {
+        ["protocolVersion"] = 1, ["navigationId"] = Guid.NewGuid().ToString("N"),
+        ["runId"] = Guid.NewGuid().ToString("N"), ["messageType"] = "trace",
+        ["origin"] = "https://example.test", ["href"] = "https://example.test/game", ["isMainFrame"] = true,
+        ["payload"] = new JsonObject { ["type"] = "trace", ["message"] = "fixture trace" },
+    };
+}

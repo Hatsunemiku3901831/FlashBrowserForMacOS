@@ -1,0 +1,134 @@
+using FlashMacOS.Application.Sol;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class AmfModelContractTests
+{
+    [TestMethod]
+    public void ImplicitNullInvalidEnumsAndInconsistentShapesAreRejectedAtConstruction()
+    {
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfString(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfAvmPlus(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfProperty(null!, AmfNull.Instance));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfDictionaryEntry(null!, AmfNull.Instance));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfDictionaryEntry(AmfNull.Instance, null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfTraits(null!, true));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfTraits("T", false, [null!]));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfTraits("T", false, ["x"], true));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfObjectNode(new(0), null!));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new AmfObjectNode(new(0), new("", true), objectKind: (AmfObjectKind)99));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfObjectNode(new(0), new("", false), properties: [new("x", AmfNull.Instance)]));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfObjectNode(new(0), new("", false), externalData: AmfNull.Instance));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfObjectNode(new(0), new("", false), externalCodecId: "unexpected"));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new AmfArrayNode(new(0), (AmfArrayKind)99));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfDateNode(new(0), null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfXmlNode(new(0), null!, true));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfVectorObjectNode(new(0), [], false, null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SolDocument(null!, SolEncoding.Amf0, new([])));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new SolDocument("x", (SolEncoding)99, new([])));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SolDocument("x", SolEncoding.Amf0, null!));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfGraph([], [new UnknownNode(new(0), true)]));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new AmfVectorIntNode(new(0), null!, false));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfVectorIntNode(new(0), Enumerable.Repeat(0, 1_000_001), false));
+        Assert.ThrowsExactly<ArgumentException>(() => new AmfByteArrayNode(new(0), new byte[64 * 1024 * 1024 + 1]));
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new AmfLimits(MaximumNodes: 1_000_001).Validate());
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new AmfLimits(MaximumElements: 1_000_001).Validate());
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new AmfLimits(MaximumFileBytes: 64 * 1024 * 1024 + 1).Validate());
+    }
+
+    [TestMethod]
+    public void ExternalMetadataWithoutDecodedDataRemainsUnsupported()
+    {
+        var node = new AmfObjectNode(new(0), new("E", false, isExternalizable: true), externalCodecId: "metadata-only");
+        Assert.IsFalse(new SolDocument("x", SolEncoding.Amf3, Root(node)).CanEditAndSave);
+    }
+
+    [TestMethod]
+    public void UnknownNodeImplementationsCannotMasqueradeAsAKnownTypeOrBeSaved()
+    {
+        var unknown = new UnknownNode(new(0)); var known = new AmfObjectNode(new(0), new("", true));
+        Assert.IsFalse(AmfGraphEquality.Equivalent(Root(unknown), Root(known)));
+        Assert.IsFalse(AmfGraphEquality.Equivalent(Root(known), Root(unknown)));
+        Assert.IsFalse(AmfGraphEquality.Equivalent(Root(unknown), Root(new UnknownNode(new(0)))));
+        Assert.ThrowsExactly<AmfFormatException>(() => new AmfCodec().Encode(Root(unknown), SolEncoding.Amf3));
+    }
+
+    [TestMethod]
+    public void EveryObservableGraphAttributeParticipatesInSemanticComparison()
+    {
+        var id = new AmfNodeId(0); var integer = new AmfInteger(1); var other = new AmfInteger(2);
+        var cases = new List<(AmfNode Left, AmfNode Right)>
+        {
+            (new AmfXmlNode(id,"A",true), new AmfXmlNode(id,"B",true)),
+            (new AmfXmlNode(id,"A",true), new AmfXmlNode(id,"A",false)),
+            (new AmfByteArrayNode(id,[0]),new AmfByteArrayNode(id,[1])),
+            (new AmfDateNode(id,new(1)),new AmfDateNode(id,new(2))),
+            (new AmfDateNode(id,new(1),0),new AmfDateNode(id,new(1),-60)),
+            (new AmfVectorIntNode(id,[1],true),new AmfVectorIntNode(id,[1],false)),
+            (new AmfVectorIntNode(id,[1],true),new AmfVectorIntNode(id,[2],true)),
+            (new AmfVectorUIntNode(id,[1],true),new AmfVectorUIntNode(id,[1],false)),
+            (new AmfVectorUIntNode(id,[1],true),new AmfVectorUIntNode(id,[2],true)),
+            (new AmfVectorNumberNode(id,[new(1)],true),new AmfVectorNumberNode(id,[new(1)],false)),
+            (new AmfVectorNumberNode(id,[new(1)],true),new AmfVectorNumberNode(id,[new(2)],true)),
+            (new AmfVectorObjectNode(id,[integer],true),new AmfVectorObjectNode(id,[integer],false)),
+            (new AmfVectorObjectNode(id,[integer],true),new AmfVectorObjectNode(id,[integer],true,"T")),
+            (new AmfVectorObjectNode(id,[integer],true),new AmfVectorObjectNode(id,[],true)),
+            (new AmfDictionaryNode(id,[new(integer,integer)],true),new AmfDictionaryNode(id,[new(integer,integer)],false)),
+            (new AmfDictionaryNode(id,[new(integer,integer)],true),new AmfDictionaryNode(id,[],true)),
+            (new AmfArrayNode(id,AmfArrayKind.Amf3Mixed,[integer]),new AmfArrayNode(id,AmfArrayKind.Amf0Strict,[integer])),
+            (new AmfArrayNode(id,AmfArrayKind.Amf3Mixed,[integer]),new AmfArrayNode(id,AmfArrayKind.Amf3Mixed,[integer,other])),
+            (new AmfArrayNode(id,AmfArrayKind.Amf3Mixed,associative:[new("a",integer)]),new AmfArrayNode(id,AmfArrayKind.Amf3Mixed)),
+            (new AmfArrayNode(id,AmfArrayKind.Amf0Ecma,declaredAssociativeCount:1),new AmfArrayNode(id,AmfArrayKind.Amf0Ecma,declaredAssociativeCount:2)),
+            (new AmfObjectNode(id,new("",true)),new AmfObjectNode(id,new("",true),objectKind:AmfObjectKind.Amf0Object)),
+            (new AmfObjectNode(id,new("T",true)),new AmfObjectNode(id,new("U",true))),
+            (new AmfObjectNode(id,new("T",true)),new AmfObjectNode(id,new("T",false))),
+            (new AmfObjectNode(id,new("E",false)),new AmfObjectNode(id,new("E",false,isExternalizable:true))),
+            (new AmfObjectNode(id,new("T",false,["a"]),[integer]),new AmfObjectNode(id,new("T",false,["b"]),[integer])),
+            (new AmfObjectNode(id,new("T",true),properties:[new("a",integer)]),new AmfObjectNode(id,new("T",true))),
+            (new AmfObjectNode(id,new("E",false,isExternalizable:true),externalData:integer,externalCodecId:"v1"),new AmfObjectNode(id,new("E",false,isExternalizable:true),externalData:integer,externalCodecId:"v2")),
+            (new AmfObjectNode(id,new("E",false,isExternalizable:true),externalCodecId:"v1"),new AmfObjectNode(id,new("E",false,isExternalizable:true),externalData:integer,externalCodecId:"v1"))
+        };
+        foreach (var pair in cases)
+        { Assert.IsFalse(AmfGraphEquality.Equivalent(Root(pair.Left),Root(pair.Right)), pair.Left.Kind.ToString()); Assert.IsFalse(AmfGraphEquality.Equivalent(Root(pair.Right),Root(pair.Left))); }
+        Assert.IsFalse(AmfGraphEquality.Equivalent(new([new("v",integer)]),new([new("v",new AmfNumber(1))])));
+        Assert.IsFalse(AmfGraphEquality.Equivalent(new([]),new([new("v",integer)])));
+        var implicitCount = new AmfArrayNode(id,AmfArrayKind.Amf0Ecma); var explicitCount = new AmfArrayNode(id,AmfArrayKind.Amf0Ecma,declaredAssociativeCount:0);
+        Assert.IsTrue(AmfGraphEquality.Equivalent(Root(implicitCount),Root(explicitCount))); Assert.IsTrue(AmfGraphEquality.Equivalent(Root(explicitCount),Root(implicitCount)));
+    }
+
+    [TestMethod]
+    public void CancellationStopsBeforeUnsupportedContentValidation()
+    {
+        using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+        var graph = new AmfGraph([new("", new AmfUnsupported(SolEncoding.Amf0,4,0,"MovieClip"))]);
+        Assert.ThrowsExactly<OperationCanceledException>(() => new AmfCodec().Encode(graph,SolEncoding.Amf0,cancellationToken:cancellation.Token));
+    }
+
+    [TestMethod]
+    public void CancellationDuringGraphValidationDoesNotEnumerateTheEntireRemainingGraph()
+    {
+        using var cancellation = new CancellationTokenSource(); var node = new ProbeNode(new(0),cancellation); var graph = Root(node); node.Armed = true;
+        Assert.ThrowsExactly<OperationCanceledException>(() => new AmfCodec().Encode(graph,SolEncoding.Amf3,cancellationToken:cancellation.Token));
+        Assert.IsTrue(node.Visits <= 33,"Cancellation must stop traversal immediately after the callback cancels it.");
+    }
+
+    private static AmfGraph Root(AmfNode node) => new([new("",new AmfReference(node.Id))],[node]);
+    private sealed class UnknownNode(AmfNodeId id,bool nullChild = false) : AmfNode(id)
+    { public override AmfNodeKind Kind => AmfNodeKind.Object; public override IEnumerable<AmfValue> Children => nullChild ? [null!] : []; }
+    private sealed class ProbeNode(AmfNodeId id,CancellationTokenSource cancellation) : AmfNode(id)
+    {
+        public bool Armed { get; set; }
+        public int Visits { get; private set; }
+        public override AmfNodeKind Kind => AmfNodeKind.Object;
+        public override IEnumerable<AmfValue> Children
+        {
+            get
+            {
+                for(var i=0;i<10000;i++)
+                { if(Armed && ++Visits==32) cancellation.Cancel(); yield return AmfNull.Instance; }
+            }
+        }
+    }
+}

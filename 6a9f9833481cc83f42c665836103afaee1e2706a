@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "sourceUrl": "http://webres.61.com/common/js/swfobject.js?202507311216",
+  "capturedOn": "2026-10-28 Australia/Sydney",
+  "sha256": "f484dbb1622c648eff246c31590dc8b8002a3ea0234790695812fd82cb05a8d3",
+  "size": 11234,
+  "targetRelativePath": "test-assets/web/mole/swfobject-202507311216.js",
+  "license": "MIT; original Geoff Stearns SWFObject notice retained in file",
+  "modification": "None; regression input for the observed obsolete installation gate only"
+}

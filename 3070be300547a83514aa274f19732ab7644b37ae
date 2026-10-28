@@ -1,0 +1,134 @@
+using System.Buffers.Binary;
+using System.Text.Json.Nodes;
+using FlashMacOS.Application.Sol;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class SolContentTests
+{
+    [TestMethod]
+    [DataRow("settings.sol")]
+    [DataRow("mao.sol")]
+    [DataRow("pvz.sol")]
+    [DataRow("FBCookie.sol")]
+    [DataRow("RuffleTest.sol")]
+    public void AllOriginalSolContentsMatchIndependentCompleteTypedExpectations(string fileName)
+    {
+        var bytes = File.ReadAllBytes(TestAssets.Sol(fileName)); var copy = (byte[])bytes.Clone(); var codec = new SolCodec();
+        var document = codec.Decode(bytes);
+        var expected = JsonNode.Parse(File.ReadAllText(Path.Combine(AmfGolden.DirectoryPath, "legacy-content", fileName + ".json")))!;
+        var actual = LegacyTree(document);
+        if (document.Encoding == SolEncoding.Amf0) { RemoveNonWireTraits(expected); RemoveNonWireTraits(actual); }
+        Assert.IsTrue(JsonNode.DeepEquals(expected, actual), fileName + " full typed tree mismatch\n" + actual.ToJsonString());
+        var written = codec.Encode(document); var reread = codec.Decode(written); var reprojected = LegacyTree(reread);
+        Assert.IsTrue(AmfGraphEquality.Equivalent(document.Graph, reread.Graph));
+        if (document.Encoding == SolEncoding.Amf0) RemoveNonWireTraits(reprojected);
+        Assert.IsTrue(JsonNode.DeepEquals(expected, reprojected)); CollectionAssert.AreEqual(copy, bytes);
+        Assert.AreEqual(written.Length - 6, (int)BinaryPrimitives.ReadUInt32BigEndian(written.AsSpan(2, 4)));
+    }
+
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(3)]
+    public void NewEmptyFileAndOrderedDuplicateEmptyNamesHaveCompleteContainer(int encoding)
+    {
+        var codec = new SolCodec(); var document = new SolDocument("中文 🎮", (SolEncoding)encoding, new AmfGraph([]));
+        var decoded = codec.Decode(codec.Encode(document)); Assert.AreEqual(document.Name, decoded.Name); Assert.HasCount(0, decoded.Graph.Entries);
+        document = new("", (SolEncoding)encoding, new AmfGraph([new("same", AmfNull.Instance), new("", AmfUndefined.Instance), new("same", new AmfBoolean(true))]));
+        decoded = codec.Decode(codec.Encode(document));
+        Assert.AreEqual("same", decoded.Graph.Entries[0].Name); Assert.AreEqual("", decoded.Graph.Entries[1].Name); Assert.AreEqual("same", decoded.Graph.Entries[2].Name);
+        Assert.IsInstanceOfType<AmfNull>(decoded.Graph.Entries[0].Value); Assert.IsInstanceOfType<AmfUndefined>(decoded.Graph.Entries[1].Value);
+    }
+
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(3)]
+    public void FullFileReferenceTablesSpanAllEntries(int encoding)
+    {
+        var id = new AmfNodeId(31); var codec = new SolCodec();
+        var kind = encoding == 0 ? AmfObjectKind.Amf0Object : AmfObjectKind.Amf3Object;
+        var node = new AmfObjectNode(id, new AmfTraits("", true), properties: [new("self", new AmfReference(id))], objectKind: kind);
+        var graph = new AmfGraph([new("a", new AmfReference(id)), new("b", new AmfReference(id))], [node]);
+        var decoded = codec.Decode(codec.Encode(new("references", (SolEncoding)encoding, graph)));
+        Assert.IsTrue(AmfGraphEquality.Equivalent(graph, decoded.Graph));
+        Assert.HasCount(1, decoded.Graph.Nodes); Assert.AreEqual(decoded.Graph.Entries[0].Value, decoded.Graph.Entries[1].Value);
+        var readNode = (AmfObjectNode)decoded.Graph.Nodes[((AmfReference)decoded.Graph.Entries[0].Value).Target];
+        Assert.AreEqual(decoded.Graph.Entries[0].Value, readNode.Properties[0].Value);
+    }
+
+    [TestMethod]
+    public void SolRootNamesParticipateInTheAmf3StringPool()
+    {
+        var codec = new SolCodec(); var bytes = codec.Encode(new("", SolEncoding.Amf3, new AmfGraph([new("x", new AmfString("x"))])));
+        Assert.AreEqual("0378060000", Convert.ToHexStringLower(bytes.AsSpan(22)));
+        Assert.AreEqual("x", ((AmfString)codec.Decode(bytes).Graph.Entries[0].Value).Value);
+    }
+
+    [TestMethod]
+    public void InvalidTerminatorTruncationChunkOverflowAndUnknownMarkerAreRejected()
+    {
+        var codec = new SolCodec(); var original = codec.Encode(new("", SolEncoding.Amf0, new AmfGraph([new("x", AmfNull.Instance)])));
+        var bytes = (byte[])original.Clone(); bytes[^1] = 1;
+        Assert.AreEqual("EntryTerminator", Assert.ThrowsExactly<AmfFormatException>(() => codec.Decode(bytes)).Code);
+        bytes = (byte[])original.Clone(); bytes[^2] = 0xff;
+        var error = Assert.ThrowsExactly<AmfFormatException>(() => codec.Decode(bytes)); Assert.AreEqual(original.Length - 2, error.Offset); Assert.AreEqual((byte)255, error.Marker);
+        for (var length = 0; length < original.Length; length++)
+        {
+            var prefix = original.AsSpan(0, length).ToArray();
+            if (length >= 6) BinaryPrimitives.WriteUInt32BigEndian(prefix.AsSpan(2, 4), (uint)(length - 6));
+            if (length == 22) continue; // A complete header with no entries is a valid empty SOL.
+            if (length < 22) Assert.ThrowsExactly<InvalidDataException>(() => codec.Decode(prefix));
+            else Assert.ThrowsExactly<AmfFormatException>(() => codec.Decode(prefix));
+        }
+        bytes = (byte[])original.Clone(); BinaryPrimitives.WriteUInt32BigEndian(bytes.AsSpan(2, 4), uint.MaxValue);
+        Assert.ThrowsExactly<InvalidDataException>(() => codec.Decode(bytes));
+    }
+
+    private static JsonObject LegacyTree(SolDocument document)
+    {
+        var values = new JsonObject(); foreach (var entry in document.Graph.Entries) values.Add(entry.Name, Value(entry.Value));
+        return new JsonObject { ["name"] = document.Name, ["encoding"] = (int)document.Encoding, ["values"] = values };
+
+        JsonObject Value(AmfValue value) => value switch
+        {
+            AmfUndefined => new() { ["type"] = 0 }, AmfNull => new() { ["type"] = 1 },
+            AmfBoolean b => new() { ["type"] = b.Value ? 3 : 2, ["value"] = b.Value },
+            AmfInteger n => new() { ["type"] = 4, ["value"] = n.Value },
+            AmfNumber n => new() { ["type"] = 5, ["bits"] = Bits(n) },
+            AmfString s => new() { ["type"] = 6, ["value"] = s.Value },
+            AmfReference reference => Node(document.Graph.Nodes[reference.Target]),
+            _ => throw new AssertFailedException("Legacy fixture has unexpected value type")
+        };
+        JsonObject Node(AmfNode node)
+        {
+            switch (node)
+            {
+                case AmfDateNode date: return new() { ["type"] = 8, ["bits"] = Bits(date.Milliseconds) };
+                case AmfXmlNode xml: return new() { ["type"] = xml.IsDocument ? 7 : 11, ["value"] = xml.Text };
+                case AmfByteArrayNode binary: return new() { ["type"] = 12, ["hex"] = Convert.ToHexStringLower(binary.Bytes.Span) };
+                case AmfArrayNode array:
+                    var associative = new JsonObject(); foreach (var property in array.Associative) associative.Add(property.Name, Value(property.Value));
+                    return new() { ["type"] = 9, ["associative"] = associative, ["dense"] = new JsonArray(array.Dense.Select(item => (JsonNode)Value(item)).ToArray()) };
+                case AmfObjectNode item:
+                    var properties = new JsonObject();
+                    for (var i = 0; i < item.Traits.SealedNames.Count; i++) properties.Add(item.Traits.SealedNames[i], Value(item.SealedValues[i]));
+                    foreach (var property in item.Properties) properties.Add(property.Name, Value(property.Value));
+                    return new() { ["type"] = 10, ["className"] = item.Traits.ClassName, ["dynamic"] = item.Traits.IsDynamic,
+                        ["externalizable"] = item.Traits.IsExternalizable, ["sealedNames"] = new JsonArray(item.Traits.SealedNames.Select(name => (JsonNode?)JsonValue.Create(name)).ToArray()), ["properties"] = properties };
+                default: throw new AssertFailedException("Legacy fixture has an unexpected node type");
+            }
+        }
+    }
+    private static string Bits(AmfNumber number) => unchecked((ulong)number.RawBits).ToString("x16", System.Globalization.CultureInfo.InvariantCulture);
+    private static void RemoveNonWireTraits(JsonNode node)
+    {
+        if (node is JsonObject item)
+        {
+            if (item["type"]?.GetValue<int>() == 10) { item.Remove("dynamic"); item.Remove("externalizable"); }
+            foreach (var child in item.Select(pair => pair.Value).OfType<JsonNode>()) RemoveNonWireTraits(child);
+        }
+        else if (node is JsonArray array) foreach (var child in array.OfType<JsonNode>()) RemoveNonWireTraits(child);
+    }
+}

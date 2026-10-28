@@ -1,0 +1,22 @@
+namespace FlashMacOS.Application.Sol;
+
+public sealed record SolFileRevision(bool Exists, string? Sha256)
+{
+    public static SolFileRevision Missing { get; } = new(false, null);
+}
+public sealed record SolFileImage(ReadOnlyMemory<byte> Bytes, SolFileRevision Revision);
+public interface ISolFileStorage
+{
+    ValueTask<SolFileImage> ReadAsync(string path, int maximumBytes, CancellationToken cancellationToken = default);
+    ValueTask<SolFileRevision> CommitAsync(string path, ReadOnlyMemory<byte> bytes, SolFileRevision expectedRevision,
+        bool createBackup = true, CancellationToken cancellationToken = default);
+}
+
+public sealed record SolDiagnostic(string Code, SolEncoding? Encoding, int? Offset, byte? Marker, string Message);
+public sealed record SolEditorSnapshot(string? Path, SolDocument? Document, long Version, SolFileRevision FileRevision,
+    bool IsDirty, bool CanUndo, bool CanRedo, IReadOnlyList<SolDiagnostic> Diagnostics)
+{
+    public bool IsReadOnly => Document is null;
+}
+public sealed record SolRecoveryResult(SolEditorSnapshot Snapshot, string? ArchivedCurrentPath);
+public sealed class SolEditConflictException(string message) : InvalidOperationException(message);

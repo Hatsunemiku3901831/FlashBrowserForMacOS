@@ -1,0 +1,468 @@
+# H0.2 + H0.3A Gate 0 hardening 合并执行计划
+
+状态：已完成；H0.2 与 H0.3A 验收通过；独立扩展验收后的当前队列见 H0.R + H0.3B1 计划
+
+快照日期：2026-08-08（Asia/Singapore）
+
+目标执行窗口：单个 Codex 5.6 sol max 上下文，连续 4–6 小时
+
+目标平台：Apple Silicon ARM64；唯一 RID 为 `osx-arm64`
+
+本文把原计划中的 H0.2 与 H0.3 第一切片合并为一个有阶段门的执行工作包。当前工作树、已完成证据和后续队列见
+[`development-handoff.zh-CN.md`](development-handoff.zh-CN.md)；项目总目标、里程碑和总工作量见
+[`../../../Docs/macos-porting-plan.zh-CN.md`](../../../Docs/macos-porting-plan.zh-CN.md)；接口、bridge 与生命周期语义见
+[`interfaces.zh-CN.md`](interfaces.zh-CN.md)。本文不改变产品范围，也不替代接口与工程规范。
+
+## 1. 合并边界与本窗口结果
+
+本窗口合并两个原计划任务，但不是把 H0.3 的 2–4 人日完整范围压缩成 6 小时：
+
+- **主任务 H0.2（强制）**：关闭生命周期、bridge 协议和协调器异步所有权缺陷。
+- **次任务 H0.3A（阶段门后强制）**：建立兼容语料的可审计纳入方式，并加入第一份 AVM2/AS3 确定性语料。
+- **后续 H0.3B（本窗口不做）**：音频、网络/策略文件、ExternalInterface 和输入/渲染/定时矩阵。
+- **后续 H0.4（本窗口不做）**：在 H0.3B 完成后重跑 Gate 0 总收口并重新估算。
+
+H0.2 必须在一个可复现变更中关闭三个相互关联的问题：
+
+1. `LoopbackContentHost` 在未启动、启动后、重复和并发释放时均幂等，不访问已释放 semaphore；释放后禁止重新启动或登记 SWF。
+2. bridge JSON 在进入 Desktop 分派与 Core 消费前经过单一、可单测的解析/验证边界；空根、缺失/空 `type`、已知消息缺少必填字段只报告一次故障，不产生下载或存档副作用。
+3. `RufflePlayerCoordinator` 的 fire-and-forget bridge 工作全部可观察；释放先停止接收新消息，再等待已接收工作排空，最后才释放同步资源。
+
+H0.2 的阶段门全部通过后，H0.3A 还必须交付：
+
+1. 固定引用 Ruffle v0.4.1 的 `tests/tests/swfs/avm2/hello_world`，纳入 `Test.as`、`test.swf`、`output.txt` 和 `test.toml`，不得只复制不可追溯的二进制。
+2. 在第三方说明中登记上游 tag、精确目录、许可证、每个文件 SHA-256 和预期 trace `Hello world!`；自动化测试锁定文件存在性和 hash。
+3. 在 Apple Silicon WKWebView 中通过本地 SWF 路径运行该 fixture，机器可判定地确认 `playerReady` 以及一次 `trace` 的规范化内容；结果写回 Gate 兼容矩阵。
+
+完成不等于“代码大致修好”。必须同时具备：失败回归、最小实现、语料 provenance/hash、全量自动化、ARM64 基线回归、接口/Gate/交接同步，以及明确的真实 WKWebView 验证结论。H0.2 未通过阶段门时不得开始 H0.3A，也不得因此把 H0.2 的必做项降级。
+
+## 2. 开始前必须读取与核对
+
+按顺序完整读取：
+
+1. [`../../../AGENTS.md`](../../../AGENTS.md)
+2. [`../AGENTS.md`](../AGENTS.md)
+3. [`development-handoff.zh-CN.md`](development-handoff.zh-CN.md)
+4. 本文
+5. [`interfaces.zh-CN.md`](interfaces.zh-CN.md)
+6. [`engineering-spec.zh-CN.md`](engineering-spec.zh-CN.md)
+7. [`gate0-results.zh-CN.md`](gate0-results.zh-CN.md)
+8. 下表中的实现、调用方、fixture 说明和测试
+
+开始修改前从仓库根执行 `git status --short`。当前 `AGENTS.md` 已修改，`Docs/macos-porting-plan.zh-CN.md` 与整个 `spike/` 仍未跟踪；它们都是用户资产，不得清理、回滚、覆盖或通过切分支假定可恢复。
+
+| 目的 | 必读文件 |
+|---|---|
+| loopback 生命周期 | [`LoopbackContentHost.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LoopbackContentHost.cs)、[`LocalContentContracts.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Hosting/LocalContentContracts.cs) |
+| bridge 模型与端口 | [`BrowserContracts.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/BrowserContracts.cs) |
+| Desktop 解析/分派 | [`AvaloniaNativeWebViewSession.cs`](../src/CefFlashBrowser.MacOS.Spike.Desktop/Browser/AvaloniaNativeWebViewSession.cs) |
+| bridge 串行消费/释放 | [`RufflePlayerCoordinator.cs`](../src/CefFlashBrowser.MacOS.Spike.Core/Flash/Ruffle/RufflePlayerCoordinator.cs) |
+| 所有权与关闭顺序 | [`CompositionRoot.cs`](../src/CefFlashBrowser.MacOS.Spike.Desktop/Composition/CompositionRoot.cs)、[`MainWindowViewModel.cs`](../src/CefFlashBrowser.MacOS.Spike.Desktop/ViewModels/MainWindowViewModel.cs) |
+| 最近测试 | [`LoopbackContentHostTests.cs`](../tests/CefFlashBrowser.MacOS.Spike.Tests/LoopbackContentHostTests.cs)、[`RufflePlayerCoordinatorTests.cs`](../tests/CefFlashBrowser.MacOS.Spike.Tests/RufflePlayerCoordinatorTests.cs) |
+| 现有语料治理 | [`THIRD-PARTY.md`](../src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/THIRD-PARTY.md)、[`GateZeroFixtureTests.cs`](../tests/CefFlashBrowser.MacOS.Spike.Tests/GateZeroFixtureTests.cs)、测试项目 `.csproj` |
+
+## 3. 已核实的缺陷机制
+
+### 3.1 `LIFE-001`：内容服务释放不是幂等的
+
+当前 `LoopbackContentHost.DisposeAsync` 在 `finally` 中同时 `Release` 和 `Dispose` `_startMutex`：
+
+- 未启动时第一次释放也会销毁 semaphore；第二次释放在 `WaitAsync` 处抛出 `ObjectDisposedException`。
+- 启动后第一次释放同样销毁 semaphore；释放后调用 `StartAsync` 或 `RegisterSwfAsync` 的行为依赖已销毁同步对象，而不是明确的对象生命周期语义。
+- `StartAsync` 在锁外读取 `_application`，与并发 `DisposeAsync` 之间没有单一线性化点。
+- 并发释放时，等待者可能仍在 semaphore 队列中，而所有者已经销毁 semaphore。
+
+### 3.2 `BRIDGE-001`：JSON 可构造非法的非空模型
+
+`WebBridgeMessage.Type` 在 C# 声明为非空 `string`，但 `System.Text.Json` 可从 `{}` 或 `{"type":null}` 构造 `Type == null` 的实例。当前 Desktop 适配器随后调用 `message.Type.Equals(...)`，该异常不在现有 `JsonException`/`NotSupportedException` catch filter 内。
+
+当前还有三项协议边界漂移：
+
+- 空白 body 被静默忽略，而接口契约要求 malformed root 通过 `Faulted` 可观察。
+- 已知消息缺少必填字段通常进入协调器后静默落空，解析、验证和副作用边界不清晰。
+- `DescribeBridge` 留在 Desktop 私有方法中，2,048 字符限制和禁止记录 `data` 无法做 Core 单测。
+
+### 3.3 协调器释放与异步 bridge 工作竞态
+
+`RufflePlayerCoordinator.OnBridgeMessageReceived` 直接丢弃 `HandleBridgeMessageAsync` 返回的任务。`DisposeAsync` 解除订阅后立即销毁 `_bridgeMutex`：
+
+- 已进入或等待 `_bridgeMutex` 的任务可能在 `WaitAsync`/`Release` 处访问已释放对象。
+- 已接收的存档写入可能在协调器报告已释放后继续运行。
+- 异常虽然通常在 handler 内转为 `Faulted`，但任务所有权、排空边界和“每个失败只报告一次”没有明确保证。
+
+## 4. 冻结的设计决策
+
+### 4.1 内容服务生命周期
+
+实现必须形成单一线性化点，推荐最小方案：
+
+- 所有 `StartAsync` 与 `DisposeAsync` 状态检查均在同一个 lifecycle semaphore 内完成；移除锁外的 `_application` 快速返回。
+- 增加明确 disposed 状态。`DisposeAsync` 可重复、可并发调用；首次调用负责停止资源，其余调用等待/返回同一个稳定结果。
+- `StartAsync` 与 `RegisterSwfAsync` 在释放完成后抛出 `ObjectDisposedException`，不得重新启动对象。
+- `BaseUri`、`DiagnosticsUri`、`RufflePublicPath` 在释放后为 `null`，进程内登记表清空。
+- 不得在线程仍可能等待时销毁 semaphore。若实现选择对象生命周期内保留该 `SemaphoreSlim`，应注释说明未访问 `AvailableWaitHandle`、没有独立原生句柄；不要为“看起来释放完整”重新引入竞态。
+- 并发 `StartAsync` 与 `DisposeAsync` 按获得 lifecycle gate 的顺序线性化：start 先获得则可完成后被 stop；dispose 先获得则后续 start 明确失败。
+
+不要引入自旋、`Task.Run`、同步 `.Wait()`、全局锁或新依赖。
+
+### 4.2 bridge 协议边界放在 Core
+
+新增一个纯 C#、无 Avalonia/WebKit 依赖的协议组件，推荐路径与名称：
+
+```text
+src/CefFlashBrowser.MacOS.Spike.Core/Application/Browser/WebBridgeProtocol.cs
+```
+
+推荐最小 API：
+
+```csharp
+public static WebBridgeMessage Parse(string? body);
+public static string Describe(WebBridgeMessage message);
+```
+
+约束：
+
+- 使用 `JsonSerializerDefaults.Web`，不在 Desktop 再维护第二份 serializer options。
+- `Parse` 对 null/空白、JSON null、数组/标量根、无效 JSON、缺失/null/空白 `type` 抛出不包含原始 body 的 `JsonException`。
+- 保持 `WebBridgeMessage.Type` 非空；不要用把类型改成 `string?` 的方式把校验责任扩散到所有消费者。
+- 未知非空 `type` 是前向兼容消息：解析成功、无副作用、不得触发 `Faulted`。
+- 已知类型在解析边界验证字段“存在性”；内容格式仍由现有业务边界二次验证。
+
+| `type` | H0.2 必填检查 |
+|---|---|
+| `saveChanged` | 非空白 `key`，非 null `data` |
+| `saveDeleted` | 非空白 `key` |
+| `savesSnapshot` | 非 null `data` |
+| `trace` | 非 null `message` |
+| `playerReady` | 无额外必填字段 |
+| `diagnostics` | `ruffleAvailable`、`flashElementCount`、`documentStartMilliseconds` 均存在 |
+| `bridgeError` | 非 null `message` |
+| `downloadRequested` | 非空白 `url`；绝对 URI 校验仍由下载分派完成 |
+
+`Describe` 只能选择 `message` 或 `key` 作为上下文，最多保留 2,048 字符；不得包含 `data`、完整 JSON、Cookie、session token 或本地绝对路径。
+
+### 4.3 Desktop 只负责平台分派
+
+`AvaloniaNativeWebViewSession.OnWebMessageReceived` 必须：
+
+1. 无条件把 body 交给 `WebBridgeProtocol.Parse`，不再静默返回空白 body。
+2. 只记录 `WebBridgeProtocol.Describe` 的脱敏结果。
+3. 对合法 `downloadRequested` 生成一次 `DownloadRequested`，且不再转发给协调器。
+4. 对其他合法消息生成一次 `BridgeMessageReceived`。
+5. 对 parsing/validation/URI 错误生成一次 `Faulted`，不触发上述两个事件。
+
+不要把 Avalonia `WebMessageReceivedEventArgs`、NativeWebView 或 Dispatcher 类型下沉到 Core。
+
+### 4.4 协调器拥有并排空 bridge 工作
+
+实现可以选择“受锁保护的 pending task 集合”或“串行 task tail”，但必须同时满足：
+
+- 消息仍按到达顺序串行消费；不得用无界并发替代 `_bridgeMutex`。
+- `OnBridgeMessageReceived` 不把无人持有、无人观察的任务直接丢弃。
+- `DisposeAsync` 先原子设置 disposed 并解除浏览器事件，再等待已经接收的 bridge 工作完成，最后才释放 mutex/其他同步资源。
+- 释放开始后新消息被忽略且不写 store；已接收的工作要么正常排空，要么产生一次 `Faulted`。
+- 不使用 `async void`、`.Wait()`、`.Result`、无限超时或 `Task.Run`。
+- 测试必须用 `TaskCompletionSource`/可控 fake 建立确定性时序，不用 `Thread.Sleep` 或概率循环。
+
+除非现有契约无法满足，否则不要引入 `Channel`、后台常驻 worker 或新的公开端口。
+
+### 4.5 H0.3A 只纳入第一份 AVM2/AS3 语料
+
+H0.3A 的唯一运行语料冻结为 Ruffle v0.4.1 上游
+[`tests/tests/swfs/avm2/hello_world`](https://github.com/ruffle-rs/ruffle/tree/v0.4.1/tests/tests/swfs/avm2/hello_world)。它只证明当前 WKWebView + 固定 Ruffle 资产能够执行 AVM2/AS3 并把确定性 trace 送回现有 bridge，不代表 AS3 整体兼容。
+
+2026-08-07 从该固定 tag 的 `raw.githubusercontent.com` 路径只读取得并独立计算的预期值如下。执行者仍必须对实际纳入文件重新计算；任一大小或 hash 不同即停止，不写入仓库。
+
+| 文件 | 字节数 | SHA-256 |
+|---|---:|---|
+| `Test.as` | 60 | `b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e` |
+| `output.txt` | 13 | `0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8` |
+| `test.swf` | 580 | `708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17` |
+| `test.toml` | 15 | `fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd` |
+
+纳入规则：
+
+- 只从固定 tag `v0.4.1` 的精确目录取文件；禁止使用 `master`、nightly、GitHub Release 的“latest”链接或搜索结果中的镜像。
+- 保留 `Test.as`、`test.swf`、`output.txt`、`test.toml` 原名与字节；仓库内目录建议为 `Assets/Fixtures/avm2-hello-world/`。
+- `THIRD-PARTY.md` 同时登记来源、tag、上游路径、双许可证以及四个 SHA-256；hash 必须由实际纳入文件计算，不能从网页手抄后不校验。
+- 扩展 `GateZeroFixtureTests`，在测试输出目录验证四个文件存在、hash 固定、`output.txt` 规范化后精确为 `Hello world!`；fixture 内容通过测试项目的显式 `Content` 项复制。
+- 真实 WKWebView 运行时必须使用现有本地 SWF 打开链路、loopback 服务、Ruffle player 与 trace bridge；不得另建 HTML runner 或以 Ruffle 桌面程序的结果替代宿主结果。
+- 运行时不依赖公网，不在应用启动时下载或更新 fixture；GitHub 只作为开发期、固定 tag 的来源。
+- 若上游文件包含意外的大资产、嵌套依赖或非双许可证内容，停止 H0.3A 并记录，不临时换一个未审查 fixture。
+
+本窗口不新增兼容 manifest schema，不改变 bridge 类型/字段，也不为 AS3 fixture 新建生产端口。`trace` 和 `playerReady` 已足够作为机器可判定输出。
+
+## 5. 允许的改动面
+
+| 文件 | 预期动作 |
+|---|---|
+| `LoopbackContentHost.cs` | 增加明确状态、线性化 start/dispose、幂等清理 |
+| 新 `WebBridgeProtocol.cs` | 纯 Core 解析、必填验证和脱敏描述 |
+| `AvaloniaNativeWebViewSession.cs` | 委托协议组件并保持平台分派 |
+| `RufflePlayerCoordinator.cs` | 跟踪/排空异步 bridge 工作，修正释放顺序 |
+| `LoopbackContentHostTests.cs` | 生命周期先红后绿测试 |
+| 新 `WebBridgeProtocolTests.cs` | malformed、兼容、必填、日志边界测试 |
+| `RufflePlayerCoordinatorTests.cs` | 可控 fake、异常观察、释放排空测试 |
+| `interfaces.zh-CN.md` | 测试通过后移除已关闭差距并固化语义 |
+| `gate0-results.zh-CN.md` | 只写本窗口实际执行证据 |
+| `development-handoff.zh-CN.md` | 两阶段完成后把下一任务切到 H0.3B；部分完成则列出未关闭阶段 |
+| `Assets/Fixtures/avm2-hello-world/` | H0.3A 固定上游源码、SWF、期望输出和配置 |
+| `Assets/Fixtures/THIRD-PARTY.md` | 登记 H0.3A provenance、许可证与逐文件 hash |
+| `GateZeroFixtureTests.cs`、测试 `.csproj` | 复制并验证新语料，不引入新包 |
+| 本文与总体计划 | 更新状态和实际结果，不复制第二份里程碑 |
+
+`BrowserContracts.cs` 的消息字段与 `IBrowserSession` 形状预期无需改变。若实现发现必须修改公开契约，先在本文“偏差记录”说明原因，并同步接口文档与所有调用方；不要顺手做协议版本升级。
+
+禁止修改：
+
+- `Directory.Build.props`、`Directory.Packages.props`、生产 `.csproj` 或 `packages.lock.json`；仅允许测试 `.csproj` 增加 H0.3A 的 `Content` 项，不得改变包引用或目标框架；
+- `scripts/package-macos.sh` 与 H0.1 ARM64/lock 策略；
+- Ruffle 运行时固定资产、现有 fixture 字节/hash、持久化 schema、bridge 类型名或字段名；
+- Windows Legacy、UI/XAML、AMF/SOL codec、设置/收藏夹和 H0.3B/H0.4 范围。
+
+## 6. 必须先建立的测试矩阵
+
+### 6.1 内容服务
+
+| ID | 场景 | 断言 |
+|---|---|---|
+| `L1` | 未启动即连续释放两次 | 两次都完成；URI 均为 null；无 `ObjectDisposedException` |
+| `L2` | 启动后连续释放两次 | 第一次清理并将 URI 置 null；第二次无操作且不抛错 |
+| `L3` | 多个并发 `DisposeAsync` | 使用有界 `WaitAsync` 防测试挂死；全部完成且只执行一次资源关闭 |
+| `L4` | 释放后 `StartAsync`/`RegisterSwfAsync` | 均抛 `ObjectDisposedException`，没有重新监听端口 |
+| `L5` | 正常重复 `StartAsync` | 保持既有幂等行为，BaseUri 稳定 |
+
+### 6.2 bridge 协议
+
+| ID | 场景 | 断言 |
+|---|---|---|
+| `B1` | null、空白、JSON null、数组/标量、损坏 JSON | `JsonException`；错误不回显原始 body |
+| `B2` | `{}`、`type:null`、空白 `type` | `JsonException` |
+| `B3` | 未知非空 `type` | 解析成功，保留类型，不要求已知字段 |
+| `B4` | 每个已知类型缺少其必填字段 | `JsonException`；数据不进入消费者 |
+| `B5` | 每个已知类型的最小合法消息 | 解析成功；camelCase 映射正确 |
+| `B6` | `message`/`key` 超过 2,048 字符 | 描述被截断且有明确省略标记 |
+| `B7` | `data` 含可识别 sentinel | 描述与异常均不包含 sentinel |
+
+### 6.3 协调器并发与错误
+
+| ID | 场景 | 断言 |
+|---|---|---|
+| `C1` | save store 在 bridge 写入中抛错 | `Faulted` 恰好一次；任务异常已观察 |
+| `C2` | bridge 写入被 fake 阻塞时调用 `DisposeAsync` | dispose 等待；释放 fake 后完成；无 mutex disposed 异常 |
+| `C3` | dispose 开始后浏览器再次发布消息 | 无新写入、无保存事件 |
+| `C4` | 两个已接收写入按顺序完成 | 后到消息不能越过先到消息 |
+
+### 6.4 H0.3A fixture 完整性与真机输出
+
+| ID | 场景 | 断言 |
+|---|---|---|
+| `F1` | 四个固定上游文件被复制到测试输出 | 文件名和相对目录齐全，无运行时下载 |
+| `F2` | 对四个文件计算 SHA-256 | 与 `THIRD-PARTY.md` 登记值逐一相同 |
+| `F3` | 读取 `output.txt` | 去除 UTF-8 BOM、统一换行并仅去除末尾换行后精确等于 `Hello world!` |
+| `F4` | 检查 AS3 源与 SWF | `Test.as` 含对应 trace；SWF 非空且 hash 固定，不用弱文件名判断替代 |
+| `F5` | 真实 WKWebView 打开 `test.swf` | journal 同一会话同时具备 `playerReady` 和唯一规范化 trace `Hello world!`，不强制两者顺序；无 `bridge.failed` |
+
+测试可以用 MSTest `DataRow` 展开；最终总数不要求硬编码，但必须大于当前 33 项、0 failed、0 skipped。任何并发测试都要有 5 秒以内的失败保护，不能以 sleep 作为同步机制。`F1–F4` 是自动化门禁，`F5` 是 Apple Silicon 真机门禁；不能用文件 hash 代替实际 AVM2 执行。
+
+## 7. 4–6 小时执行顺序
+
+| 时间盒 | 工作 | 阶段退出条件 |
+|---:|---|---|
+| 0:00–0:20 | 路由、`git status`、基线 restore/build/test、读实现与调用方 | 当前 33 项仍绿；工作树差异已记录 |
+| 0:20–1:00 | 添加 `L1–L5` 并最小修复内容服务 | 测试先稳定失败后全绿；现有 loopback 集成测试仍绿 |
+| 1:00–2:05 | 添加 `B1–B7`，实现 Core 协议边界并接入 Desktop | 协议测试全绿；solution 编译；正常分派保持原行为 |
+| 2:05–3:10 | 添加 `C1–C4`，实现协调器任务所有权/排空 | 并发测试确定性全绿，无未观察异常 |
+| 3:10–3:30 | H0.2 阶段门：定向测试、全量 build/test、审查 lock/范围 | H0.2 全部强制项通过；否则留在 H0.2，不进入 fixture 工作 |
+| 3:30–4:20 | 固定获取 H0.3A 四个文件，登记 provenance/hash，添加 `F1–F4` | 文件可审计；fixture 自动化全绿；无新包/运行时下载 |
+| 4:20–4:50 | Apple Silicon 打开 AVM2 fixture 并检查本次 journal | `playerReady` + `Hello world!` trace；无法执行则准确写待复验标记并保持 H0.3A 部分完成 |
+| 4:50–5:35 | `verify-arm64-baseline.sh` 与改动面审查 | 全量测试绿、0 warnings、lock 不变、bundle 仅 ARM64 |
+| 5:35–6:00 | 更新接口、Gate、交接、本文和总体计划 | 两阶段状态和下一任务与实际证据一致 |
+
+时间盒用于防止范围蔓延，不是降低完成标准。3:30 阶段门是硬顺序：H0.2 未绿时继续修 H0.2，不能为了“合并任务”抢跑 H0.3A。若 6 小时到点仍缺强制项，保留已通过变更，本文状态写“部分完成”，交接中逐项列出剩余工作；不得把未通过阶段标记完成。H0.2 与 H0.3A 均完成后，下一任务才切换为 H0.3B。
+
+## 8. 建议命令
+
+工作目录：`spike/macos-host/`。
+
+开始基线：
+
+```sh
+dotnet restore CefFlashBrowser.MacOS.Spike.slnx --locked-mode
+dotnet build CefFlashBrowser.MacOS.Spike.slnx \
+  --configuration Debug --no-restore --disable-build-servers -m:1
+dotnet test CefFlashBrowser.MacOS.Spike.slnx \
+  --configuration Debug --no-build --disable-build-servers -m:1
+```
+
+测试先红后绿时使用最小过滤范围：
+
+```sh
+dotnet test tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj \
+  --configuration Debug --filter FullyQualifiedName~LoopbackContentHostTests
+
+dotnet test tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj \
+  --configuration Debug --filter FullyQualifiedName~WebBridgeProtocolTests
+
+dotnet test tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj \
+  --configuration Debug --filter FullyQualifiedName~RufflePlayerCoordinatorTests
+
+dotnet test tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj \
+  --configuration Debug --filter FullyQualifiedName~GateZeroFixtureTests
+```
+
+H0.3A 纳入文件后，从仓库实际文件计算并核对 hash：
+
+```sh
+shasum -a 256 \
+  src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/*
+```
+
+完成前完整门禁：
+
+```sh
+scripts/verify-arm64-baseline.sh
+git diff --check
+git status --short
+```
+
+`verify-arm64-baseline.sh` 会执行 locked restore、Debug build、全量测试、ARM64 package、全包 Mach-O 和 codesign，并校验 lock file hash 不变。不得用 `--no-build` 跳过本窗口实际构建，也不得用 unlocked restore、删除 lock 或只跑旧二进制制造通过。
+
+## 9. Apple Silicon smoke
+
+自动化全部通过后，在真实 Apple Silicon 会话启动内置诊断页、固定 AVM1 fixture 和新 AVM2 fixture，至少确认：
+
+- document-start 注入仍成功；
+- `diagnostics`、`playerReady`、`saveChanged` 正常到达；
+- AVM2 fixture 的本次 journal 包含 `playerReady`，且 trace 规范化后精确为 `Hello world!`；
+- journal 没有新增 `browser.bridge.failed` 或释放期 `ObjectDisposedException`；
+- 正常关闭进程退出 0，loopback host 完成停止。
+
+新 fixture 的启动命令：
+
+```sh
+dotnet run --project src/CefFlashBrowser.MacOS.Spike.Desktop -- \
+  src/CefFlashBrowser.MacOS.Spike.Desktop/Assets/Fixtures/avm2-hello-world/test.swf
+```
+
+若当前执行环境不能操作 GUI，必须在 Gate 与交接中写：
+
+```text
+[PENDING_RETEST: APPLE_SILICON_WKWEBVIEW_SMOKE]
+[PENDING_RETEST: AVM2_HELLO_WORLD_WKWEBVIEW]
+```
+
+按未执行范围使用一个或两个标记，不得复用历史 Gate 0 GUI 结果冒充本窗口验证。单元/集成修复或 fixture 纳入可以交付，但对应阶段保持“部分完成”；未关闭真机 smoke 时不得把下一任务越过该复验直接切到 H0.3B。
+
+## 10. 停损与升级条件
+
+出现以下任一情况时，先完成安全的局部工作并在交接中记录，不扩大任务：
+
+- 基线 33 项在修改前失败：先诊断并记录原始失败；不得同时实施 H0.2。
+- 修复需要改变 bridge 类型名、字段名、持久化 schema 或 `IBrowserSession` 公开形状：这是范围偏差，必须先更新接口决策，不能静默兼容。
+- 需要新增 NuGet、修改生产 `.csproj`/lock、升级 Avalonia/WebView/Ruffle：停止该路线；本工作包不需要新依赖。测试 `.csproj` 只允许增加 H0.3A `Content` 项。
+- 为测试 parser 考虑让现有测试项目引用 Desktop：停止；协议组件应留在 Core，避免把 Avalonia/原生平台引入 Core 测试。
+- 并发测试只能靠 sleep 或概率循环通过：重构 fake/同步点，不接受脆弱测试。
+- `scripts/verify-arm64-baseline.sh` 改写 lock 或出现非 ARM64 Mach-O：H0.1 回归，优先恢复基线，不继续 H0.3A。
+- 固定 tag 的 H0.3A 文件无法取得、许可证/来源不能核实或 hash 在两次获取间不同：停止 H0.3A，不使用镜像或 latest 替代。
+- H0.3A 需要新增生产端口、bridge 消息、manifest schema、编译器工具链或 Ruffle 版本变化：登记为 H0.3B 设计问题，本窗口不扩展。
+- 发现新缺陷但与本任务无直接因果：登记新 ID、最小复现和优先级，不顺手重构。
+
+## 11. 完成检查表
+
+- [x] 已保存起始 `git status --short`，未覆盖用户资产。
+- [x] 起始 33 项基线通过，或准确记录原始失败。
+- [x] `L1–L5` 先红后绿，内容服务释放幂等且 start/dispose 有明确线性化语义。
+- [x] `B1–B7` 通过，非法 bridge 不进入下载或存档消费者。
+- [x] 未知 bridge 类型仍保持前向兼容。
+- [x] 诊断描述最多 2,048 字符且不泄露 `data`/原始 body。
+- [x] `C1–C4` 通过，所有 bridge task 可观察，释放会排空已接收工作。
+- [x] H0.2 阶段门全绿后才开始 H0.3A。
+- [x] H0.3A 四个上游文件、来源、许可证与逐文件 SHA-256 已固定，现有 fixture 未被改写。
+- [x] `F1–F4` 自动化通过；真实 WKWebView 的 `F5` 已通过。若只能使用待复验标记，H0.3A 状态仍为部分完成。
+- [x] 全量测试多于 33 项，0 failed、0 skipped、0 warnings。
+- [x] `scripts/verify-arm64-baseline.sh` 通过，lock hash 不变且 bundle 仅 ARM64。
+- [x] Apple Silicon WKWebView smoke 已执行，或使用规定标记准确记录未验证项。
+- [x] `interfaces.zh-CN.md`、Gate 报告、交接、总体计划和本文已按实际结果同步。
+- [x] H0.2 + H0.3A 完成后下一任务已切换为 H0.3B；部分完成时保留精确阶段与剩余项。
+- [x] 未修改依赖、锁、Ruffle 运行时资产、UI、AMF/SOL、Windows Legacy 或 H0.3B/H0.4 范围。
+
+## 12. 原执行上下文启动提示词（历史）
+
+```text
+请在 /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser 中连续工作 4–6 小时，
+完成 macOS vNext 的 H0.2 + H0.3A 合并工作包，不要只给方案。先运行
+git status --short，并完整读取：
+1. 根 AGENTS.md
+2. spike/macos-host/AGENTS.md
+3. spike/macos-host/docs/development-handoff.zh-CN.md
+4. spike/macos-host/docs/h0.2-h0.3a-gate0-hardening.zh-CN.md
+5. spike/macos-host/docs/interfaces.zh-CN.md
+6. spike/macos-host/docs/engineering-spec.zh-CN.md
+
+保留全部未提交和未跟踪文件。严格执行合并计划的测试先行、阶段门、时间盒、允许
+改动面、停损条件和完成检查表。先完整关闭 H0.2：修复 LoopbackContentHost 幂等/
+并发释放，建立 Core bridge 解析验证边界，修复 RufflePlayerCoordinator 的异步任务
+所有权与释放竞态。只有 H0.2 阶段门全绿后才执行 H0.3A：从 Ruffle v0.4.1 固定
+目录纳入 avm2/hello_world 的源码、SWF、期望输出和配置，登记许可证/hash，增加
+fixture 自动化并用当前应用的 WKWebView/loopback/trace bridge 验证 Hello world!。
+
+完成后运行全量 restore/build/test 和 scripts/verify-arm64-baseline.sh，并按实际结果
+同步接口、Gate、交接、总体计划与合并计划。只有两个阶段全部通过才把下一任务切到
+H0.3B；H0.2 未通过时不得抢跑 H0.3A。
+
+不要开始 H0.3B/H0.4、M1、UI、AMF/SOL、依赖升级或浏览器框架替换；不要修改
+packages.lock.json、打包/RID 策略、Ruffle 运行时固定资产或 Windows Legacy；不要提交
+或推送。GUI 无法执行时使用计划规定的 PENDING_RETEST 标记，不得沿用历史结果。
+```
+
+## 13. 完成后的回写格式
+
+执行者在本文顶部把状态改为“完成”或“部分完成”，并在本节追加一次结果，不覆盖计划：
+
+```text
+执行日期/设备：
+实际耗时：
+实现摘要：
+新增测试与总数：
+H0.2 阶段门：
+H0.3A fixture 来源/hash：
+restore/build/test：
+ARM64 package/Mach-O/codesign：
+WKWebView smoke：
+lock hash 是否不变：
+未完成/待复验：
+下一任务：
+```
+
+不得填写未执行的证据，不得用“应该通过”代替结果。
+
+### 2026-08-08 实际结果
+
+```text
+执行日期/设备：2026-08-08；MacBook Pro 14-inch 2021，Apple M1 Pro，macOS 26.5.1（25F80），arm64，.NET SDK 10.0.301
+实际耗时：约 55 分钟（含 locked restore 授权等待、两轮 WKWebView 定位与最终全门禁）
+实现摘要：LoopbackContentHost 使用单一 lifecycle gate 完成幂等/并发释放与释放后拒绝；Core 新增 WebBridgeProtocol 并由 Desktop 单点分派；RufflePlayerCoordinator 用串行 task tail 拥有并排空 bridge 工作；Ruffle trace observer 改在 loadedmetadata 同步点绑定
+新增测试与总数：新增 19 个测试方法、49 个展开项；最终 36 个测试方法、82 passed、0 failed、0 skipped
+H0.2 阶段门：先红后绿；L1–L5、B1–B7、C1–C4 通过；阶段门时 76 passed，Debug build 0 warnings/0 errors，lock hash 不变
+H0.3A fixture 来源/hash：Ruffle v0.4.1 tests/tests/swfs/avm2/hello_world；四文件大小与 SHA-256 均和本文第 4.5 节一致，双许可证已登记
+restore/build/test：最终 scripts/verify-arm64-baseline.sh 原样执行成功；两次 locked restore、Debug build 0 warnings/0 errors、82 passed
+ARM64 package/Mach-O/codesign：170 MiB self-contained + ReadyToRun ad-hoc/Hardened Runtime .app；主程序 arm64，全包 Mach-O 无 Intel slice，codesign --deep --strict 通过
+WKWebView smoke：签名 bundle 通过；journal gate0-20260807T200614454Z-19376.jsonl 中 playerReady=1、helloWorldTrace=1、bridgeFailures=0、ObjectDisposedException=0、contentHostStopped=1、processStopping=1；原生窗口显示 SWF trace: Hello world!；正常关闭退出码 0
+lock hash 是否不变：是；Core eb1beb60...6327、Desktop 1b64525e...0262、Tests 4ea9907c...e70
+未完成/待复验：本工作包无；完整 M0.1 仍需后续 H0.3B，不属于本工作包缺项
+下一任务：H0.3B 补齐输入/渲染/定时、音频、网络/策略文件和 ExternalInterface 固定兼容语料
+```
+
+### 2026-08-08 独立验收补充
+
+验收者没有沿用上一段命令输出，重新执行了完整 `scripts/verify-arm64-baseline.sh` 和 H0.3A F5 冷启动：82/82 测试、0 warnings/0 errors、两次 locked restore、170 MiB ARM64 bundle、18 个 Mach-O、严格 codesign 与 lock hash 不变性均通过。最新 F5 journal：
+
+```text
+~/Library/Logs/CefFlashBrowser/gate0-20260807T204020664Z-35069.jsonl
+```
+
+该会话 `playerReady=1`、`helloWorldTrace=1`、bridge failure=0、释放事件齐全，启动进程退出码 0。因此本文定义的 H0.2/H0.3A 退出条件维持“已完成”。
+
+扩展到本文 F5 之外的“诊断页后热导航 + Reload player”时发现 `TRACE-001` 和 `CTRL-001`；失败 journal 为 `gate0-20260807T203757598Z-34028.jsonl`。这两项不回写成本文旧任务未完成，而是作为下一工作包的强制回归阶段门。唯一细化计划已切到
+[`h0.3b1-player-reliability-externalinterface.zh-CN.md`](h0.3b1-player-reliability-externalinterface.zh-CN.md)。

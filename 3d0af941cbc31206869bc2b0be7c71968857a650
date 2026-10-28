@@ -1,0 +1,54 @@
+# AGENTS.md
+
+本文件为 `spike/macos-host/` 子树的强制增量规则。根目录 `AGENTS.md` 仍然适用；进入本子树进行任何读取后的修改、构建、测试、打包或结论性评估前，必须先完成下列任务路由。
+
+## 1. 硬性路由
+
+| 命中内容 | 必须先读并执行 | 需要同时核对 |
+|---|---|---|
+| 新聊天窗口接手、当前工作树、已完成/未完成、阻塞、下一可执行任务 | `docs/development-handoff.zh-CN.md` | `../../Docs/macos-porting-plan.zh-CN.md`、`README.md`、对应 Gate 报告 |
+| 当前 4–6 小时开发工作包、H0.R、H0.3B1、CTRL-001、TRACE-001、播放器命令返回值、热导航 trace 或 ExternalInterface | `docs/h0.3b1-player-reliability-externalinterface.zh-CN.md` | `docs/development-handoff.zh-CN.md`、`docs/interfaces.zh-CN.md`、`docs/variables.zh-CN.md`、`docs/engineering-spec.zh-CN.md`、`docs/gate0-results.zh-CN.md`、对应实现与测试 |
+| 已完成 H0.2/H0.3A、LIFE-001、BRIDGE-001、bridge 释放竞态或首份 AVM2/AS3 语料的历史设计与验收 | `docs/h0.2-h0.3a-gate0-hardening.zh-CN.md` | `docs/development-handoff.zh-CN.md`、`docs/interfaces.zh-CN.md`、`docs/gate0-results.zh-CN.md`、对应实现与测试 |
+| 目标平台、支持范围、阶段、工作量、完成度、交付差距 | `../../Docs/macos-porting-plan.zh-CN.md` | `README.md`、对应 Gate 报告 |
+| Core/Desktop 端口、record/enum、事件、错误、bridge 消息、JavaScript 调用、初始化或释放顺序 | `docs/interfaces.zh-CN.md` | 接口实现、调用方、契约测试 |
+| 环境变量、构建参数、RID、常量、路径、文件名、schema、JSON 字段、URL、Cookie、bundle ID、版本、entitlement | `docs/variables.zh-CN.md` | 定义处、所有读取方、打包配置和测试 |
+| 分层、依赖、线程、异步、性能、安全、数据迁移、UI、依赖、测试或 ARM64 发布 | `docs/engineering-spec.zh-CN.md` | 对应代码、测试和本地验证命令 |
+| WKWebView 后端选择或其他已记录架构决策 | `docs/ADR-0001-wkwebview-backend.zh-CN.md` | 移植方案、接口与工程规范 |
+| Gate 0 已完成事实、性能数据或验收证据 | `docs/gate0-results.zh-CN.md` | 实际日志、测试、构建或签名输出 |
+| 构建、运行、打包命令 | `README.md` | 实际存在的 solution、project、script 和 `global.json` |
+
+路由是累加规则，不是单选题。一次变更命中多行时，必须读取并执行所有匹配入口。例如：新增 bridge 字段并持久化时，必须同时进入接口文档、变量文档和工程规范。
+
+## 2. 强制同步
+
+- 修改跨层端口、模型、事件、bridge 或生命周期时，必须在同一变更中更新 `docs/interfaces.zh-CN.md`、调用方和测试。
+- 修改稳定名称、默认值、路径、schema、路由、Cookie、标识、版本或签名输入时，必须在同一变更中更新 `docs/variables.zh-CN.md` 和对应测试/配置。
+- 修改架构、线程、性能、安全、测试或发布规则时，必须更新 `docs/engineering-spec.zh-CN.md`；偏离既有强制规范必须新增或更新 ADR，不能只留代码注释。
+- 修改目标、阶段或交付口径时，只在 `../../Docs/macos-porting-plan.zh-CN.md` 维护完整清单，其他文档只链接和摘要，禁止复制第二份里程碑。
+- 文档与实现不一致时，以可复现的代码、测试、构建和真机事实判定现状，并在同一变更中修正错误一侧。
+
+## 3. ARM-only 门禁
+
+- macOS 唯一目标架构与 RID 是 Apple Silicon `osx-arm64`。
+- 禁止新增、恢复或验证 `osx-x64`、`x64`、Intel、Universal 2 的 macOS 构建、条件分支、依赖、文档、测试矩阵和发布产物。
+- 当前打包与基线脚本只接受 `osx-arm64`，并要求未知/非 ARM64 RID 在 restore 和产物变化前失败；任何触及这些脚本的任务都必须保留该拒绝门禁和无 Intel runtime graph 的锁文件事实。
+- Windows Legacy 的 x86/x64 不受此门禁影响，不得误删。
+
+## 4. 子树工作规则
+
+1. 修改前先从仓库根执行 `git status --short`，保留所有用户已有修改和未跟踪内容。
+2. 先读定义、实现、调用方和最接近的测试，再确定最小改动面。
+3. 优先复用 Legacy 的纯业务模型、算法、fixture 和资源；涉及 WPF、CefSharp、Win32、HWND 或 C++/CLI 的边界必须通过端口隔离。
+4. `Core` 禁止依赖 Avalonia、WKWebView、AppKit 或平台句柄；ViewModel 禁止持有 View/Window/WebView/文件对话框。
+5. 运行时用户数据不得写入 app bundle、源码或工作目录；写入采用原子替换并保护旧数据。
+6. 禁止编辑生成目录、`artifacts/`、`bin/`、`obj/` 和固定第三方资产，除非任务明确是依赖升级且完成 hash/许可证验证。
+7. 只报告实际执行的构建、测试、签名和真机验证；未执行范围及原因必须明确。
+
+## 5. 完成检查
+
+- [ ] 已读取所有命中的路由入口。
+- [ ] 改动保持 Core/Application/Desktop/Platform 的依赖方向。
+- [ ] 接口、稳定变量与工程规则已按强制同步要求更新。
+- [ ] 相关单元、集成或 Apple Silicon 真机验证已完成，或准确记录未验证项。
+- [ ] 只产生 `osx-arm64` 路径和产物。
+- [ ] 没有覆盖用户改动、提交生成物或引入无关重构。

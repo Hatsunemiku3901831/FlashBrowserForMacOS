@@ -1,0 +1,63 @@
+using System.Text.Json;
+
+namespace FlashMacOS.Browser.WebKit;
+
+/// <summary>Entry validation for native new-window and download payloads; inner layers receive typed, trusted values.</summary>
+public static class NativeBrowserPayloads
+{
+    public const int MaximumPopupBodyBytes = 8 * 1024 * 1024;
+    public const int MaximumFileNameCharacters = 200;
+
+    /// <summary>Allowed host address, GET/POST only, an in-memory body of at most 8 MiB.</summary>
+    public static BrowserPopupRequest ParsePopupRequest(string payload, BrowserPurpose purpose)
+    {
+        using var document = JsonDocument.Parse(payload);
+        var root = document.RootElement;
+        var address = new Uri(root.GetProperty("url").GetString()!, UriKind.Absolute);
+        BrowserNavigationPolicy.RequireAllowed(address);
+        var method = root.GetProperty("method").GetString()!.ToUpperInvariant();
+        if (method is not ("GET" or "POST")) throw new NotSupportedException("A new window supports GET or POST, not " + method + ".");
+        if (root.GetProperty("streamedBody").GetBoolean()) throw new NotSupportedException("A new window cannot replay a streamed (file upload) request body.");
+        var body = root.GetProperty("body").GetString() is { } encoded ? Convert.FromBase64String(encoded) : null;
+        if (body?.Length > MaximumPopupBodyBytes) throw new InvalidDataException("A new-window request body exceeds 8 MiB.");
+        return new BrowserPopupRequest(new BrowserRequest(address, method, method == "POST" ? body ?? [] : null,
+            method == "POST" ? root.GetProperty("contentType").GetString() : null), purpose);
+    }
+
+    /// <summary>The suggested name becomes one safe file name: no directories, controls or leading dots.</summary>
+    public static BrowserDownloadRequest ParseDownloadRequest(long id, string payload)
+    {
+        using var document = JsonDocument.Parse(payload);
+        var root = document.RootElement;
+        var name = Path.GetFileName((root.GetProperty("suggestedFilename").GetString() ?? "").Replace('\\', '/'));
+        name = new string(name.Where(c => !char.IsControl(c)).ToArray()).Trim().TrimStart('.');
+        if (name.Length == 0) name = "download";
+        if (name.Length > MaximumFileNameCharacters) name = name[..(MaximumFileNameCharacters / 2)] + name[^(MaximumFileNameCharacters / 2)..];
+        Uri.TryCreate(root.GetProperty("url").GetString(), UriKind.Absolute, out var address);
+        return new BrowserDownloadRequest(id, address, name, root.GetProperty("method").GetString() ?? "GET",
+            root.GetProperty("mimeType").GetString(), PositiveOrNull(root.GetProperty("expected").GetInt64()));
+    }
+
+    /// <summary>Native kinds 21 progress, 22 finished, 23 failed/cancelled, 24 redirected.</summary>
+    public static BrowserDownloadUpdate ParseDownloadUpdate(int kind, long id, string payload)
+    {
+        using var document = JsonDocument.Parse(payload);
+        var root = document.RootElement;
+        switch (kind)
+        {
+            case 21: return new BrowserDownloadUpdate(id, BrowserDownloadEventKind.Progress, root.GetProperty("received").GetInt64(), PositiveOrNull(root.GetProperty("expected").GetInt64()));
+            case 22: return new BrowserDownloadUpdate(id, BrowserDownloadEventKind.Finished, root.GetProperty("received").GetInt64());
+            case 23:
+                var received = root.GetProperty("received").GetInt64();
+                if (root.GetProperty("cancelled").GetBoolean()) return new BrowserDownloadUpdate(id, BrowserDownloadEventKind.Cancelled, received);
+                return new BrowserDownloadUpdate(id, BrowserDownloadEventKind.Failed, received,
+                    Error: $"{root.GetProperty("domain").GetString()} {root.GetProperty("code").GetInt64()}: {root.GetProperty("message").GetString()}");
+            case 24:
+                return new BrowserDownloadUpdate(id, BrowserDownloadEventKind.Redirected,
+                    Address: Uri.TryCreate(root.GetProperty("url").GetString(), UriKind.Absolute, out var redirected) ? redirected : null);
+            default: throw new ArgumentOutOfRangeException(nameof(kind));
+        }
+    }
+
+    private static long? PositiveOrNull(long value) => value >= 0 ? value : null;
+}

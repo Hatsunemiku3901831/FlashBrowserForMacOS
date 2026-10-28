@@ -1,0 +1,113 @@
+using System.Windows.Input;
+
+namespace FlashMacOS.Desktop.ViewModels;
+
+public sealed class RelayCommand(Action execute, Func<bool>? canExecute = null) : ICommand
+{
+    public event EventHandler? CanExecuteChanged;
+
+    public bool CanExecute(object? parameter) => canExecute?.Invoke() ?? true;
+
+    public void Execute(object? parameter) => execute();
+
+    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+}
+
+public sealed class AsyncCommand(
+    Func<CancellationToken, Task> execute,
+    Func<bool>? canExecute = null) : ICommand, IDisposable, IAsyncDisposable
+{
+    private readonly object _gate = new();
+    private CancellationTokenSource? _executionCancellation;
+    private Task _completion = Task.CompletedTask;
+    private bool _isExecuting;
+    private bool _disposed;
+
+    public event EventHandler? CanExecuteChanged;
+    public event Action<Exception>? Faulted;
+    public Exception? LastError { get; private set; }
+    public Task Completion { get { lock (_gate) return _completion; } }
+
+    public bool CanExecute(object? parameter)
+    {
+        lock (_gate) return !_disposed && !_isExecuting && (canExecute?.Invoke() ?? true);
+    }
+
+    public async void Execute(object? parameter)
+    {
+        if (!CanExecute(parameter))
+        {
+            return;
+        }
+
+        try
+        {
+            await ExecuteAsync(parameter);
+        }
+        catch (Exception exception)
+        {
+            LastError = exception;
+            Faulted?.Invoke(exception);
+        }
+    }
+
+    public Task ExecuteAsync(object? parameter = null)
+    {
+        TaskCompletionSource completion;
+        CancellationTokenSource cancellation;
+        lock (_gate)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_isExecuting || !(canExecute?.Invoke() ?? true)) return Task.CompletedTask;
+            _isExecuting = true;
+            cancellation = new CancellationTokenSource();
+            _executionCancellation = cancellation;
+            completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _completion = completion.Task;
+        }
+        _ = RunAsync(cancellation, completion);
+        return completion.Task;
+    }
+
+    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            if (_disposed) return;
+            _disposed = true;
+            // RunAsync is the sole CTS disposer. Completion can still read this token after Cancel.
+            _executionCancellation?.Cancel();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Dispose();
+        await Completion.ConfigureAwait(false);
+    }
+
+    private async Task RunAsync(CancellationTokenSource cancellation, TaskCompletionSource completion)
+    {
+        Exception? failure = null;
+        try { RaiseCanExecuteChanged(); await execute(cancellation.Token); }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        catch (Exception exception) { failure = exception; LastError = exception; }
+        finally
+        {
+            bool notify;
+            lock (_gate)
+            {
+                _executionCancellation = null;
+                _isExecuting = false;
+                notify = !_disposed;
+                cancellation.Dispose();
+            }
+            try { if (notify) RaiseCanExecuteChanged(); }
+            catch (Exception exception) { failure ??= exception; LastError = exception; }
+            if (failure is null) completion.TrySetResult();
+            else completion.TrySetException(failure);
+        }
+    }
+}

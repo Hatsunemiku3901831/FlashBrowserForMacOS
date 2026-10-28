@@ -1,0 +1,40 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const root = path.resolve(__dirname, '../..');
+const source = name => fs.readFileSync(path.join(root, 'src/FlashMacOS.Flash.Ruffle/Runtime', name), 'utf8');
+class Storage { constructor(){this.values=new Map();} get length(){return this.values.size;} key(i){return [...this.values.keys()][i]??null;} getItem(k){return this.values.get(k)??null;} setItem(k,v){this.values.set(k,String(v));} removeItem(k){this.values.delete(k);} clear(){this.values.clear();} }
+function events(){const handlers=new Map();return {addEventListener(t,f){if(!handlers.has(t))handlers.set(t,new Set());handlers.get(t).add(f);},removeEventListener(t,f){handlers.get(t)?.delete(f);},emit(t){for(const f of handlers.get(t)||[])f();},handlers};}
+async function main(){
+  const timers=new Map();let sequence=0;const doc=Object.assign(events(),{hidden:false});const win=events();
+  const context=vm.createContext({...win,document:doc,Storage,localStorage:new Storage(),atob:v=>Buffer.from(v,'base64').toString('binary'),__cefFlashBrowserPost:()=>{},
+    setTimeout(fn,ms){timers.set(++sequence,{fn,ms});return sequence;},clearTimeout(id){timers.delete(id);}});
+  vm.runInContext(source('RuffleStorageObserver.js'),context);
+  const first=[...timers.values()][0];timers.clear();first.fn();assert.equal([...timers.values()][0].ms,1000);
+  doc.hidden=true;doc.emit('visibilitychange');assert.equal(timers.size,1);assert.equal([...timers.values()][0].ms,5000);
+  doc.hidden=false;doc.emit('visibilitychange');assert.equal([...timers.values()][0].ms,1000);
+  context.emit('pagehide');assert.equal(timers.size,0);assert.equal(doc.handlers.get('visibilitychange').size,0);
+  const messages=[];const control=vm.createContext({...events(),document:events(),AbortController,DOMException,setTimeout,clearTimeout,Promise,
+    __flashMacOSRunId:'run',__cefFlashBrowserPost:m=>messages.push(m),__cefFlashBrowserPlayerApi:{suspended:false,suspend(){this.suspended=true;},resume(){throw Error('rejected');},reload(){return new Promise(()=>{});}}});
+  vm.runInContext(source('RuffleControls.js'),control);
+  assert.equal(JSON.parse(control.__flashMacOSDispatchControl('wrong','stale','Pause',1)).accepted,false);
+  assert.equal(JSON.parse(control.__flashMacOSDispatchControl('pause','run','Pause',1)).accepted,true);
+  await new Promise(setImmediate);assert.equal(messages[0].message,'completed');assert.equal(messages[0].runId,'run');
+  control.__flashMacOSDispatchControl('resume','run','Resume',1);await new Promise(setImmediate);assert.equal(messages[1].message,'failed');
+  control.__flashMacOSDispatchControl('reload','run','Reload',1);control.__flashMacOSCancelControl('reload');await new Promise(setImmediate);assert.equal(messages.length,2);
+  control.emit('pagehide');assert.equal(JSON.parse(control.__flashMacOSDispatchControl('closed','run','Pause',1)).accepted,false);
+  const metadataTimers=new Map();let metadataSequence=0;const metadataContext=vm.createContext({...events(),DOMException,Promise,
+    setTimeout(fn,ms){metadataTimers.set(++metadataSequence,{fn,ms});return metadataSequence;},clearTimeout(id){metadataTimers.delete(id);}});
+  vm.runInContext(source('RuffleMetadata.js'),metadataContext);
+  const movie=events();const movieApi={metadata:null};let ready=false;
+  const waiting=metadataContext.__flashMacOSWaitForMetadata(movie,movieApi).then(()=>ready=true);
+  await new Promise(setImmediate);assert.equal(ready,false);movieApi.metadata={swfVersion:10};movie.emit('loadedmetadata');await waiting;
+  assert.equal(ready,true);assert.equal(metadataTimers.size,0);
+  movieApi.metadata=null;const invalid=metadataContext.__flashMacOSWaitForMetadata(movie,movieApi);const rejected=assert.rejects(invalid,/valid SWF metadata/);
+  [...metadataTimers.values()][0].fn();await rejected;assert.equal(metadataTimers.size,0);
+  const abandoned=metadataContext.__flashMacOSWaitForMetadata(movie,movieApi);const cancelledMetadata=assert.rejects(abandoned,{name:'AbortError'});
+  metadataContext.emit('pagehide');await cancelledMetadata;assert.equal(metadataTimers.size,0);
+  process.stdout.write('PASS storage cadence/pagehide and control completion/failure/cancel/closure\n');
+}
+main().catch(error=>{console.error(error);process.exitCode=1;});

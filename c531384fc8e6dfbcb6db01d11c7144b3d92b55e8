@@ -1,0 +1,126 @@
+using FlashMacOS.Application.Lifecycle;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class AsyncLifecycleTests
+{
+    [TestMethod]
+    public async Task CallerCancellationDoesNotCancelAnotherStartupWait()
+    {
+        var entered = Signal(); var release = Signal(); var initializations = 0; var cleanups = 0;
+        await using var owner = new AsyncLifecycle(async token =>
+        {
+            Interlocked.Increment(ref initializations); entered.TrySetResult();
+            await release.Task.WaitAsync(token);
+        }, _ => { cleanups++; return ValueTask.CompletedTask; }, TimeProvider.System);
+        using var caller = new CancellationTokenSource();
+        var first = owner.StartAsync(caller.Token).AsTask();
+        var second = owner.StartAsync().AsTask();
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await caller.CancelAsync();
+        await Assert.ThrowsExactlyAsync<TaskCanceledException>(async () => await first);
+        Assert.IsFalse(second.IsCompleted);
+        release.TrySetResult(); await second;
+        await owner.DisposeAsync();
+        Assert.AreEqual(1, initializations); Assert.AreEqual(1, cleanups);
+        Assert.AreEqual(LifecycleState.Stopped, owner.State);
+    }
+
+    [TestMethod]
+    public async Task ConcurrentCloseSharesOneCleanupAndRejectsNewStarts()
+    {
+        var entered = Signal(); var release = Signal(); var cleanups = 0;
+        await using var owner = new AsyncLifecycle(_ => ValueTask.CompletedTask, async _ =>
+        {
+            Interlocked.Increment(ref cleanups); entered.TrySetResult(); await release.Task;
+        }, TimeProvider.System);
+        await owner.StartAsync();
+        var first = owner.DisposeAsync().AsTask();
+        var closes = Enumerable.Range(0, 8).Select(_ => owner.DisposeAsync().AsTask()).ToArray();
+        foreach (var close in closes) Assert.AreSame(first, close);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await Assert.ThrowsExactlyAsync<ObjectDisposedException>(async () => await owner.StartAsync());
+        release.TrySetResult(); await Task.WhenAll(closes);
+        Assert.AreEqual(1, cleanups); Assert.AreEqual(LifecycleState.Stopped, owner.State);
+    }
+
+    [TestMethod]
+    public async Task InitializationFailureIsPreservedAndCleanupStillRunsOnce()
+    {
+        var failure = new InvalidDataException("Controlled missing resource"); var cleanups = 0;
+        await using var owner = new AsyncLifecycle(_ => ValueTask.FromException(failure),
+            _ => { cleanups++; return ValueTask.CompletedTask; }, TimeProvider.System);
+        Assert.AreSame(failure, await Assert.ThrowsExactlyAsync<InvalidDataException>(async () => await owner.StartAsync()));
+        Assert.AreSame(failure, owner.InitializationError);
+        await owner.DisposeAsync(); await owner.DisposeAsync();
+        Assert.AreEqual(1, cleanups); Assert.AreEqual(LifecycleState.Stopped, owner.State);
+    }
+
+    [TestMethod]
+    public async Task ClosingJoinsActualInitializationBeforeReleasingResources()
+    {
+        var entered = Signal(); var canceled = Signal(); var release = Signal();
+        var workFinished = false; var releaseSawFinished = false;
+        await using var owner = new AsyncLifecycle(async token =>
+        {
+            using var registration = token.Register(() => canceled.TrySetResult());
+            entered.TrySetResult();
+            await release.Task; // Deliberately defer cancellation acknowledgement to test joining.
+            workFinished = true;
+        }, _ => { releaseSawFinished = workFinished; return ValueTask.CompletedTask; }, TimeProvider.System);
+        var start = owner.StartAsync().AsTask(); await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        var close = owner.DisposeAsync().AsTask(); await canceled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.IsFalse(close.IsCompleted);
+        release.TrySetResult();
+        try { await start; } catch (OperationCanceledException) { }
+        await close;
+        Assert.IsTrue(releaseSawFinished); Assert.AreEqual(LifecycleState.Stopped, owner.State);
+    }
+
+    [TestMethod]
+    public async Task InitializationTimeoutCancelsWorkAndCanBeClosed()
+    {
+        var canceled = Signal();
+        await using var owner = new AsyncLifecycle(async token =>
+        {
+            try { await Task.Delay(Timeout.InfiniteTimeSpan, token); }
+            finally { canceled.TrySetResult(); }
+        }, _ => ValueTask.CompletedTask, TimeProvider.System, TimeSpan.FromMilliseconds(50));
+        await Assert.ThrowsExactlyAsync<TimeoutException>(async () => await owner.StartAsync());
+        await owner.DisposeAsync(); await canceled.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        Assert.AreEqual(LifecycleState.Stopped, owner.State);
+    }
+
+    [TestMethod]
+    public async Task NonCooperatingCleanupIsReportedAsFailure()
+    {
+        var release = Signal(); var actualDone = Signal();
+        var owner = new AsyncLifecycle(_ => ValueTask.CompletedTask, async _ =>
+        {
+            await release.Task; actualDone.TrySetResult();
+        }, TimeProvider.System, stopTimeout: TimeSpan.FromMilliseconds(50));
+        try
+        {
+            var failure = await Assert.ThrowsExactlyAsync<AggregateException>(async () => await owner.DisposeAsync());
+            Assert.IsInstanceOfType<TimeoutException>(failure.InnerExceptions.Single());
+            Assert.AreEqual(LifecycleState.Faulted, owner.State);
+        }
+        finally { release.TrySetResult(); await actualDone.Task.WaitAsync(TimeSpan.FromSeconds(5)); }
+    }
+
+    [TestMethod]
+    public async Task TransitionsUseTheInjectedClock()
+    {
+        var clock = new FixedClock();
+        await using var owner = new AsyncLifecycle(_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, clock);
+        await owner.StartAsync(); await owner.DisposeAsync();
+        Assert.AreEqual(clock.GetUtcNow(), owner.LastTransitionAt);
+    }
+
+    private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private sealed class FixedClock : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => DateTimeOffset.UnixEpoch;
+    }
+}

@@ -1,0 +1,245 @@
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Platform.Storage;
+using CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+using CefFlashBrowser.MacOS.Spike.Desktop.Browser;
+using CefFlashBrowser.MacOS.Spike.Desktop.ViewModels;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop.Views;
+
+public sealed partial class MainWindow : Window
+{
+    private static readonly FilePickerFileType SwfFileType = new("Flash movie")
+    {
+        Patterns = ["*.swf"],
+        AppleUniformTypeIdentifiers = ["com.macromedia.flash.movie"],
+    };
+
+    private static readonly FilePickerFileType SolFileType = new("Flash SharedObject")
+    {
+        Patterns = ["*.sol"],
+    };
+
+    private readonly MainWindowViewModel _viewModel;
+    private readonly AvaloniaNativeWebViewSession _browserSession;
+    private readonly Func<CancellationToken, ValueTask> _initialize;
+    private readonly IReadOnlyList<string> _arguments;
+    private readonly Func<Uri, PopupWindow> _popupFactory;
+    private readonly Func<ValueTask> _shutdown;
+    private bool _started;
+    private bool _shutdownStarted;
+    private bool _shutdownComplete;
+
+    public MainWindow(
+        MainWindowViewModel viewModel,
+        AvaloniaNativeWebViewSession browserSession,
+        Func<CancellationToken, ValueTask> initialize,
+        IReadOnlyList<string> arguments,
+        Func<Uri, PopupWindow> popupFactory,
+        Func<ValueTask> shutdown)
+    {
+        ArgumentNullException.ThrowIfNull(viewModel);
+        ArgumentNullException.ThrowIfNull(browserSession);
+        ArgumentNullException.ThrowIfNull(initialize);
+        ArgumentNullException.ThrowIfNull(arguments);
+        ArgumentNullException.ThrowIfNull(popupFactory);
+        ArgumentNullException.ThrowIfNull(shutdown);
+
+        _viewModel = viewModel;
+        _browserSession = browserSession;
+        _initialize = initialize;
+        _arguments = arguments;
+        _popupFactory = popupFactory;
+        _shutdown = shutdown;
+        DataContext = viewModel;
+        InitializeComponent();
+
+        Opened += OnOpened;
+        Closing += OnClosing;
+        Closed += OnClosed;
+        _viewModel.PopupRequested += OnPopupRequested;
+        _viewModel.DownloadRequested += OnDownloadRequested;
+    }
+
+    private async void OnOpened(object? sender, EventArgs args)
+    {
+        if (_started)
+        {
+            return;
+        }
+
+        _started = true;
+        try
+        {
+            await _initialize(CancellationToken.None);
+            var webView = new NativeWebView();
+            _browserSession.Attach(webView);
+            this.FindControl<ContentControl>("BrowserHost")!.Content = webView;
+            await _viewModel.OpenInitialTargetAsync(_arguments);
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportError(exception);
+        }
+    }
+
+    private void OnClosed(object? sender, EventArgs args)
+    {
+        Opened -= OnOpened;
+        Closing -= OnClosing;
+        Closed -= OnClosed;
+        _viewModel.PopupRequested -= OnPopupRequested;
+        _viewModel.DownloadRequested -= OnDownloadRequested;
+    }
+
+    private async void OnClosing(object? sender, WindowClosingEventArgs args)
+    {
+        if (_shutdownComplete)
+        {
+            return;
+        }
+
+        args.Cancel = true;
+        if (_shutdownStarted)
+        {
+            return;
+        }
+
+        _shutdownStarted = true;
+        try
+        {
+            await _shutdown();
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportError(exception);
+        }
+        finally
+        {
+            _shutdownComplete = true;
+            Close();
+        }
+    }
+
+    private void OnAddressKeyDown(object? sender, KeyEventArgs args)
+    {
+        if (args.Key != Key.Enter || !_viewModel.NavigateCommand.CanExecute(null))
+        {
+            return;
+        }
+
+        args.Handled = true;
+        _viewModel.NavigateCommand.Execute(null);
+    }
+
+    private async void OnOpenSwfClick(object? sender, RoutedEventArgs args)
+    {
+        try
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "Open Flash movie",
+                AllowMultiple = false,
+                FileTypeFilter = [SwfFileType],
+            });
+            var path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
+            if (path is not null)
+            {
+                await _viewModel.OpenSwfAsync(path);
+            }
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportError(exception);
+        }
+    }
+
+    private async void OnImportSaveClick(object? sender, RoutedEventArgs args)
+    {
+        try
+        {
+            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = _viewModel.SelectedSave is null ? "Import SharedObject" : "Replace selected SharedObject",
+                AllowMultiple = false,
+                FileTypeFilter = [SolFileType],
+            });
+            var path = files.Count > 0 ? files[0].TryGetLocalPath() : null;
+            if (path is not null)
+            {
+                await _viewModel.ImportSaveAsync(path);
+            }
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportError(exception);
+        }
+    }
+
+    private async void OnExportSaveClick(object? sender, RoutedEventArgs args)
+    {
+        var selected = _viewModel.SelectedSave;
+        if (selected is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Export SharedObject",
+                SuggestedFileName = selected.SolName + ".sol",
+                DefaultExtension = "sol",
+                FileTypeChoices = [SolFileType],
+            });
+            var path = file?.TryGetLocalPath();
+            if (path is not null)
+            {
+                await _viewModel.ExportSelectedSaveAsync(path);
+            }
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportError(exception);
+        }
+    }
+
+    private void OnPopupRequested(Uri address)
+    {
+        _popupFactory(address).Show(this);
+    }
+
+    private async void OnDownloadRequested(BrowserDownloadRequest request)
+    {
+        try
+        {
+            var suggestedName = request.SuggestedFileName;
+            if (string.IsNullOrWhiteSpace(suggestedName))
+            {
+                suggestedName = Path.GetFileName(request.Address.LocalPath);
+            }
+
+            if (string.IsNullOrWhiteSpace(suggestedName))
+            {
+                suggestedName = "download";
+            }
+
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = "Save download",
+                SuggestedFileName = suggestedName,
+            });
+            var path = file?.TryGetLocalPath();
+            if (path is not null)
+            {
+                await _viewModel.DownloadAsync(request, path);
+            }
+        }
+        catch (Exception exception)
+        {
+            _viewModel.ReportError(exception);
+        }
+    }
+}

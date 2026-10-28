@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "files": [
+    {
+      "path": "test-assets/configuration/expected-favorites-v2.json",
+      "sha256": "68cd8cbba2e190916e959f5f7b387cb33271cba1f16e54c8ef19367d0e02c0bc",
+      "reason": "Project-authored synthetic legacy/v2 golden from frozen source field/default contract; no application migration/writer used to generate expected settings; favorite UUIDs independently computed with Python SHA-256 and UUID byte order"
+    },
+    {
+      "path": "test-assets/configuration/expected-settings-v2.json",
+      "sha256": "717d6e988cdabf029f2b891a357671dee191cdd9ef8f3cac74799dcb3848b56c",
+      "reason": "Project-authored synthetic legacy/v2 golden from frozen source field/default contract; no application migration/writer used to generate expected settings; favorite UUIDs independently computed with Python SHA-256 and UUID byte order"
+    },
+    {
+      "path": "test-assets/configuration/legacy-favorites.json",
+      "sha256": "5066e1da7b88968ea4e9d3ed984cab0edcb99cd8439b971e13f0db3ccdc27ee9",
+      "reason": "Project-authored synthetic legacy/v2 golden from frozen source field/default contract; no application migration/writer used to generate expected settings; favorite UUIDs independently computed with Python SHA-256 and UUID byte order"
+    },
+    {
+      "path": "test-assets/configuration/legacy-settings-all.json",
+      "sha256": "7e4a37bbada786d028763caf8fb40fdcdecc52d9d3f4bad61aee8ed3848d0f81",
+      "reason": "Project-authored synthetic legacy/v2 golden from frozen source field/default contract; no application migration/writer used to generate expected settings; favorite UUIDs independently computed with Python SHA-256 and UUID byte order"
+    },
+    {
+      "path": "test-assets/configuration/legacy-settings-nulls.json",
+      "sha256": "2f80e306dedf0d9ec6c66d09ba7b0e85a220337489c3aea5146b18bf0367bae8",
+      "reason": "Project-authored synthetic legacy/v2 golden from frozen source field/default contract; no application migration/writer used to generate expected settings; favorite UUIDs independently computed with Python SHA-256 and UUID byte order"
+    },
+    {
+      "path": "test-assets/configuration/settings-v2-unknown.json",
+      "sha256": "b3d26c5dcca68af60e4a5d6ea916e6e7775c071c0e7d0abb3c1fa4bd0b39e3a3",
+      "reason": "Project-authored synthetic legacy/v2 golden from frozen source field/default contract; no application migration/writer used to generate expected settings; favorite UUIDs independently computed with Python SHA-256 and UUID byte order"
+    },
+    {
+      "path": "test-assets/configuration/malformed-settings.json",
+      "sha256": "a6fb08fda1acb957b6116bd37811a1fe41a01611c0631edbf786d6889a27a55c",
+      "reason": "Project-authored two-byte malformed JSON to verify real native startup refusal and source preservation; no user data"
+    }
+  ]
+}

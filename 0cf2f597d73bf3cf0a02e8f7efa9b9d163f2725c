@@ -1,0 +1,464 @@
+# H0.R + H0.3B1 播放器可靠性与 ExternalInterface 合并执行计划
+
+状态：已完成（2026-08-09）；实际结果见第 15 节
+
+快照日期：2026-08-09（Asia/Singapore）
+
+目标执行环境：单个 Codex 5.6 sol max 上下文，连续 4–6 小时
+
+目标平台：Apple Silicon ARM64；唯一 RID 为 `osx-arm64`
+
+本文是下一窗口的任务设计、拆分、约束和验收单一来源。当前工作树事实见
+[`development-handoff.zh-CN.md`](development-handoff.zh-CN.md)，已完成的 H0.2 + H0.3A 见
+[`h0.2-h0.3a-gate0-hardening.zh-CN.md`](h0.2-h0.3a-gate0-hardening.zh-CN.md)，总体范围和净人日见
+[`../../../Docs/macos-porting-plan.zh-CN.md`](../../../Docs/macos-porting-plan.zh-CN.md)。本文不宣称关闭完整 H0.3B。
+
+## 1. 本窗口合并什么
+
+本工作包合并三个有直接依赖关系的任务：
+
+1. **H0.R1 / `CTRL-001`（强制）**：所有 Ruffle 播放器控制脚本只向 NativeWebView 返回可序列化的原始值，重点关闭 `Reload player` 返回 `Promise` 后触发的 `NSErrorException`。
+2. **H0.R2 / `TRACE-001`（强制）**：固定 AVM2 `hello_world` 在冷启动、诊断页后热导航、浏览器重载和播放器重载中均产生可判定且不重复的 trace。
+3. **H0.3B1 / ExternalInterface（阶段门后强制）**：固定纳入 Ruffle v0.4.1 官方 self-hosted ExternalInterface fixture，验证 JavaScript → ActionScript 和 ActionScript → JavaScript 的非重入双向调用。
+
+执行顺序不可交换。R1/R2 是 H0.3B1 的可靠性前置阶段门；若 3 小时内仍未关闭，就继续修回归并把 H0.3B1 保持“未开始”，不得为了填满交付清单先复制 fixture。
+
+本窗口不做：
+
+- H0.3B2 的输入/渲染/定时、音频、网络/策略文件；
+- 上游已标记 `it.skip` 的 JS → Flash → JS 同步重入 ExternalInterface 场景；
+- H0.4 Gate 0 总收口、M1、正式 UI、AMF/SOL、设置/收藏夹；
+- 依赖、SDK、Avalonia、NativeWebView 或 Ruffle 升级。
+
+## 2. 已验收基线与新增失败证据
+
+开始实现前必须把以下两类证据分开，不得用成功样本覆盖失败样本。
+
+### 2.1 正式 H0.2 + H0.3A 基线已通过
+
+2026-08-08 独立验收实际执行 `scripts/verify-arm64-baseline.sh`：
+
+- 两次 locked restore 通过且三份 lock hash 不变；
+- Debug build 为 0 warnings、0 errors；
+- 82 passed、0 failed、0 skipped；
+- 170 MiB `osx-arm64` `.app` 中 18 个 Mach-O 均无 Intel slice；
+- `codesign --verify --deep --strict` 通过。
+
+按 H0.3A F5 规定从冷启动直接携带固定 SWF 参数运行最新签名 bundle：
+
+```text
+~/Library/Logs/CefFlashBrowser/gate0-20260807T204020664Z-35069.jsonl
+```
+
+机器统计为 `playerReady=1`、`helloWorldTrace=1`、`browser.bridge.failed=0`、
+`ObjectDisposedException=0`、`composition.contentHost.stopped=1`、`process.stopping=1`，进程退出码 0。
+
+因此 H0.2 与 H0.3A 的既定退出条件保持“已完成”；本工作包处理的是扩展验收新发现的回归，不重写已经通过的 lifecycle、bridge parser 或 task-tail 设计。
+
+### 2.2 扩展 smoke 新发现两项 P0 回归
+
+失败会话：
+
+```text
+~/Library/Logs/CefFlashBrowser/gate0-20260807T203757598Z-34028.jsonl
+```
+
+复现路径和事实：
+
+1. 最新签名 `.app` 无参数冷启动到诊断页；
+2. 在地址栏输入固定 `avm2-hello-world/test.swf` 的绝对路径并打开；
+3. journal 收到一次 `playerReady: test.swf`，但没有 `trace: Hello world!`，且没有 `browser.bridge.failed`；
+4. 点击 `Reload player` 后原生状态栏显示：
+
+```text
+NSErrorException: JavaScript execution returned a result of an unsupported type
+```
+
+5. 正常关闭仍完成 `composition.contentHost.stopped`、`process.stopping`，进程已退出。
+
+静态机制线索：`RufflePlayerCoordinator.ReloadAsync` 当前直接执行
+`window.__cefFlashBrowserPlayerApi?.reload();`，Ruffle `reload()` 返回 `Promise`；导入/删除路径已经使用 `void ...; return true;` 避免同类错误，但通用播放器命令尚未统一。热导航 trace 的根因尚未证明，执行者必须先建立失败回归，不能只凭这条线索直接改代码。
+
+## 3. 开始前硬路由
+
+按顺序完整读取：
+
+1. [`../../../AGENTS.md`](../../../AGENTS.md)
+2. [`../AGENTS.md`](../AGENTS.md)
+3. [`development-handoff.zh-CN.md`](development-handoff.zh-CN.md)
+4. 本文
+5. [`interfaces.zh-CN.md`](interfaces.zh-CN.md)
+6. [`variables.zh-CN.md`](variables.zh-CN.md)
+7. [`engineering-spec.zh-CN.md`](engineering-spec.zh-CN.md)
+8. [`gate0-results.zh-CN.md`](gate0-results.zh-CN.md)
+9. 下表中的实现、调用方与测试
+
+开始修改前从仓库根执行 `git status --short`。当前 `AGENTS.md` 已修改，`Docs/macos-porting-plan.zh-CN.md` 与整个 `spike/` 尚未跟踪；全部视为用户资产，不得清理、回滚、覆盖、切分支或自动提交。
+
+| 目的 | 必读文件 |
+|---|---|
+| 播放器命令 | `RufflePlayerCoordinator.cs`、`MainWindowViewModel.cs`、`MainWindow.axaml` |
+| player HTML 与 trace | `LoopbackContentHost.cs`、`RuffleDocumentStartScriptBuilder.cs` |
+| bridge 契约 | `BrowserContracts.cs`、`WebBridgeProtocol.cs`、`AvaloniaNativeWebViewSession.cs` |
+| 所有权/释放 | `CompositionRoot.cs`、`MainWindowViewModel.DisposeAsync` |
+| 最近回归 | `RufflePlayerCoordinatorTests.cs`、`LoopbackContentHostTests.cs`、`WebBridgeProtocolTests.cs`、`GateZeroFixtureTests.cs` |
+| fixture 治理 | `Assets/Fixtures/THIRD-PARTY.md`、测试项目 `.csproj` |
+
+## 4. 冻结的可观察契约
+
+### 4.1 播放器命令的 JavaScript 返回边界
+
+`PauseAsync`、`ResumeAsync`、`ReloadAsync`、`RequestFullscreenAsync` 和 `SetVolumeAsync` 都必须通过一个统一 helper 生成可序列化脚本：
+
+- 不把 `Promise`、DOM 节点、Ruffle 对象或函数作为 `ExecuteScriptAsync` 的结果；
+- 异步/可能返回异步值的调用使用 `void` 明确丢弃页面返回值，并在 IIFE 末尾返回 `true` 或 `null`；
+- 页面同步抛错仍由现有浏览器端口传播，不吞异常；
+- 不用字符串特判只修 `reload`，防止下一个 Ruffle API 再次越过边界；
+- 导入/删除已有 `void reload(); return true;` 行为保持回归。
+
+控制命令的“调用被 WebView 接受”和“Ruffle 语义成功”必须区分。全屏可能受用户手势/系统策略限制；本窗口只保证返回值边界不产生 `unsupported type`，不得伪造全屏成功。
+
+### 4.2 trace 的次数语义
+
+对固定 `hello_world` fixture，以一次 `api.load`/一次播放器重载为一个 run：
+
+- 每个 run 必须收到一次且仅一次规范化 `Hello world!`；
+- `playerReady` 与 trace 的相对顺序不冻结；
+- 冷启动、同一 WebView 从诊断页热导航、浏览器原生 reload、播放器 API reload 均适用；
+- 导航离开旧文档后，不得由旧 observer 产生迟到 trace；
+- 不通过延长固定 sleep、重复发送 trace 或 journal 去重来制造通过。
+
+实现可在 player 元素、PlayerV1 API 或其生命周期事件上安装同一个 observer，但必须由真实 WKWebView 证据决定。若需要同时在元素与 API 绑定，必须复用同一个函数并证明没有重复输出。
+
+### 4.3 ExternalInterface runner
+
+优先实现一个**受会话 token 保护、离线、只服务固定文件**的 loopback 页面，并从 Gate 0 诊断页提供链接。建议稳定路由：
+
+```text
+/{sessionToken}/fixtures/external-interface
+```
+
+约束：
+
+- runner 使用当前 NativeWebView/WKWebView、document-start、自托管 Ruffle、loopback 和 bridge；不得调用 Ruffle desktop、外部浏览器或公网 runner 替代；
+- 只服务下节固定目录中的明确文件，不接受任意文件名、绝对路径或 query 路径；
+- 保持现有 loopback 地址、token、Cookie、CSP、MIME、`nosniff` 与目录边界；
+- 不以文件名自动识别任意用户 SWF 并注入测试脚本；
+- runner 页面可以是本项目最小 HTML/JS oracle，不修改上游文件字节；
+- 页面必须产生机器可判定的 bridge 结果，截图只作辅助证据。
+
+### 4.4 `compatibilityResult` bridge 消息
+
+H0.3B1 允许新增一个通用 Gate 兼容结果消息，复用 `WebBridgeMessage` 现有字段，不增加裸 `object`：
+
+```json
+{
+  "type": "compatibilityResult",
+  "key": "external-interface/v1",
+  "message": "PASS available=true jsToAs=123.4 asToJs=true structured=true",
+  "data": "{...canonical diagnostic JSON...}"
+}
+```
+
+契约：
+
+- `key` 非空白，`message` 非 null/空白，`data` 非 null；
+- `message` 是 journal 可记录的短摘要，ExternalInterface 通过值必须与上例精确一致；失败使用 `FAIL ...`，不能静默无消息；
+- `data` 可含结构化诊断，但 `WebBridgeProtocol.Describe`、journal 和异常不得记录它；
+- Desktop 继续只解析和分派；Core coordinator 可以把短摘要投影到 `StatusChanged`，不得在 Desktop 复制协议校验；
+- 修改后同步 `interfaces.zh-CN.md`；新增稳定 route/fixture key 后同步 `variables.zh-CN.md`；
+- 未知非空 bridge 类型的前向兼容行为保持不变。
+
+如果执行者找到无需新增消息且同样可机器判定、可脱敏、可复用的更小方案，必须先在本文偏差记录说明，并同步接口测试；不得把结果塞入普通 `trace` 字符串后隐式解析。
+
+## 5. 固定上游 ExternalInterface 语料
+
+唯一候选为 Ruffle `v0.4.1`（commit `a1ac4ce8647352ad03044031cad0454a636427b8`）的 self-hosted Web 集成 fixture：
+
+```text
+web/packages/selfhosted/test/integration_tests/external_interface
+```
+
+来源：<https://github.com/ruffle-rs/ruffle/tree/v0.4.1/web/packages/selfhosted/test/integration_tests/external_interface>
+
+开发期只从固定 tag 的 `raw.githubusercontent.com` 精确路径取得。纳入前必须重新计算实际文件大小与 SHA-256；任一不一致即停止，不使用 master/nightly/latest 或镜像替换。
+
+| 文件 | 字节数 | SHA-256 |
+|---|---:|---|
+| `Test.as` | 5,715 | `d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d` |
+| `index.html` | 1,906 | `e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0` |
+| `test.fla` | 4,804 | `1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9` |
+| `test.swf` | 2,308 | `d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5` |
+| `test.ts` | 11,769 | `ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894` |
+
+仓库建议目录：
+
+```text
+Assets/Fixtures/avm2-external-interface/
+```
+
+五个文件原名、目录与字节保持不变。`THIRD-PARTY.md` 登记 tag、commit、精确路径、Ruffle Apache-2.0/MIT 双许可证、逐文件大小/hash，以及本项目只采纳的测试子集。
+
+本窗口固定验证以下非重入子集：
+
+1. `ExternalInterface.available == true`；
+2. JavaScript 通过 PlayerV1 `callExternalInterface("returnAValue", 123.4)` 调用 AS3，返回 JSON 可序列化数值 `123.4`；
+3. JavaScript 调用 SWF 暴露的延迟方法，AS3 再调用页面固定回调，页面收到 `true`；
+4. 至少一组包含字符串、数值、布尔、null、数组/对象的结构化值按预期往返；
+5. 全部断言汇总为唯一 `compatibilityResult` PASS 或明确 FAIL。
+
+上游 `test.ts` 中 `it.skip("calls a reentrant JS method")` 明确不在本窗口通过口径。不得删除 skip 后把随机结果列为 A，也不得声称整个 ExternalInterface 兼容。
+
+## 6. 必须先建立的测试矩阵
+
+### 6.1 播放器命令
+
+| ID | 场景 | 断言 |
+|---|---|---|
+| `PC1` | pause/resume/reload/fullscreen/volume 生成脚本 | 每段通过统一序列化边界结束于原始值；不得直接返回 Promise/对象 |
+| `PC2` | import/delete 后触发 player reload | 既有 `void reload` + 原始返回值保持不变 |
+| `PC3` | signed WKWebView 点击 `Reload player` | 状态栏/journal 无 `unsupported type`；同一 run 最终可观察 |
+| `PC4` | 页面 API 缺失 | 命令安全返回原始值，不制造 JS `TypeError` |
+
+### 6.2 trace 冷/热/重载
+
+| ID | 场景 | 断言 |
+|---|---|---|
+| `TR1` | 冷启动直接打开 `hello_world` | `playerReady=1`、规范化 trace=1、bridge failure=0 |
+| `TR2` | 诊断页后用正常本地 SWF 链路热导航 | 与 `TR1` 相同，不得缺 trace |
+| `TR3` | 浏览器 reload 一次 | 只对新增 run 增加一个 trace，无旧 observer 重复 |
+| `TR4` | `Reload player` 一次 | 不报序列化错误，只对新增 run 增加一个 trace |
+| `TR5` | 正常关闭 | 无迟到 bridge/`ObjectDisposedException`；host stopped、process stopping、退出 0 |
+
+生成 HTML 的 Core 测试只能锁住 observer 的安装时点和脚本结构；`TR1–TR5` 的最终判定必须来自同一版本签名 bundle 的真实 Apple Silicon WKWebView，不能以字符串测试替代。
+
+### 6.3 ExternalInterface
+
+| ID | 场景 | 断言 |
+|---|---|---|
+| `EI1` | 五个固定上游文件复制到测试输出 | 文件齐全，逐文件大小/hash 与第 5 节一致，无运行时下载 |
+| `EI2` | fixed runner route | 未授权 404；授权页面、SWF MIME/CSP/nosniff 正确；任意文件名与遍历被拒绝 |
+| `EI3` | `compatibilityResult` parser | 必填字段、未知类型兼容、2,048 限制和 `data` 脱敏回归全部通过 |
+| `EI4` | runner oracle 结构 | 同时包含 JS→AS3、延迟 AS3→JS、结构化往返与唯一结果发送；无魔法文件名判断 |
+| `EI5` | 真实 WKWebView 执行固定 fixture | journal 恰好一个精确 PASS 摘要；无 FAIL、bridge failure 或异常 |
+| `EI6` | 从诊断页进入 runner 后返回/再次进入 | 每次 run 恰好一个结果，无旧回调、重复 observer 或跨页面污染 |
+| `EI7` | 正常关闭 | coordinator/bridge/host 排空，进程退出 0 |
+
+测试总数不硬编码，但必须在现有 82 项之上合理增加，最终 0 failed、0 skipped、0 warnings。不能把上游 `it.skip` 映射成本项目 skipped 测试；它应作为明确未覆盖范围记录。
+
+## 7. 4–6 小时执行顺序
+
+| 时间盒 | 工作 | 阶段退出条件 |
+|---:|---|---|
+| 0:00–0:20 | 路由、`git status`、82 项基线、核对两份 journal 和实现 | 基线仍绿；成功/失败证据已区分 |
+| 0:20–0:55 | `PC1–PC4` 先红，统一播放器命令返回边界 | 定向测试全绿；不只修一个字符串 |
+| 0:55–1:50 | `TR1–TR5` 的可自动化部分先红；最小修复 observer 生命周期 | Core 测试绿；没有 sleep/重复发送/日志去重 |
+| 1:50–2:30 | Debug 全量 + 签名 bundle 冷/热/两种 reload 真机阶段门 | 两个失败都复现后关闭；无新 bridge/释放回归 |
+| 2:30–3:10 | 固定取得五个上游文件，登记 provenance/hash，完成 `EI1` | 实际 hash 全匹配；测试输出齐全 |
+| 3:10–4:25 | 固定 runner route、`compatibilityResult` 协议与 `EI2–EI4` | route/协议/脱敏/runner 自动化全绿；接口/变量同步 |
+| 4:25–5:10 | Apple Silicon 执行 `EI5–EI7`，检查精确 PASS、重复进入和退出 | 同版本签名 bundle 的 journal 可机器判定 |
+| 5:10–5:45 | `scripts/verify-arm64-baseline.sh`、`git diff --check`、改动面/lock/hash 审查 | 全量、ARM64、签名、lock 全绿 |
+| 5:45–6:00 | 更新 Gate、交接、总体计划、README 与本文实际结果 | 下一任务准确切到 H0.3B2 或保留未完成阶段 |
+
+2:30 是硬门。若 `PC/TR` 未全部通过，不进入 ExternalInterface；若 6 小时到点缺 `EI5–EI7`，H0.3B1 保持“部分完成”，不得把 ExternalInterface 矩阵标 A。
+
+## 8. 允许改动面
+
+| 文件/目录 | 允许动作 |
+|---|---|
+| `RufflePlayerCoordinator.cs` | 统一玩家命令返回边界；消费短兼容结果摘要（如需要） |
+| `LoopbackContentHost.cs` | 修正 trace 生命周期；增加严格固定的 EI runner/资产 route |
+| `WebBridgeProtocol.cs` | 增加 `compatibilityResult` 已知类型验证与脱敏描述 |
+| `AvaloniaNativeWebViewSession.cs` | 仅接入已有 Core 协议分派；不得复制校验 |
+| 对应 Core 测试 | `PC/TR/EI` 失败回归、route/协议/HTML 结构测试 |
+| `Assets/Fixtures/avm2-external-interface/` | 五个上游原字节文件 |
+| `Assets/Fixtures/THIRD-PARTY.md` | 来源、commit、许可证、hash、采纳/排除范围 |
+| 测试 `.csproj` | 只增加显式 fixture `Content`，不改包或框架 |
+| `interfaces.zh-CN.md` | bridge/命令/trace 契约同步 |
+| `variables.zh-CN.md` | 新 route、fixture key/目录等稳定值同步 |
+| Gate、交接、总体计划、README、本文 | 只回写实际结果和新队列 |
+
+若最小实现不需要修改某项，不为了符合表格制造改动。若需要改变 `IBrowserSession` 公开形状、持久化 schema 或生产项目依赖，触发第 10 节停损，不得静默扩面。
+
+## 9. 明确禁止
+
+- 不编辑 `Directory.Build.props`、`Directory.Packages.props`、三份 `packages.lock.json`、Ruffle runtime 资产或打包脚本；
+- 不恢复/生成/测试 `osx-x64`、Intel 或 Universal 2；
+- 不新增 npm/NuGet/Rust/Java/Adobe 编译器依赖，固定上游已有 SWF 足够；
+- 不把 Desktop/Avalonia/WebKit 引入 Core 测试项目；
+- 不新增全局状态、service locator、`async void`、后台常驻 worker、无限等待或 UI 线程同步网络；
+- 不靠 `Thread.Sleep`、概率循环、重复发消息、吞异常、降低断言或标记 skip 制造通过；
+- 不修改现有 H0.3A fixture 字节/hash，不把 ExternalInterface 文件混入 `avm2-hello-world`；
+- 不顺手处理文件面板、UI 美化、音频、网络或其他 H0.3B2 能力；
+- 不提交、推送、清理 artifacts 或删除用户文件，除非用户另行明确授权。
+
+## 10. 停损条件
+
+出现任一情况时，保留已通过的最小工作并准确写回，不扩大任务：
+
+- 起始 82 项或 ARM64 baseline 在修改前失败；
+- 热导航 trace 只能通过固定延时/重复注入解决，尚未证明生命周期机制；
+- runner 必须放宽 loopback 任意文件访问、CSP、token 或路径边界才能工作；
+- ExternalInterface 需要升级 Ruffle、引入编译工具链或依赖公网；
+- 新 bridge 需要改变持久化 schema、下载事件或 `IBrowserSession` 公开形状；
+- 上游五文件的大小/hash/许可证无法复核；
+- macOS 当前无可交互 GUI：使用 `[PENDING_RETEST: APPLE_SILICON_WKWEBVIEW_SMOKE]`，对应阶段不得标完成；
+- 发现上游固定 v0.4.1 本身不支持某个采纳子场景：记录真实 FAIL 和 A/B/C/D 等级，不换 nightly 掩盖。
+
+## 11. 验证命令
+
+工作目录：`spike/macos-host/`。
+
+```sh
+dotnet restore CefFlashBrowser.MacOS.Spike.slnx --locked-mode
+dotnet build CefFlashBrowser.MacOS.Spike.slnx \
+  --configuration Debug --no-restore --disable-build-servers -m:1
+dotnet test CefFlashBrowser.MacOS.Spike.slnx \
+  --configuration Debug --no-build --disable-build-servers -m:1
+```
+
+定向测试按实际类名过滤，不用 `--no-build` 跳过本窗口实现：
+
+```sh
+dotnet test tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj \
+  --configuration Debug --filter FullyQualifiedName~RufflePlayerCoordinatorTests
+
+dotnet test tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj \
+  --configuration Debug --filter FullyQualifiedName~LoopbackContentHostTests
+
+dotnet test tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj \
+  --configuration Debug --filter FullyQualifiedName~WebBridgeProtocolTests
+
+dotnet test tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj \
+  --configuration Debug --filter FullyQualifiedName~GateZeroFixtureTests
+```
+
+完成门禁：
+
+```sh
+scripts/verify-arm64-baseline.sh
+git diff --check
+git status --short
+```
+
+真机至少执行：
+
+1. 冷启动参数打开 `avm2-hello-world/test.swf`；
+2. 无参数启动诊断页，再通过正常本地 SWF 链路打开同一 fixture；
+3. 分别执行一次浏览器 reload 和 `Reload player`；
+4. 从诊断页打开 ExternalInterface runner，返回后再进入一次；
+5. 正常关闭并记录启动进程退出码。
+
+每次 journal 记录设备、系统、SDK、Ruffle 版本、bundle 签名、fixture hash、期望/实际次数。失败 journal 不能删除，也不能用另一次成功会话替换失败事实。
+
+## 12. 完成定义
+
+- [x] 起始工作树和 82 项基线已保存，用户资产未被覆盖。
+- [x] `PC1–PC4` 通过，`Reload player` 不再产生 NativeWebView unsupported result。
+- [x] `TR1–TR5` 在同版本签名 bundle 中通过，冷/热/两种 reload 每 run 恰好一个 trace。
+- [x] R1/R2 阶段门全绿后才纳入 ExternalInterface。
+- [x] 五个上游文件、tag、commit、许可证、大小/hash 与测试输出已锁定。
+- [x] `EI1–EI7` 通过；每次 runner 进入恰好一个精确 PASS 摘要且 `data` 未泄露。
+- [x] 上游同步重入 skip 被明确排除，没有转成本项目 skipped 测试。
+- [x] 全量测试 0 failed、0 skipped、0 warnings。
+- [x] ARM64 package、18 个 Mach-O 扫描、codesign 和 lock hash 不变性通过。
+- [x] 接口、变量、Gate、交接、总体计划、README 与本文按实际结果同步。
+- [x] 完成后下一任务切到 H0.3B2。
+- [x] 没有升级依赖、修改 Windows Legacy、清理 artifacts、提交或推送。
+
+## 13. 下一上下文启动提示词
+
+```text
+请在 /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser 连续工作 4–6 小时，
+实际完成 H0.R + H0.3B1，不要只给方案。先运行 git status --short，并完整读取：
+1. 根 AGENTS.md
+2. spike/macos-host/AGENTS.md
+3. spike/macos-host/docs/development-handoff.zh-CN.md
+4. spike/macos-host/docs/h0.3b1-player-reliability-externalinterface.zh-CN.md
+5. interfaces.zh-CN.md、variables.zh-CN.md、engineering-spec.zh-CN.md
+6. gate0-results.zh-CN.md 和计划列出的实现/测试
+
+保留所有未提交和未跟踪文件。严格按计划的阶段门执行三个合并任务：先用失败
+回归关闭 CTRL-001 的播放器命令返回值问题，再关闭 TRACE-001 的冷/热/两种 reload
+trace 一致性；只有这两项在真实 Apple Silicon WKWebView 全绿后，才固定纳入 Ruffle
+v0.4.1 官方 self-hosted ExternalInterface 五文件 fixture，完成非重入 JS→AS3、延迟
+AS3→JS 和结构化值往返的唯一机器结果。
+
+完成后原样运行 scripts/verify-arm64-baseline.sh，检查 lock hash、全包 ARM64 和
+codesign，并按实际结果同步接口、变量、Gate、交接、总体计划、README 与执行计划。
+若 4–6 小时内未通过强制门，保留部分成果并准确标记未完成，不抢跑 H0.3B2/H0.4。
+
+不要升级依赖/Ruffle，不修改 lock、打包/RID、Windows Legacy、AMF/SOL 或正式 UI，
+不要做音频/网络/输入矩阵，不使用 skip/sleep/吞异常制造通过，不提交或推送。
+```
+
+## 14. 完成后回写格式
+
+执行者追加实际结果，不覆盖计划：
+
+```text
+执行日期/设备：
+起始基线：
+PC1–PC4：
+TR1–TR5（冷/热/两种 reload journal）：
+ExternalInterface 来源/hash：
+EI1–EI7 与精确结果：
+新增测试与总数：
+restore/build/test：
+ARM64 package/Mach-O/codesign：
+lock hash 是否不变：
+未完成/待复验：
+下一任务：
+```
+
+## 15. 实际结果（2026-08-09）
+
+执行日期/设备：2026-08-09（Asia/Singapore）；Apple M1 Pro、macOS 26.5.1
+（25F80）arm64、.NET SDK 10.0.301、Ruffle Web 0.4.1；签名为 ad-hoc +
+Hardened Runtime。
+
+起始基线：修改前保存 `git status --short`，确认 `AGENTS.md` 已修改且
+`Docs/macos-porting-plan.zh-CN.md`、`spike/` 为用户未跟踪资产；locked restore、Debug
+build 0 warnings/0 errors、82 passed/0 failed/0 skipped。
+
+PC1–PC4：暂停、恢复、重载、全屏和音量统一通过 `void (expression)` 丢弃 Ruffle 返回
+对象，并同步返回 `true`；import/delete 既有 reload 边界保持。签名 WKWebView 点击
+`Reload player` 不再出现 unsupported result 或 `NSErrorException`。
+
+TR1–TR5：冷启动证据为
+`~/Library/Logs/CefFlashBrowser/gate0-20260808T182601433Z-27503.jsonl`，
+`playerReady=1`、`Hello world! trace=1`。热导航、浏览器 reload、播放器 reload 的同一
+会话为 `gate0-20260808T230305303Z-60920.jsonl`，三个 run 的 trace 累计严格为
+`1 → 2 → 3`，没有旧 observer 迟到、bridge failure、unsupported result 或释放异常；两次
+会话都正常记录 host stop/process stopping。
+
+ExternalInterface 来源/hash：阶段门通过后才复制 Ruffle tag `v0.4.1`、commit
+`a1ac4ce8647352ad03044031cad0454a636427b8` 下
+`web/packages/selfhosted/test/integration_tests/external_interface` 的五个原文件；大小和
+SHA-256 全部与第 5 节一致，运行时不联网，上游原件未修改。
+
+EI1–EI7 与精确结果：固定 token runner、唯一 SWF allowlist、MIME/CSP/no-store/nosniff、
+协议必填字段和 `data` 脱敏测试通过。签名 bundle 执行“进入→返回→再进入”的 journal
+`gate0-20260809T004129216Z-1344.jsonl` 每次进入各产生一条
+`compatibilityResult: PASS available=true jsToAs=123.4 asToJs=true structured=true`；
+没有 `bridgeError`，journal 不含结构化 `data`。完整 ARM64 门禁重新组包后的最终产物又在
+`gate0-20260809T005034384Z-5958.jsonl` 产生恰好一条相同 PASS，正常释放，
+`open -n -W` 退出码为 0。同步重入场景保持明确排除，没有项目 skipped 测试。
+
+新增测试与总数：增加播放器命令边界、trace HTML 生命周期、五文件 hash/语料、严格 route、
+`compatibilityResult` 解析/脱敏/状态投影等回归；最终 97 passed、0 failed、0 skipped。
+
+restore/build/test：`scripts/verify-arm64-baseline.sh` 完整通过；两次 locked restore，
+Debug build 0 warnings/0 errors，97/97 测试通过。
+
+ARM64 package/Mach-O/codesign：`osx-arm64` self-contained + ReadyToRun `.app` 通过；
+主程序为 arm64，bundle 内 18 个 Mach-O 均无 Intel slice，
+`codesign --verify --deep --strict` 通过。
+
+lock hash 是否不变：是；完整脚本确认第二次 restore 与 package 前后，Core、Desktop、
+Tests 三份 lock file hash 均不变。
+
+未完成/待复验：本包无待复验强制项。上游同步重入 JS 方法仍按范围排除；输入/渲染/定时、
+音频、网络/策略文件属于 H0.3B2；`UI-001`、`DL-001` 等既有 P1 不在本包。
+
+下一任务：H0.3B2 剩余固定兼容语料；完成后执行 H0.4 Gate 0 总收口。

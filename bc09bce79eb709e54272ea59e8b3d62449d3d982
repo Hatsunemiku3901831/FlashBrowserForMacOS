@@ -1,0 +1,81 @@
+using System.Buffers.Binary;
+using FlashMacOS.Sol.Managed;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class LegacySolValueAssertionsTests
+{
+    [TestMethod]
+    public void LegacyScalarBoundaryAndSpecialValueAssertionsRunThroughWholeFiles()
+    {
+        var codec = new SolCodec(); using var directory = new TemporaryDirectory();
+        foreach (var integer in new[] { 0, 1, 127, 128, 16383, 16384, 2097151, 2097152, -1, -256, 0xfffffff })
+        {
+            var document = RoundTrip(SolEncoding.Amf3, new AmfInteger(integer));
+            Assert.AreEqual(integer, ((AmfInteger)document.Graph.Entries[0].Value).Value);
+        }
+        foreach (var encoding in new[] { SolEncoding.Amf0, SolEncoding.Amf3 })
+        {
+            foreach (var number in new[] { double.NaN, double.PositiveInfinity, double.NegativeInfinity, 0.0, -0.0, double.Epsilon, double.MaxValue, double.MinValue, 3.14159265358979, 0.75 })
+            {
+                var document = RoundTrip(encoding, new AmfNumber(number));
+                Assert.AreEqual(BitConverter.DoubleToInt64Bits(number), ((AmfNumber)document.Graph.Entries[0].Value).RawBits);
+            }
+            foreach (var value in new AmfValue[] { new AmfBoolean(true), new AmfBoolean(false), AmfNull.Instance, AmfUndefined.Instance })
+                Assert.AreEqual(value, RoundTrip(encoding, value).Graph.Entries[0].Value);
+            foreach (var text in new[] { "", "hello amf0", "你好世界🎮", new string('A', 70000) })
+                Assert.AreEqual(text, ((AmfString)RoundTrip(encoding, new AmfString(text)).Graph.Entries[0].Value).Value);
+            foreach (var milliseconds in new[] { 0d, 1718447445123d, -0.25d })
+            {
+                var date = new AmfDateNode(new(100), new AmfNumber(milliseconds), encoding == SolEncoding.Amf0 ? (short)0 : null);
+                var document = RoundTrip(encoding, new AmfReference(date.Id), date);
+                Assert.AreEqual(milliseconds, ((AmfDateNode)document.Graph.Nodes[((AmfReference)document.Graph.Entries[0].Value).Target]).Milliseconds.Value);
+            }
+        }
+        foreach (var bytes in new[] { new byte[] { 1, 2, 3, 255, 0 }, new byte[256], Enumerable.Repeat((byte)255, 256).ToArray() })
+        {
+            var binary = new AmfByteArrayNode(new(0), bytes); var document = RoundTrip(SolEncoding.Amf3, new AmfReference(binary.Id), binary);
+            CollectionAssert.AreEqual(bytes, ((AmfByteArrayNode)document.Graph.Nodes[new(0)]).Bytes.ToArray());
+        }
+        foreach (var isDocument in new[] { true, false })
+        {
+            var xml = new AmfXmlNode(new(0), "<root><value>测试</value></root>", isDocument);
+            var document = RoundTrip(SolEncoding.Amf3, new AmfReference(xml.Id), xml);
+            Assert.AreEqual(xml.Kind, document.Graph.Nodes[new(0)].Kind); Assert.AreEqual(xml.Text, ((AmfXmlNode)document.Graph.Nodes[new(0)]).Text);
+        }
+        SolDocument RoundTrip(SolEncoding encoding, AmfValue value, params AmfNode[] nodes)
+        {
+            var source = new SolDocument("test", encoding, new AmfGraph([new("v", value)], nodes)); var path = directory.GetPath("roundtrip.sol");
+            File.WriteAllBytes(path, codec.Encode(source)); var bytes = File.ReadAllBytes(path); var document = codec.Decode(bytes);
+            Assert.IsTrue(AmfGraphEquality.Equivalent(source.Graph, document.Graph));
+            Assert.AreEqual((byte)0, bytes[0]); Assert.AreEqual((byte)0xbf, bytes[1]);
+            Assert.AreEqual(bytes.Length - 6, (int)BinaryPrimitives.ReadUInt32BigEndian(bytes.AsSpan(2, 4))); Assert.AreEqual(source.Name, document.Name);
+            Assert.AreEqual(encoding, document.Encoding); return document;
+        }
+    }
+
+    [TestMethod]
+    public void LegacyManyKeysPoolingAndNestedContainerAssertionsUseNewFileCodec()
+    {
+        var codec = new SolCodec();
+        var fifty = new SolDocument("many", SolEncoding.Amf3, new AmfGraph(Enumerable.Range(0, 50).Select(index =>
+            new AmfProperty("key_" + index.ToString("D3", System.Globalization.CultureInfo.InvariantCulture), new AmfInteger(index)))));
+        var decoded = codec.Decode(codec.Encode(fifty)); Assert.HasCount(50, decoded.Graph.Entries);
+        for (var i = 0; i < 50; i++) Assert.AreEqual(i, ((AmfInteger)decoded.Graph.Entries[i].Value).Value);
+        var duplicate = Pool(false); var unique = Pool(true); Assert.IsTrue(duplicate.Length < unique.Length);
+        decoded = codec.Decode(duplicate); foreach (var entry in decoded.Graph.Entries) Assert.AreEqual("shared value text", ((AmfString)entry.Value).Value);
+        foreach (var encoding in new[] { SolEncoding.Amf0, SolEncoding.Amf3 })
+        {
+            var number = encoding == SolEncoding.Amf0 ? (AmfValue)new AmfNumber(42) : new AmfInteger(42);
+            var kind = encoding == SolEncoding.Amf0 ? AmfObjectKind.Amf0Object : AmfObjectKind.Amf3Object;
+            var inner = new AmfObjectNode(new(2), new AmfTraits("", true), properties: [new("val", number)], objectKind: kind);
+            var array = new AmfArrayNode(new(1), encoding == SolEncoding.Amf0 ? AmfArrayKind.Amf0Strict : AmfArrayKind.Amf3Mixed, [new AmfReference(inner.Id)]);
+            var outer = new AmfObjectNode(new(0), new AmfTraits("", true), properties: [new("arr", new AmfReference(array.Id))], objectKind: kind);
+            var source = new SolDocument("nested", encoding, new AmfGraph([new("root", new AmfReference(outer.Id))], [outer, array, inner]));
+            decoded = codec.Decode(codec.Encode(source)); Assert.IsTrue(AmfGraphEquality.Equivalent(source.Graph, decoded.Graph));
+        }
+        byte[] Pool(bool uniqueValues) => codec.Encode(new("pool", SolEncoding.Amf3, new AmfGraph(Enumerable.Range(0, 20).Select(index =>
+            new AmfProperty("key" + index.ToString(System.Globalization.CultureInfo.InvariantCulture), new AmfString(uniqueValues ? "unique value " + index.ToString(System.Globalization.CultureInfo.InvariantCulture) : "shared value text"))))));
+    }
+}

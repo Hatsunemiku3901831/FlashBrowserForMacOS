@@ -1,0 +1,210 @@
+using System.Text.Json;
+using System.Threading.Channels;
+
+namespace FlashMacOS.Infrastructure.Diagnostics;
+
+public sealed record JournalOptions(int QueueCapacity = 512, long MaximumFileBytes = 2 * 1024 * 1024,
+    int RetainedFiles = 8, TimeSpan? ShutdownTimeout = null)
+{
+    public TimeSpan EffectiveShutdownTimeout => ShutdownTimeout ?? TimeSpan.FromSeconds(3);
+    public void Validate()
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(QueueCapacity);
+        ArgumentOutOfRangeException.ThrowIfLessThan(MaximumFileBytes, 512);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(RetainedFiles);
+        if (QueueCapacity > 4096 || RetainedFiles > 64 || EffectiveShutdownTimeout <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(QueueCapacity), "Journal limits are invalid.");
+    }
+}
+
+// Name retained at the composition boundary; this is the bounded product journal, not a raw evidence recorder.
+public sealed class GateZeroSessionJournal : IAsyncDisposable
+{
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly HashSet<string> BridgeTypes = new(StringComparer.Ordinal)
+        { "playerRunStarted", "playerReady", "trace", "sharedObjectSnapshot", "sharedObjectUpsert", "sharedObjectRemove", "compatibilityResult", "error" };
+    private readonly object _gate = new();
+    private readonly Channel<Entry> _entries;
+    private readonly TimeProvider _clock;
+    private readonly JournalOptions _options;
+    private readonly Func<string, Stream> _openWrite;
+    private readonly long _startedAt;
+    private readonly Task _writerTask;
+    private readonly CancellationTokenSource _stop = new();
+    private readonly string _directory;
+    private Task? _disposeTask;
+    private bool _closing;
+    private long _dropped;
+    private int _stopDisposed;
+    private volatile Exception? _failure;
+
+    public GateZeroSessionJournal(string logDirectory, TimeProvider? clock = null, JournalOptions? options = null,
+        Func<string, Stream>? openWrite = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(logDirectory);
+        _clock = clock ?? TimeProvider.System;
+        _options = options ?? new JournalOptions();
+        _options.Validate();
+        _entries = Channel.CreateBounded<Entry>(new BoundedChannelOptions(_options.QueueCapacity)
+            { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = false });
+        _startedAt = _clock.GetTimestamp();
+        _directory = Path.GetFullPath(logDirectory);
+        Directory.CreateDirectory(_directory);
+        FilePath = Path.Combine(_directory, $"session-{_clock.GetUtcNow():yyyyMMddTHHmmssfffZ}-{Environment.ProcessId}-{Guid.NewGuid():N}.jsonl");
+        _openWrite = openWrite ?? (path => new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read,
+            16 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan));
+        _writerTask = Task.Run(WriteEntriesAsync);
+        Record("process.started", $"pid={Environment.ProcessId}");
+    }
+
+    public string FilePath { get; }
+    public long DroppedRecords => Interlocked.Read(ref _dropped);
+    public Exception? Failure => _failure;
+    public Task Completion => _writerTask;
+
+    public void Record(string name, string? detail = null)
+    {
+        if (string.IsNullOrEmpty(name) || name.Length > 128 || !name.All(c => char.IsAsciiLetterOrDigit(c) || c is '.' or '_' or '-'))
+        { name = "event.invalidName"; detail = null; }
+        lock (_gate)
+        {
+            if (_closing) return;
+            Enqueue(name, SafeDetail(name, detail));
+        }
+    }
+
+    private void Enqueue(string name, string? detail)
+    {
+        if (!_entries.Writer.TryWrite(new Entry(_clock.GetUtcNow(), _clock.GetElapsedTime(_startedAt).TotalMilliseconds, name, detail)))
+            Interlocked.Increment(ref _dropped);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        lock (_gate)
+        {
+            if (_disposeTask is not null) return new ValueTask(_disposeTask);
+            _closing = true;
+            Enqueue("process.stopping", null);
+            _entries.Writer.TryComplete();
+            _disposeTask = StopCoreAsync();
+            return new ValueTask(_disposeTask);
+        }
+    }
+
+    private async Task StopCoreAsync()
+    {
+        try { await _writerTask.WaitAsync(_options.EffectiveShutdownTimeout, _clock).ConfigureAwait(false); }
+        catch (TimeoutException)
+        {
+            _stop.Cancel();
+            _ = _writerTask.ContinueWith(task => { _ = task.Exception; DisposeStop(); }, CancellationToken.None,
+                TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+            throw new TimeoutException("Journal drain exceeded its deadline; the writer is not reported as drained.");
+        }
+        finally { if (_writerTask.IsCompleted) DisposeStop(); }
+    }
+
+    private void DisposeStop() { if (Interlocked.Exchange(ref _stopDisposed, 1) == 0) _stop.Dispose(); }
+
+    private async Task WriteEntriesAsync()
+    {
+        Stream? stream = null;
+        long length = 0;
+        var segment = 0;
+        try
+        {
+            PruneClosedFiles(_options.RetainedFiles - 1);
+            stream = _openWrite(FilePath);
+            await foreach (var entry in _entries.Reader.ReadAllAsync(_stop.Token).ConfigureAwait(false))
+                await AppendAsync(entry).ConfigureAwait(false);
+            if (DroppedRecords > 0)
+                await AppendAsync(new Entry(_clock.GetUtcNow(), _clock.GetElapsedTime(_startedAt).TotalMilliseconds,
+                    "journal.dropped", DroppedRecords.ToString(System.Globalization.CultureInfo.InvariantCulture))).ConfigureAwait(false);
+            await stream.FlushAsync(_stop.Token).ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            _failure = exception;
+            throw;
+        }
+        finally
+        {
+            if (stream is not null) await stream.DisposeAsync().ConfigureAwait(false);
+        }
+
+        async ValueTask AppendAsync(Entry entry)
+        {
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(entry, JsonOptions);
+            if (bytes.LongLength + 1 > _options.MaximumFileBytes)
+            { Interlocked.Increment(ref _dropped); return; }
+            if (length > 0 && bytes.LongLength + 1 > _options.MaximumFileBytes - length)
+            {
+                await stream!.DisposeAsync().ConfigureAwait(false);
+                PruneClosedFiles(_options.RetainedFiles - 1);
+                stream = _openWrite(Path.Combine(_directory, Path.GetFileNameWithoutExtension(FilePath) + $"-{++segment:D4}.jsonl"));
+                length = 0;
+            }
+            await stream!.WriteAsync(bytes, _stop.Token).ConfigureAwait(false);
+            await stream.WriteAsync(new byte[] { (byte)'\n' }, _stop.Token).ConfigureAwait(false);
+            await stream.FlushAsync(_stop.Token).ConfigureAwait(false);
+            length += bytes.LongLength + 1;
+        }
+    }
+
+    private void PruneClosedFiles(int keep)
+    {
+        var files = new DirectoryInfo(_directory).EnumerateFiles("session-*.jsonl")
+            .OrderByDescending(x => x.LastWriteTimeUtc).ThenByDescending(x => x.Name, StringComparer.Ordinal).ToArray();
+        foreach (var file in files.Skip(keep))
+        {
+            try
+            {
+                // Active writers deny this exclusive open. Never remove their files.
+                using (new FileStream(file.FullName, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+            }
+            catch (IOException) { continue; /* An active process retains its own bounded files. */ }
+            file.Delete();
+        }
+    }
+
+    private static string? SafeDetail(string name, string? detail)
+    {
+        if (detail is null || detail.Length > 2048) return null;
+        if (name == "process.started" && detail.StartsWith("pid=", StringComparison.Ordinal) && int.TryParse(detail.AsSpan(4), out var pid))
+            return "pid=" + pid.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (name == "composition.stopped" && detail.StartsWith("failures=", StringComparison.Ordinal) && int.TryParse(detail.AsSpan(9), out var failures))
+            return "failures=" + failures.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (name == "browser.profile.configured" && detail.StartsWith("persistent=true; dataStore=", StringComparison.Ordinal) &&
+            Guid.TryParse(detail.AsSpan(27), out var store)) return $"persistent=true; dataStore={store}";
+        if (name == "profile.selected")
+        {
+            var selected = detail.Split(';', StringSplitOptions.TrimEntries);
+            if (selected.Length == 2 && selected[0] is "kind=Product" or "kind=Development" or "kind=Test" &&
+                selected[1].StartsWith("webKitDataStore=", StringComparison.Ordinal) && Guid.TryParse(selected[1].AsSpan(16), out var profileStore))
+                return selected[0] + "; webKitDataStore=" + profileStore;
+        }
+        if (name is "browser.navigate.requested" or "browser.navigation.started" or "browser.navigation.completed" or "compatibility.host.started")
+        {
+            if (!Uri.TryCreate(detail, UriKind.Absolute, out var uri)) return null;
+            if (uri.IsFile) return "file://[local]";
+            return uri.Scheme is "http" or "https" ? uri.Scheme + "://" + uri.IdnHost + (uri.IsDefaultPort ? "" : ":" + uri.Port) : null;
+        }
+        if (name == "browser.bridge.accepted")
+        {
+            var parts = detail.Split(';', StringSplitOptions.TrimEntries);
+            if (parts.Length != 4 || parts[0] != "protocol=1" || !parts[1].StartsWith("navigationId=", StringComparison.Ordinal) ||
+                !parts[2].StartsWith("runId=", StringComparison.Ordinal) || !parts[3].StartsWith("type=", StringComparison.Ordinal) ||
+                !Guid.TryParse(parts[1].AsSpan(13), out var navigation) || !Guid.TryParse(parts[2].AsSpan(6), out var run) || !BridgeTypes.Contains(parts[3][5..])) return null;
+            return $"protocol=1; navigationId={navigation:N}; runId={run:N}; type={parts[3][5..]}";
+        }
+        // The journal is an event summary. Arbitrary errors, trace, save data, paths and session details belong
+        // only in explicitly requested diagnostic evidence, never in routine product logs.
+        return null;
+    }
+
+    private sealed record Entry(DateTimeOffset Timestamp, double ElapsedMilliseconds, string Name, string? Detail)
+    {
+        public string ProductVersion { get; } = FlashMacOS.Domain.Identity.ProductIdentity.Version;
+    }
+}

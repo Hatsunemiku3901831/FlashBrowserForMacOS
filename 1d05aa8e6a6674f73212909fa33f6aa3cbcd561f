@@ -1,0 +1,9 @@
+{
+  "sourcePath": "spike/macos-host/packaging/macos/CefFlashBrowser.development.entitlements",
+  "sourceSha256": "3726221a606dae99b53f3f561754842b0e18fad422c134479e4a5fa9a5f466a4",
+  "acceptedCopyPath": "bootstrap/legacy/spike/macos-host/packaging/macos/CefFlashBrowser.development.entitlements",
+  "acceptedCopySha256": "3726221a606dae99b53f3f561754842b0e18fad422c134479e4a5fa9a5f466a4",
+  "targetPath": "packaging/macos/FlashMacOS.development.entitlements",
+  "targetSha256": "3726221a606dae99b53f3f561754842b0e18fad422c134479e4a5fa9a5f466a4",
+  "reason": "A02 actual formal ARM64 development-session evidence only; broad development entitlements remain subject to Q03/Q04 removal/review"
+}

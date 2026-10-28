@@ -1,0 +1,22 @@
+using FlashMacOS.Infrastructure.Diagnostics;
+
+namespace FlashMacOS.Tests;
+
+[TestClass]
+public sealed class JournalPrivacyTests
+{
+    [TestMethod]
+    public async Task EventSummaryCannotContainSessionOrSolPayload()
+    {
+        using var directory = new TemporaryDirectory();
+        var journal = new GateZeroSessionJournal(directory.RootPath);
+        journal.Record("browser.bridge.received", "Cookie: synthetic-session-secret; SOL=synthetic-sol-payload");
+        journal.Record("browser.navigate.requested", "https://name:synthetic-password@example.test/private/synthetic-path?token=synthetic-token#synthetic-fragment");
+        journal.Record("composition.startup.failed", "Synthetic failure with synthetic-session-secret");
+        await journal.DisposeAsync();
+
+        var text = await File.ReadAllTextAsync(journal.FilePath);
+        foreach (var secret in new[] { "synthetic-session-secret", "synthetic-sol-payload", "synthetic-password", "synthetic-path", "synthetic-token", "synthetic-fragment" })
+            Assert.IsFalse(text.Contains(secret, StringComparison.Ordinal), "Event summaries must not retain payloads or URL secrets.");
+    }
+}

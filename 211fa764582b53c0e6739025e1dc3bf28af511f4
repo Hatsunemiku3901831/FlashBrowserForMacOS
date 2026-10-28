@@ -1,0 +1,292 @@
+#!/usr/bin/env python3
+"""One-time, conflict-preserving migration of accepted P03 ports and adapters.
+
+This is provenance tooling, never a restore/build/runtime prerequisite.
+"""
+from pathlib import Path
+import hashlib
+import json
+
+ROOT = Path(__file__).resolve().parents[1]
+BOOT = ROOT / 'bootstrap/legacy/spike/macos-host'
+CORE = BOOT / 'src/CefFlashBrowser.MacOS.Spike.Core'
+DESKTOP = BOOT / 'src/CefFlashBrowser.MacOS.Spike.Desktop'
+entries = []
+MAPPING = {
+    'CefFlashBrowser.MacOS.Spike.Core.Application.Browser': 'FlashMacOS.Application.Browser',
+    'CefFlashBrowser.MacOS.Spike.Core.Application.Navigation': 'FlashMacOS.Application.Navigation',
+    'CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting': 'FlashMacOS.Flash.Ruffle.Hosting',
+    'CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle': 'FlashMacOS.Flash.Ruffle.Runtime',
+    'CefFlashBrowser.MacOS.Spike.Core.Flash.Storage': 'FlashMacOS.Application.Flash',
+    'CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Persistence': 'FlashMacOS.Infrastructure.Persistence',
+    'CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Paths': 'FlashMacOS.Infrastructure.Paths',
+    'CefFlashBrowser.MacOS.Spike.Core.Sol': 'FlashMacOS.Sol.Managed',
+    'CefFlashBrowser.MacOS.Spike.Desktop.Platform.MacOS': 'FlashMacOS.Browser.WebKit',
+    'CefFlashBrowser.MacOS.Spike.Desktop.Browser': 'FlashMacOS.Browser.WebKit',
+    'CefFlashBrowser.MacOS.Spike.Desktop.Diagnostics': 'FlashMacOS.Infrastructure.Diagnostics',
+    'CefFlashBrowser.MacOS.Spike.Desktop': 'FlashMacOS.Desktop',
+    'CefFlashBrowser.MacOS.Spike.Tests': 'FlashMacOS.Tests',
+}
+
+def transform(s):
+    for a, b in MAPPING.items():
+        s = s.replace(a, b)
+    return s
+
+def sha(p):
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+def write(relative, content, source=None, reason='A01 authored port/adapter composition'):
+    target = ROOT / relative
+    data = content.encode() if isinstance(content, str) else content
+    if target.exists() and target.read_bytes() != data:
+        raise ValueError('Preserving conflicting file: ' + str(target))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        with target.open('xb') as stream:
+            stream.write(data)
+    original = ROOT / 'reference/legacy/spike/macos-host' / source.relative_to(BOOT) if source and source.is_relative_to(BOOT) else None
+    entries.append({
+        'bootstrapSourcePath': str(source.relative_to(ROOT)) if source else None,
+        'bootstrapSourceSha256': sha(source) if source else None,
+        'originalSourcePath': str(original.relative_to(ROOT / 'reference/legacy')) if original and original.is_file() else None,
+        'originalSourceSha256': sha(original) if original and original.is_file() else None,
+        'targetPath': relative, 'targetSha256': sha(target), 'reason': reason,
+    })
+
+def copy(relative, source, edit=None, raw=False):
+    value = source.read_bytes() if raw else transform(source.read_text())
+    if edit:
+        value = edit(value)
+    write(relative, value, source, 'A01 relocate accepted P03 behavior; namespace/port adaptation; fixed assets remain byte-identical')
+
+def project(name, refs, packages=(), extra='', properties=''):
+    write(f'src/FlashMacOS.{name}/FlashMacOS.{name}.csproj',
+          '<Project Sdk="Microsoft.NET.Sdk">\n' + properties + '  <ItemGroup>\n' +
+          ''.join(f'    <ProjectReference Include="../FlashMacOS.{r}/FlashMacOS.{r}.csproj" />\n' for r in refs) +
+          ''.join(f'    <PackageReference Include="{p}" />\n' for p in packages) +
+          '  </ItemGroup>\n' + extra + '</Project>\n')
+    write(f'src/FlashMacOS.{name}/GlobalUsings.cs', '''global using FlashMacOS.Domain.Browser;
+global using FlashMacOS.Domain.Flash;
+global using FlashMacOS.Domain.Sol;
+global using FlashMacOS.Application.Browser;
+global using FlashMacOS.Application.Flash;
+''')
+
+# Application keeps orchestration; JavaScript and file-system implementation are ports.
+write('src/FlashMacOS.Application/Flash/IRuffleScriptBuilder.cs', '''namespace FlashMacOS.Application.Flash;
+
+public enum PlayerCommand { Pause, Resume, Reload, Fullscreen, Volume }
+
+public interface IRuffleScriptBuilder
+{
+    string CaptureSaves();
+    string ReplaceSave(string key, string base64);
+    string DeleteSave(string key);
+    string Control(PlayerCommand command, double volume = 1);
+}
+''')
+s = transform((CORE / 'Application/Navigation/NavigationResolver.cs').read_text())
+s = 'using FlashMacOS.Application.Files;\n' + s
+s = s.replace('public static bool IsLocalFileWithExtension(string? path, string extension)',
+              'public static async ValueTask<bool> IsLocalFileWithExtensionAsync(string? path, string extension, IFileAccess files, CancellationToken cancellationToken = default)')
+s = s.replace('&& File.Exists(path);', '&& await files.ExistsAsync(path, cancellationToken).ConfigureAwait(false);')
+write('src/FlashMacOS.Application/Navigation/NavigationResolver.cs', s, CORE / 'Application/Navigation/NavigationResolver.cs', 'A01 preserve resolution semantics; asynchronous file existence via Application port')
+s = transform((CORE / 'Infrastructure/Paths/AppPaths.cs').read_text()).split('public sealed class MacAppPaths', 1)[0]
+s = s.replace('FlashMacOS.Infrastructure.Paths', 'FlashMacOS.Application.Paths')
+write('src/FlashMacOS.Application/Paths/IAppPaths.cs', s, CORE / 'Infrastructure/Paths/AppPaths.cs', 'A01 own path port in Application; exclude unused legacy data-directory implementation')
+
+original = (CORE / 'Flash/Ruffle/RufflePlayerCoordinator.cs').read_text()
+s = transform(original).replace('using FlashMacOS.Flash.Ruffle.Hosting;', 'using FlashMacOS.Application.Flash;')
+s = s.replace('using FlashMacOS.Infrastructure.Persistence;', 'using FlashMacOS.Application.Files;')
+s = s.replace('using FlashMacOS.Sol.Managed;', 'using FlashMacOS.Application.Sol;')
+s = s.replace('namespace FlashMacOS.Flash.Ruffle.Runtime;', 'namespace FlashMacOS.Application.Flash;')
+s = s.replace('using System.Globalization;\n', '')
+s = s.replace('    private readonly IRuffleSaveStore _saveStore;', '''    private readonly IRuffleSaveStore _saveStore;
+    private readonly IRuffleScriptBuilder _scripts;
+    private readonly ISolHeaderInspector _inspector;
+    private readonly IFileAccess _files;''')
+s = s.replace('        IRuffleSaveStore saveStore)', '''        IRuffleSaveStore saveStore,
+        IRuffleScriptBuilder scripts,
+        ISolHeaderInspector inspector,
+        IFileAccess files)''')
+s = s.replace('        _saveStore = saveStore;', '''        _saveStore = saveStore;
+        _scripts = scripts ?? throw new ArgumentNullException(nameof(scripts));
+        _inspector = inspector ?? throw new ArgumentNullException(nameof(inspector));
+        _files = files ?? throw new ArgumentNullException(nameof(files));''')
+s = s.replace('RuffleAssetManifest.Version', '_contentHost.RuntimeVersion')
+capture_start = s.index('        const string script = """')
+capture_end = s.index('        _ = await _browser.ExecuteScriptAsync', capture_start)
+capture_literal = s[capture_start:capture_end].replace('        const string script = ', '        return ', 1)
+s = s[:capture_start] + '        var script = _scripts.CaptureSaves();\n' + s[capture_end:]
+a = s.index('        var fileInfo = new FileInfo(sourcePath);')
+b = s.index('        var header = SolFileInspector.ReadHeader(bytes);', a)
+s = s[:a] + '        var bytes = await _files.ReadBoundedAsync(sourcePath, MaxSaveBytes, cancellationToken).ConfigureAwait(false);\n' + s[b:]
+s = s.replace('SolFileInspector.ReadHeader', '_inspector.ReadHeader').replace('AtomicFileWriter.WriteAsync', '_files.WriteAtomicAsync')
+replace_start = s.index('        var script = $$"""')
+replace_end = s.index('        _ = await _browser.ExecuteScriptAsync', replace_start)
+replace_literal = s[replace_start:replace_end].replace('        var script = ', '        return ', 1)
+s = s[:replace_start] + '        var script = _scripts.ReplaceSave(key, base64);\n' + s[replace_end:]
+delete_start = s.index('        var script = $$"""')
+delete_end = s.index('        _ = await _browser.ExecuteScriptAsync', delete_start)
+delete_literal = s[delete_start:delete_end].replace('        var script = ', '        return ', 1).replace('entry.Key', 'key')
+s = s[:delete_start] + '        var script = _scripts.DeleteSave(entry.Key);\n' + s[delete_end:]
+a = s.index('    public ValueTask PauseAsync(')
+b = s.index('    public ValueTask DisposeAsync()', a)
+s = s[:a] + '''    public ValueTask PauseAsync(CancellationToken cancellationToken = default)
+        => ExecutePlayerCommandAsync(PlayerCommand.Pause, cancellationToken);
+
+    public ValueTask ResumeAsync(CancellationToken cancellationToken = default)
+        => ExecutePlayerCommandAsync(PlayerCommand.Resume, cancellationToken);
+
+    public ValueTask ReloadAsync(CancellationToken cancellationToken = default)
+        => ExecutePlayerCommandAsync(PlayerCommand.Reload, cancellationToken);
+
+    public ValueTask RequestFullscreenAsync(CancellationToken cancellationToken = default)
+        => ExecutePlayerCommandAsync(PlayerCommand.Fullscreen, cancellationToken);
+
+    public ValueTask SetVolumeAsync(double volume, CancellationToken cancellationToken = default)
+        => ExecutePlayerCommandAsync(PlayerCommand.Volume, cancellationToken, Math.Clamp(volume, 0d, 1d));
+
+''' + s[b:]
+a = s.index('    private async ValueTask ExecutePlayerCommandAsync(')
+b = s.index('    private void OnBridgeMessageReceived', a)
+control_original = transform(original)[transform(original).index('    private static string BuildSerializablePlayerCommand'):transform(original).index('    private void OnBridgeMessageReceived')]
+s = s[:a] + '''    private async ValueTask ExecutePlayerCommandAsync(
+        PlayerCommand command, CancellationToken cancellationToken, double volume = 1)
+    {
+        ThrowIfDisposed();
+        _ = await _browser.ExecuteScriptAsync(_scripts.Control(command, volume), cancellationToken).ConfigureAwait(false);
+    }
+
+''' + s[b:]
+# Namespace splitting can produce repeated usings; preserve one of each.
+lines = s.splitlines(keepends=True)
+seen = set()
+s = ''.join(line for line in lines if not line.startswith('using ') or not (line in seen or seen.add(line)))
+write('src/FlashMacOS.Application/Flash/RufflePlayerCoordinator.cs', s, CORE / 'Flash/Ruffle/RufflePlayerCoordinator.cs', 'A01 use-case orchestration through script/codec/file ports; command strings and event ordering retained')
+
+project('Infrastructure', ['Domain', 'Application'])
+copy('src/FlashMacOS.Infrastructure/Persistence/AtomicFileWriter.cs', CORE / 'Infrastructure/Persistence/AtomicFileWriter.cs')
+copy('src/FlashMacOS.Infrastructure/Paths/TestProfile.cs', CORE / 'Infrastructure/Paths/TestProfile.cs', lambda s: 'using FlashMacOS.Application.Paths;\n' + s)
+copy('src/FlashMacOS.Infrastructure/Paths/BundleResourceLocator.cs', DESKTOP / 'Platform/MacOS/BundleResourceLocator.cs', lambda s: s.replace('namespace FlashMacOS.Browser.WebKit;', 'namespace FlashMacOS.Infrastructure.Paths;').replace('internal static class', 'public static class'))
+for name in ('GateZeroSessionJournal', 'CompatibilityEvidenceRecorder'):
+    copy(f'src/FlashMacOS.Infrastructure/Diagnostics/{name}.cs', DESKTOP / f'Diagnostics/{name}.cs')
+s = transform((CORE / 'Flash/Storage/RuffleSaveStore.cs').read_text())
+s = s[:s.index('public sealed record RuffleSaveEntry')] + s[s.index('public sealed class JsonRuffleSaveStore'):]
+s = s.replace('namespace FlashMacOS.Application.Flash;', 'namespace FlashMacOS.Infrastructure.Persistence;')
+s = s.replace('using FlashMacOS.Sol.Managed;', 'using FlashMacOS.Application.Sol;')
+s = s.replace('    private readonly string _path;', '    private readonly string _path;\n    private readonly ISolHeaderInspector _inspector;')
+s = s.replace('JsonRuffleSaveStore(string path)', 'JsonRuffleSaveStore(string path, ISolHeaderInspector inspector)')
+s = s.replace('        _path = Path.GetFullPath(path);', '        _path = Path.GetFullPath(path);\n        _inspector = inspector ?? throw new ArgumentNullException(nameof(inspector));')
+s = s.replace('SolFileInspector.ReadHeader', '_inspector.ReadHeader').replace('private static RuffleSaveEntry ToEntry', 'private RuffleSaveEntry ToEntry').replace('private static byte[] DecodeAndValidate', 'private byte[] DecodeAndValidate')
+write('src/FlashMacOS.Infrastructure/Persistence/JsonRuffleSaveStore.cs', s, CORE / 'Flash/Storage/RuffleSaveStore.cs', 'A01 relocate JSON persistence; validate through codec port instead of adapter-to-adapter reference; transaction changes reserved for A03')
+write('src/FlashMacOS.Infrastructure/Persistence/LocalFileAccess.cs', '''using FlashMacOS.Application.Files;
+
+namespace FlashMacOS.Infrastructure.Persistence;
+
+public sealed class LocalFileAccess : IFileAccess
+{
+    public async ValueTask<bool> ExistsAsync(string path, CancellationToken cancellationToken = default)
+        => await Task.Run(() => File.Exists(path), cancellationToken).ConfigureAwait(false);
+
+    public async ValueTask<byte[]> ReadBoundedAsync(string path, int maximumBytes, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(maximumBytes);
+        return await Task.Run(async () =>
+        {
+            await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+                64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
+            if (stream.Length > maximumBytes) throw new InvalidDataException($"The file exceeds {maximumBytes} bytes.");
+            var bytes = new byte[checked((int)stream.Length)];
+            await stream.ReadExactlyAsync(bytes, cancellationToken).ConfigureAwait(false);
+            if (await stream.ReadAsync(new byte[1], cancellationToken).ConfigureAwait(false) != 0)
+                throw new InvalidDataException("The file grew while it was being read.");
+            return bytes;
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async ValueTask WriteAtomicAsync(string path, Func<Stream, CancellationToken, ValueTask> write,
+        CancellationToken cancellationToken = default)
+        => await Task.Run(async () => await AtomicFileWriter.WriteAsync(path, write, cancellationToken).ConfigureAwait(false),
+            cancellationToken).ConfigureAwait(false);
+}
+''')
+
+project('Flash.Ruffle', ['Domain', 'Application'], extra='''  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <EmbeddedResource Include="Hosting/CompatibilityRunner.js" />
+    <EmbeddedResource Include="Runtime/MoleCompatibility.js" />
+    <EmbeddedResource Include="Runtime/RuffleStorageReload.js" />
+  </ItemGroup>
+''')
+for name in ('LoopbackContentHost.cs', 'CompatibilityContentHost.cs', 'CompatibilityRunner.js', 'PathSafety.cs'):
+    source = CORE / 'Flash/Hosting' / name
+    def edit(s):
+        s = s.replace('Ruffle.RuffleDocumentStartScriptBuilder', 'Runtime.RuffleDocumentStartScriptBuilder')
+        if 'class LoopbackContentHost' in s:
+            s = s.replace('    public Uri? BaseUri', '    public string RuntimeVersion => RuffleAssetManifest.Version;\n\n    public Uri? BaseUri', 1)
+        return s
+    copy('src/FlashMacOS.Flash.Ruffle/Hosting/' + name, source, edit if name.endswith('.cs') else None, raw=name.endswith('.js'))
+for name in ('RuffleAssetManifest.cs', 'RuffleDocumentStartScriptBuilder.cs', 'MoleCompatibility.js', 'RuffleStorageReload.js'):
+    copy('src/FlashMacOS.Flash.Ruffle/Runtime/' + name, CORE / 'Flash/Ruffle' / name, raw=name.endswith('.js'))
+copy('src/FlashMacOS.Flash.Ruffle/Runtime/DocumentStartScriptSource.cs', DESKTOP / 'Browser/DocumentStartScriptSource.cs', lambda s: s.replace('namespace FlashMacOS.Browser.WebKit;', 'namespace FlashMacOS.Flash.Ruffle.Runtime;').replace('using FlashMacOS.Flash.Ruffle.Hosting;', 'using FlashMacOS.Application.Flash;'))
+write('src/FlashMacOS.Flash.Ruffle/Runtime/RuffleScriptBuilder.cs', '''using System.Globalization;
+using System.Text.Json;
+using FlashMacOS.Application.Flash;
+
+namespace FlashMacOS.Flash.Ruffle.Runtime;
+
+public sealed class RuffleScriptBuilder : IRuffleScriptBuilder
+{
+    public string CaptureSaves()
+    {
+''' + capture_literal + '''    }
+
+    public string ReplaceSave(string key, string base64)
+    {
+''' + replace_literal + '''    }
+
+    public string DeleteSave(string key)
+    {
+''' + delete_literal + '''    }
+
+    public string Control(PlayerCommand command, double volume = 1)
+    {
+        var expression = command switch
+        {
+            PlayerCommand.Pause => "api.suspend()",
+            PlayerCommand.Resume => "api.resume()",
+            PlayerCommand.Reload => "api.reload()",
+            PlayerCommand.Fullscreen => "api.requestFullscreen()",
+            PlayerCommand.Volume => $"api.volume = {Math.Clamp(volume, 0d, 1d).ToString("R", CultureInfo.InvariantCulture)}",
+            _ => throw new ArgumentOutOfRangeException(nameof(command)),
+        };
+        return BuildSerializablePlayerCommand(expression);
+    }
+
+''' + control_original + '}\n', CORE / 'Flash/Ruffle/RufflePlayerCoordinator.cs', 'A01 move exact legacy JavaScript into Ruffle adapter; stable wire globals, return values and deferred storage mutation')
+write('src/FlashMacOS.Flash.Ruffle/Properties/AssemblyInfo.cs', 'using System.Runtime.CompilerServices;\n[assembly: InternalsVisibleTo("FlashMacOS.IntegrationTests")]\n')
+for directory in ('Ruffle', 'Fixtures'):
+    for source in sorted((DESKTOP / 'Assets' / directory).rglob('*')):
+        if source.is_file():
+            copy('src/FlashMacOS.Flash.Ruffle/Assets/' + str(source.relative_to(DESKTOP / 'Assets')), source, raw=True)
+for source in sorted((ROOT / 'bootstrap/legacy/CefFlashBrowser.Tests/TestData').glob('*.sol')):
+    copy('test-assets/legacy-sol/' + source.name, source, raw=True)
+
+project('Browser.WebKit', ['Domain', 'Application'], ['Avalonia', 'Avalonia.Controls.WebView'], properties='  <PropertyGroup><AllowUnsafeBlocks>true</AllowUnsafeBlocks></PropertyGroup>\n')
+copy('src/FlashMacOS.Browser.WebKit/IDocumentStartInjector.cs', DESKTOP / 'Browser/IDocumentStartInjector.cs')
+copy('src/FlashMacOS.Browser.WebKit/WebBridgeProtocol.cs', CORE / 'Application/Browser/WebBridgeProtocol.cs', lambda s: s.replace('namespace FlashMacOS.Application.Browser;', 'namespace FlashMacOS.Browser.WebKit;'))
+for name in ('MacDocumentStartInjector', 'MacWebViewSnapshot'):
+    copy(f'src/FlashMacOS.Browser.WebKit/{name}.cs', DESKTOP / f'Platform/MacOS/{name}.cs')
+copy('src/FlashMacOS.Browser.WebKit/Diagnostics/NativePageProbe.cs', DESKTOP / 'Diagnostics/NativePageProbe.cs', lambda s: s.replace('namespace FlashMacOS.Infrastructure.Diagnostics;', 'namespace FlashMacOS.Browser.WebKit.Diagnostics;'))
+s = transform((DESKTOP / 'Browser/AvaloniaNativeWebViewSession.cs').read_text())
+s = s.replace('using FlashMacOS.Flash.Ruffle.Runtime;\n', '').replace('using FlashMacOS.Infrastructure.Persistence;', 'using FlashMacOS.Application.Files;')
+s = s.replace('    private readonly Guid _dataStoreIdentifier;', '    private readonly Guid _dataStoreIdentifier;\n    private readonly IFileAccess _files;')
+s = s.replace('        Guid dataStoreIdentifier,', '        Guid dataStoreIdentifier,\n        IFileAccess files,')
+s = s.replace('        _dataStoreIdentifier = dataStoreIdentifier;', '        _dataStoreIdentifier = dataStoreIdentifier;\n        _files = files ?? throw new ArgumentNullException(nameof(files));')
+s = s.replace('AtomicFileWriter.WriteAsync', '_files.WriteAtomicAsync').replace('RuffleDocumentStartScriptBuilder.DefaultBridgeName', 'WebBridgeNames.DefaultHandler')
+write('src/FlashMacOS.Browser.WebKit/AvaloniaNativeWebViewSession.cs', s, DESKTOP / 'Browser/AvaloniaNativeWebViewSession.cs', 'A01 WK owner adapter uses Application file port/bridge name; no sibling adapter dependency')
+
+write('docs/provenance/A01-adapter-import.json', json.dumps({'schemaVersion': 1, 'stage': 'ports-and-adapters', 'files': entries}, ensure_ascii=False, indent=2) + '\n')
+print('Created formal ports/adapters; files:', len(entries))

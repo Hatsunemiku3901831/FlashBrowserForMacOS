@@ -1,0 +1,53 @@
+using FlashMacOS.Application.Browser;
+using FlashMacOS.Browser.WebKit;
+
+namespace FlashMacOS.Browser.WebKit.Diagnostics;
+
+public static class NativePageProbe
+{
+    public static async Task CaptureAsync(IBrowserSession browser, string profileRoot, CancellationToken cancellationToken)
+    {
+        var rawCount = Environment.GetEnvironmentVariable("FLASHMACOS_NATIVE_CAPTURE_COUNT");
+        var captureCount = 6;
+        if (rawCount is not null && (!int.TryParse(rawCount, System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture, out captureCount) || captureCount is < 1 or > 120))
+            throw new ArgumentException("Native diagnostic capture count must be between 1 and 120.");
+        var directory = Path.Combine(profileRoot, "native-inspections",
+            $"{DateTimeOffset.UtcNow:yyyyMMddTHHmmssfffZ}-{Environment.ProcessId}-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(Path.Combine(directory, "run.json"), System.Text.Json.JsonSerializer.Serialize(new
+        {
+            profileRoot, processId = Environment.ProcessId, startedAt = DateTimeOffset.UtcNow,
+            captureCount, intervalSeconds = 10,
+        }), cancellationToken).ConfigureAwait(false);
+        const string script = """
+            JSON.stringify({ capturedAt: new Date().toISOString(), url: location.href, title: document.title,
+              navigationId:window.__flashMacOSNavigationId, runId:window.__flashMacOSRunId,
+              readyState: document.readyState, html: document.documentElement?.outerHTML,
+              viewport: {width:innerWidth,height:innerHeight,devicePixelRatio,scrollX,scrollY},
+              plugins: [...navigator.plugins].map(p => ({name:p.name,description:p.description})),
+              frames: [...document.querySelectorAll('iframe')].map(f => ({src:f.src})),
+              flash: [...document.querySelectorAll('object,embed,ruffle-object,ruffle-embed,ruffle-player')].map(e => {
+                const rect=e.getBoundingClientRect();
+                const result = {tag:e.tagName,id:e.id,html:e.outerHTML,shadow:e.shadowRoot?.innerHTML,
+                  rect:{x:rect.x,y:rect.y,width:rect.width,height:rect.height}};
+                try { const api=e.ruffle?.(1);result.metadata=api?.metadata;result.isPlaying=api?.isPlaying; } catch(error) { result.apiError=String(error); }
+                try { const canvas=e.shadowRoot?.querySelector('canvas');if(canvas){result.canvasDimensions=[canvas.width,canvas.height];result.rendererPng=canvas.toDataURL('image/png');} } catch(error) { result.captureError=String(error); }
+                return result;
+              }),
+              resources: performance.getEntriesByType('resource').map(r=>({url:r.name,duration:r.duration,transferSize:r.transferSize})) })
+            """;
+        var path = Path.Combine(directory, "page-inspection.jsonl");
+        for (var attempt = 0; attempt < captureCount; attempt++)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken).ConfigureAwait(false);
+            var value = await browser.ExecuteScriptAsync(script, cancellationToken).ConfigureAwait(false);
+            await File.AppendAllTextAsync(path, value + Environment.NewLine, cancellationToken).ConfigureAwait(false);
+            if (browser is AvaloniaNativeWebViewSession native)
+            {
+                var png = await native.CaptureDiagnosticSnapshotAsync(cancellationToken).ConfigureAwait(false);
+                await File.WriteAllBytesAsync(Path.Combine(directory, $"native-snapshot-{attempt}.png"), png, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+}

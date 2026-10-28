@@ -1,0 +1,185 @@
+using FlashMacOS.Application.Sol;
+
+namespace FlashMacOS.Sol.Managed;
+
+internal sealed partial class AmfReadContext
+{
+    private readonly List<string> _strings3 = [];
+    private readonly List<(AmfNodeId Id, AmfNodeKind Kind)> _objects3 = [];
+    private readonly List<AmfTraits> _traits3 = [];
+
+    public uint ReadU29()
+    {
+        uint value = 0;
+        for (var i = 0; i < 3; i++)
+        {
+            var next = ReadByte(); value = (value << 7) | (uint)(next & 0x7f);
+            if ((next & 0x80) == 0) return value;
+        }
+        return (value << 8) | ReadByte();
+    }
+    private string ReadString3()
+    {
+        var header = ReadU29();
+        if ((header & 1) == 0)
+        {
+            var index = header >> 1;
+            if (index >= _strings3.Count) throw Error("InvalidStringReference", "AMF3 string reference is out of range.");
+            return _strings3[(int)index];
+        }
+        var length = (int)(header >> 1);
+        if (length == 0) return "";
+        CountItems(1); var text = ReadUtf8(length); _strings3.Add(text); return text;
+    }
+    private AmfNodeId ReserveObject3(AmfNodeKind kind)
+    { var id = ReserveNode(); _objects3.Add((id, kind)); return id; }
+    private AmfReference Reference3(uint index, AmfNodeKind kind, int offset, byte marker)
+    {
+        if (index >= _objects3.Count) throw Error("InvalidObjectReference", "AMF3 object reference is out of range.", offset, marker);
+        var item = _objects3[(int)index];
+        if (item.Kind != kind) throw Error("ReferenceTypeMismatch", "AMF3 reference marker does not match the referenced node type.", offset, marker);
+        return new(item.Id);
+    }
+    public AmfValue ReadAmf3(int depth, IReadOnlyDictionary<string, AmfExternalRegistration> registry)
+    {
+        var previous = Encoding; Encoding = SolEncoding.Amf3;
+        try
+        {
+            CountValue(depth); var offset = Position; var marker = ReadByte();
+            switch (marker)
+            {
+                case 0: return AmfUndefined.Instance;
+                case 1: return AmfNull.Instance;
+                case 2: return new AmfBoolean(false);
+                case 3: return new AmfBoolean(true);
+                case 4:
+                    var integer = ReadU29();
+                    return new AmfInteger((integer & 0x10000000) == 0 ? (int)integer : unchecked((int)(integer | 0xe0000000)));
+                case 5: return ReadNumber();
+                case 6: return new AmfString(ReadString3());
+                case 0x0a: return ReadObject3(depth, offset, registry);
+                case 7: case 8: case 9: case 0x0b: case 0x0c: case 0x0d: case 0x0e: case 0x0f: case 0x10: case 0x11:
+                    return ReadComplex3(marker, offset, depth, registry);
+                default: throw Error("UnsupportedMarker", "Unknown AMF3 marker.", offset, marker);
+            }
+        }
+        finally { Encoding = previous; }
+    }
+    private AmfReference ReadObject3(int depth, int offset, IReadOnlyDictionary<string, AmfExternalRegistration> registry)
+    {
+        var header = ReadU29();
+        if ((header & 1) == 0) return Reference3(header >> 1, AmfNodeKind.Object, offset, 0x0a);
+        var id = ReserveObject3(AmfNodeKind.Object);
+        AmfTraits traits;
+        if ((header & 2) == 0)
+        {
+            var index = header >> 2;
+            if (index >= _traits3.Count) throw Error("InvalidTraitReference", "AMF3 trait reference is out of range.", offset, 0x0a);
+            traits = _traits3[(int)index];
+        }
+        else
+        {
+            var externalizable = (header & 4) != 0; var dynamic = !externalizable && (header & 8) != 0;
+            // In the externalizable production all upper header bits are explicitly insignificant.
+            var count = externalizable ? 0 : CheckCount(header >> 4, 1);
+            CountItems(1); var className = ReadString3(); var names = new List<string>(count);
+            for (var i = 0; i < count; i++) names.Add(ReadString3());
+            traits = new AmfTraits(className, dynamic, names, externalizable); _traits3.Add(traits);
+        }
+        if (traits.IsExternalizable)
+        {
+            if (!registry.TryGetValue(traits.ClassName, out var registration))
+                throw Error("UnknownExternalizable", "No registered codec for class " + traits.ClassName, offset, 0x0a);
+            AmfValue data;
+            try { data = registration.Codec.Read(new ExternalInput(this, registry, depth)); }
+            catch (Exception error) when (Amf3ValueCodec.IsLayoutFailure(error))
+            { throw new AmfFormatException("ExternalCodecFailure", SolEncoding.Amf3, offset, 0x0a, "Registered class codec rejected its layout.", error); }
+            if (data is null) throw Error("InvalidExternalData", "Registered codec returned C# null.", offset, 0x0a);
+            return Complete(new AmfObjectNode(id, traits, externalData: data, externalCodecId: registration.CodecId));
+        }
+        CheckCount((uint)traits.SealedNames.Count, 1);
+        var values = new List<AmfValue>(traits.SealedNames.Count);
+        for (var i = 0; i < traits.SealedNames.Count; i++) values.Add(ReadAmf3(depth + 1, registry));
+        var properties = new List<AmfProperty>();
+        if (traits.IsDynamic)
+        {
+            while (true)
+            {
+                var name = ReadString3(); if (name.Length == 0) break;
+                properties.Add(new(name, ReadAmf3(depth + 1, registry)));
+            }
+        }
+        return Complete(new AmfObjectNode(id, traits, values, properties));
+    }
+    private AmfReference ReadComplex3(byte marker, int offset, int depth, IReadOnlyDictionary<string, AmfExternalRegistration> registry)
+    {
+        var kind = marker switch
+        { 7 => AmfNodeKind.XmlDocument, 8 => AmfNodeKind.Date, 9 => AmfNodeKind.Array, 0x0b => AmfNodeKind.Xml,
+          0x0c => AmfNodeKind.ByteArray, 0x0d => AmfNodeKind.VectorInt, 0x0e => AmfNodeKind.VectorUInt,
+          0x0f => AmfNodeKind.VectorNumber, 0x10 => AmfNodeKind.VectorObject, _ => AmfNodeKind.Dictionary };
+        var header = ReadU29();
+        if ((header & 1) == 0) return Reference3(header >> 1, kind, offset, marker);
+        var id = ReserveObject3(kind); var length = header >> 1;
+        switch (marker)
+        {
+            case 7: case 0x0b: return Complete(new AmfXmlNode(id, ReadUtf8((int)length), marker == 7));
+            case 8:
+                // AMF3 3.10: only bit zero is significant for an inline date.
+                return Complete(new AmfDateNode(id, ReadNumber()));
+            case 9:
+                var count = CheckCount(length, 1); var associative = new List<AmfProperty>();
+                while (true)
+                {
+                    var name = ReadString3(); if (name.Length == 0) break;
+                    associative.Add(new(name, ReadAmf3(depth + 1, registry)));
+                }
+                CheckCount(length, 1); var dense = new List<AmfValue>(count);
+                for (var i = 0; i < count; i++) dense.Add(ReadAmf3(depth + 1, registry));
+                return Complete(new AmfArrayNode(id, AmfArrayKind.Amf3Mixed, dense, associative));
+            case 0x0c:
+                Require((int)length);
+                var binary = new AmfByteArrayNode(id, _source.Span.Slice(Position, (int)length)); Position += (int)length;
+                return Complete(binary);
+            case 0x0d:
+                var fixedVector = ReadFlag3(); count = CheckCount(length, 4); CountItems(count);
+                var ints = new int[count]; for (var i = 0; i < count; i++) ints[i] = unchecked((int)ReadUInt32());
+                return Complete(new AmfVectorIntNode(id, ints, fixedVector));
+            case 0x0e:
+                fixedVector = ReadFlag3(); count = CheckCount(length, 4); CountItems(count);
+                var uints = new uint[count]; for (var i = 0; i < count; i++) uints[i] = ReadUInt32();
+                return Complete(new AmfVectorUIntNode(id, uints, fixedVector));
+            case 0x0f:
+                fixedVector = ReadFlag3(); count = CheckCount(length, 8); CountItems(count);
+                var numbers = new AmfNumber[count]; for (var i = 0; i < count; i++) numbers[i] = ReadNumber();
+                return Complete(new AmfVectorNumberNode(id, numbers, fixedVector));
+            case 0x10:
+                fixedVector = ReadFlag3(); var typeName = ReadString3(); count = CheckCount(length, 1);
+                var objects = new AmfValue[count]; for (var i = 0; i < count; i++) objects[i] = ReadAmf3(depth + 1, registry);
+                return Complete(new AmfVectorObjectNode(id, objects, fixedVector, typeName));
+            default:
+                var weakKeys = ReadFlag3(); count = CheckCount(length, 2, 2); var entries = new AmfDictionaryEntry[count];
+                for (var i = 0; i < count; i++) entries[i] = new(ReadAmf3(depth + 1, registry), ReadAmf3(depth + 1, registry));
+                return Complete(new AmfDictionaryNode(id, entries, weakKeys));
+        }
+    }
+    private bool ReadFlag3()
+    {
+        var value = ReadByte();
+        if (value > 1) throw Error("InvalidFlag", "AMF3 fixed/weak flag must be zero or one.", Position - 1);
+        return value != 0;
+    }
+    private sealed class ExternalInput(AmfReadContext owner, IReadOnlyDictionary<string, AmfExternalRegistration> registry, int depth) : IAmfExternalInput
+    {
+        public AmfValue ReadValue() => owner.ReadAmf3(depth + 1, registry);
+        public byte ReadByte() => owner.ReadByte();
+        public uint ReadUInt32() => owner.ReadUInt32();
+        public string ReadUtf8(int length) => owner.ReadUtf8(length);
+        public ReadOnlyMemory<byte> ReadBytes(int length) => owner.ReadBytes(length);
+        public AmfReference AddNode(Func<AmfNodeId, AmfNode> create)
+        {
+            ArgumentNullException.ThrowIfNull(create); var id = owner.ReserveNode(); var node = create(id);
+            if (node is null || node.Id != id) throw owner.Error("InvalidExternalData", "Registered codec returned null or a different node ID.");
+            return owner.Complete(node);
+        }
+    }
+}

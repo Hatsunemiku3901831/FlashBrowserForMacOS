@@ -1,0 +1,11 @@
+namespace FlashMacOS.Domain.Flash;
+using FlashMacOS.Domain.Sol;
+
+public sealed record RuffleSaveEntry(
+    string Key,
+    string Base64Data,
+    string SolName,
+    SolEncoding Encoding,
+    int ByteLength,
+    DateTimeOffset UpdatedAt);
+

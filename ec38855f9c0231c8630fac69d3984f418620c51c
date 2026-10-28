@@ -1,0 +1,102 @@
+using System.Collections.ObjectModel;
+
+namespace FlashMacOS.Domain.Sol;
+
+#pragma warning disable CA1720 // AMF specifications use these exact type names.
+public enum AmfValueKind { Undefined, Null, Boolean, Integer, Number, String, Reference, AvmPlus, Unsupported }
+public enum AmfNodeKind { Object, Array, Date, XmlDocument, Xml, ByteArray, VectorInt, VectorUInt, VectorNumber, VectorObject, Dictionary }
+#pragma warning restore CA1720
+public enum AmfArrayKind { Amf0Strict, Amf0Ecma, Amf3Mixed }
+public enum AmfObjectKind { Amf0Object, Amf0TypedObject, Amf3Object }
+
+public readonly record struct AmfNodeId
+{
+    public AmfNodeId(int value) { ArgumentOutOfRangeException.ThrowIfNegative(value); Value = value; }
+    public int Value { get; }
+}
+
+public abstract record AmfValue
+{
+    public abstract AmfValueKind Kind { get; }
+}
+public sealed record AmfUndefined : AmfValue
+{
+    public static AmfUndefined Instance { get; } = new();
+    public override AmfValueKind Kind => AmfValueKind.Undefined;
+}
+public sealed record AmfNull : AmfValue
+{
+    public static AmfNull Instance { get; } = new();
+    public override AmfValueKind Kind => AmfValueKind.Null;
+}
+public sealed record AmfBoolean(bool Value) : AmfValue { public override AmfValueKind Kind => AmfValueKind.Boolean; }
+// Int32 is retained in the model; codecs must report an out-of-range AMF3 signed-U29 conversion.
+public sealed record AmfInteger(int Value) : AmfValue { public override AmfValueKind Kind => AmfValueKind.Integer; }
+public sealed record AmfNumber : AmfValue
+{
+    public AmfNumber(double value) => RawBits = BitConverter.DoubleToInt64Bits(value);
+    public long RawBits { get; private init; }
+    public double Value => BitConverter.Int64BitsToDouble(RawBits);
+    public static AmfNumber FromBits(long bits) => new(0d) { RawBits = bits };
+    public override AmfValueKind Kind => AmfValueKind.Number;
+}
+public sealed record AmfString : AmfValue
+{
+    public AmfString(string value) => Value = value ?? throw new ArgumentNullException(nameof(value));
+    public string Value { get; }
+    public override AmfValueKind Kind => AmfValueKind.String;
+}
+public sealed record AmfReference(AmfNodeId Target) : AmfValue { public override AmfValueKind Kind => AmfValueKind.Reference; }
+public sealed record AmfAvmPlus : AmfValue
+{
+    public AmfAvmPlus(AmfValue value) => Value = value ?? throw new ArgumentNullException(nameof(value));
+    public AmfValue Value { get; }
+    public override AmfValueKind Kind => AmfValueKind.AvmPlus;
+}
+public sealed record AmfUnsupported(SolEncoding Encoding, byte Marker, long Offset, string Reason) : AmfValue
+{ public override AmfValueKind Kind => AmfValueKind.Unsupported; }
+public sealed record AmfProperty
+{
+    public AmfProperty(string name, AmfValue value)
+    { Name = name ?? throw new ArgumentNullException(nameof(name)); Value = value ?? throw new ArgumentNullException(nameof(value)); }
+    public string Name { get; }
+    public AmfValue Value { get; }
+}
+public sealed record AmfDictionaryEntry
+{
+    public AmfDictionaryEntry(AmfValue key, AmfValue value)
+    { Key = key ?? throw new ArgumentNullException(nameof(key)); Value = value ?? throw new ArgumentNullException(nameof(value)); }
+    public AmfValue Key { get; }
+    public AmfValue Value { get; }
+}
+
+public sealed record AmfLimits(int MaximumFileBytes = 64 * 1024 * 1024, int MaximumDepth = 256,
+    int MaximumNodes = 1_000_000, int MaximumElements = 1_000_000)
+{
+    public static AmfLimits Default { get; } = new();
+    public void Validate()
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaximumFileBytes);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaximumDepth);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaximumNodes);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaximumElements);
+        if (MaximumFileBytes > Default.MaximumFileBytes || MaximumDepth > Default.MaximumDepth ||
+            MaximumNodes > Default.MaximumNodes || MaximumElements > Default.MaximumElements)
+            throw new ArgumentOutOfRangeException(nameof(MaximumFileBytes), "Configured AMF limits may tighten the product ceilings, not exceed them.");
+    }
+}
+
+internal static class AmfCollections
+{
+    public static ReadOnlyCollection<T> Freeze<T>(IEnumerable<T> values, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (cancellationToken.CanBeCanceled) values = values.Select(value => { cancellationToken.ThrowIfCancellationRequested(); return value; });
+        var copy = values.Take(AmfLimits.Default.MaximumElements + 1).ToArray();
+        cancellationToken.ThrowIfCancellationRequested();
+        if (copy.Length > AmfLimits.Default.MaximumElements) throw new ArgumentException("AMF collection exceeds its model bound.", nameof(values));
+        if (copy.Any(item => item is null)) throw new ArgumentException("AMF collections cannot contain C# null.", nameof(values));
+        return Array.AsReadOnly(copy);
+    }
+}

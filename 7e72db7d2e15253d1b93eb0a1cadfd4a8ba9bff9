@@ -1,0 +1,22 @@
+/* Ruffle v1 load() starts streaming; only loadedmetadata/metadata establish a usable movie. */
+(() => {
+  const pending = new Set();
+  let closed = false;
+  globalThis.__flashMacOSWaitForMetadata = (player, api, signal) => {
+    if (closed || signal?.aborted) return Promise.reject(new DOMException("Player load cancelled", "AbortError"));
+    if (api.metadata) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const finish = error => {
+        clearTimeout(timer); player.removeEventListener("loadedmetadata", loaded);
+        signal?.removeEventListener("abort", cancelled); pending.delete(cancelled);
+        error ? reject(error) : resolve();
+      };
+      const loaded = () => finish();
+      const cancelled = () => finish(new DOMException("Player load cancelled", "AbortError"));
+      const timer = setTimeout(() => finish(new Error("Ruffle did not load valid SWF metadata within 15 seconds. The file may be invalid or unavailable.")), 15000);
+      pending.add(cancelled); player.addEventListener("loadedmetadata", loaded, {once:true});
+      signal?.addEventListener("abort", cancelled, {once:true});
+    });
+  };
+  globalThis.addEventListener("pagehide", () => { closed = true; for (const cancel of [...pending]) cancel(); }, {once:true});
+})();

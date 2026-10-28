@@ -1,0 +1,85 @@
+namespace FlashMacOS.Domain.Configuration;
+
+public enum Theme { Light, Dark }
+public enum SearchEngine { Baidu, Google, Bing, Sogou, So360, DuckDuckGo, Yandex, Bilibili, Game4399 }
+public enum NavigationType { Automatic, SearchOnly, NavigateOnly }
+public enum NewPageBehavior { OriginalWindow, NewWindow }
+
+public sealed record ProxySettings
+{
+    public bool EnableProxy { get; init; }
+    public string IP { get; init; } = "";
+    public string Port { get; init; } = "";
+    public string UserName { get; init; } = "";
+    public string Password { get; init; } = "";
+}
+
+public sealed record UserAgentSetting
+{
+    public bool EnableCustom { get; init; }
+    public string UserAgent { get; init; } = "";
+}
+
+public sealed record FakeFlashVersionSetting
+{
+    public bool Enable { get; init; } = true;
+    public string FlashVersion { get; init; } = "99.0.0.999";
+}
+
+public sealed record WindowSizeInfo(double? Left = null, double? Top = null, double? Width = null,
+    double? Height = null, bool IsMaximized = false);
+
+/// <summary>Stored preferences. Platform availability is a separate application capability projection.</summary>
+public sealed record AppSettings
+{
+    public bool FirstStart { get; init; } = true;
+    public string Language { get; init; } = "zh-CN";
+    public Theme Theme { get; init; } = Theme.Light;
+    public SearchEngine SearchEngine { get; init; } = SearchEngine.Bing;
+    public NavigationType NavigationType { get; init; } = NavigationType.Automatic;
+    public NewPageBehavior NewPageBehavior { get; init; } = NewPageBehavior.OriginalWindow;
+    public bool DisableOnBeforeUnloadDialog { get; init; }
+    public WindowSizeInfo? MainWindowSizeInfo { get; init; }
+    public WindowSizeInfo? BrowserWindowSizeInfo { get; init; }
+    public WindowSizeInfo? SwfWindowSizeInfo { get; init; }
+    public WindowSizeInfo? SolSaveManagerSizeInfo { get; init; }
+    public ProxySettings ProxySettings { get; init; } = new();
+    public UserAgentSetting UserAgentSetting { get; init; } = new();
+    public FakeFlashVersionSetting FakeFlashVersionSetting { get; init; } = new();
+    public bool HideMainWindowOnBrowsing { get; init; }
+    public bool FollowSystemTheme { get; init; } = true;
+    public bool EnableIntegratedDevTools { get; init; } = true;
+    public double IntegratedDevToolsWidth { get; init; } = 300;
+    public bool SaveZoomLevel { get; init; } = true;
+    public double BrowserZoomLevel { get; init; }
+    public bool DisableFullscreen { get; init; }
+    public int RetainedLogCount { get; init; } = 30;
+    public bool DisableBrowserShortcuts { get; init; }
+    public bool DisableGpuAcceleration { get; init; }
+    public bool DisableGpuAccelerationWPF { get; init; }
+    public string? CustomEmoticon { get; init; }
+    public bool DisableBrowserContextMenu { get; init; }
+
+    public static AppSettings Default => new();
+
+    public void Validate()
+    {
+        if (Language is null || Language.Length > 64 || ProxySettings is null ||
+            UserAgentSetting is null || FakeFlashVersionSetting is null)
+            throw new ArgumentException("Settings require a language and non-null nested preferences.");
+        if (!Enum.IsDefined(Theme) || !Enum.IsDefined(SearchEngine) || !Enum.IsDefined(NavigationType) || !Enum.IsDefined(NewPageBehavior))
+            throw new ArgumentException("A settings enum is unknown.");
+        if (!double.IsFinite(IntegratedDevToolsWidth) || !double.IsFinite(BrowserZoomLevel) || RetainedLogCount < 0)
+            throw new ArgumentException("Numeric settings must be finite and retention non-negative.");
+        foreach (var value in new[] { ProxySettings.IP, ProxySettings.Port, ProxySettings.UserName, ProxySettings.Password,
+            UserAgentSetting.UserAgent, FakeFlashVersionSetting.FlashVersion })
+            if (value is null || value.Length > 16 * 1024) throw new ArgumentException("A settings string is null or exceeds its limit.");
+        if (CustomEmoticon?.Length > 16 * 1024) throw new ArgumentException("The title preference exceeds its limit.");
+        foreach (var window in new[] { MainWindowSizeInfo, BrowserWindowSizeInfo, SwfWindowSizeInfo, SolSaveManagerSizeInfo })
+        {
+            if (window is null) continue;
+            foreach (var number in new[] { window.Left, window.Top, window.Width, window.Height })
+                if (number is { } value && !double.IsFinite(value)) throw new ArgumentException("Window geometry must be finite or absent.");
+        }
+    }
+}

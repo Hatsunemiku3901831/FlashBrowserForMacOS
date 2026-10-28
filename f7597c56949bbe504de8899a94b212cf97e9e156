@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+"""Run the imported prototype baseline; this is not the product acceptance suite."""
+import argparse
+from datetime import datetime
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import sys
+import xml.etree.ElementTree as ET
+from zoneinfo import ZoneInfo
+
+ROOT = Path(__file__).resolve().parents[1]
+BOOTSTRAP = ROOT / 'bootstrap/legacy/spike/macos-host'
+
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def now():
+    return datetime.now(ZoneInfo('Australia/Sydney')).isoformat()
+
+
+def inputs():
+    excluded = {'bin', 'obj', 'artifacts', 'TestResults', '__pycache__'}
+    paths = []
+    for directory in [BOOTSTRAP, ROOT / 'test-assets', ROOT / 'bootstrap/legacy/CefFlashBrowser.Tests/TestData']:
+        paths.extend(p for p in directory.rglob('*') if p.is_file() and not excluded.intersection(p.relative_to(directory).parts))
+    return {str(p.relative_to(ROOT)): sha(p) for p in sorted(set(paths))}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--run-id', required=True)
+    parser.add_argument('--task', choices=['P01', 'P02', 'P03'], default='P01')
+    args = parser.parse_args()
+    if not args.run_id or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_' for c in args.run_id):
+        parser.error('run-id must be a simple directory name')
+    output = ROOT / 'artifacts/evidence' / args.task / args.run_id
+    output.mkdir(parents=True, exist_ok=False)
+    start = now()
+    before = inputs()
+    locks = {str(p.relative_to(ROOT)): sha(p) for p in BOOTSTRAP.rglob('packages.lock.json')}
+    phases = [
+        ('restore', ['dotnet', 'restore', 'CefFlashBrowser.MacOS.Spike.slnx', '--locked-mode']),
+        ('build', ['dotnet', 'build', 'CefFlashBrowser.MacOS.Spike.slnx', '--configuration', 'Debug', '--no-restore', '--disable-build-servers', '-m:1']),
+        ('test', ['dotnet', 'test', 'CefFlashBrowser.MacOS.Spike.slnx', '--configuration', 'Debug', '--no-build', '--disable-build-servers', '-m:1', '--logger', 'trx;LogFileName=baseline.trx', '--results-directory', str(output / 'TestResults')]),
+    ]
+    results = []
+    exit_code = 0
+    for phase, command in phases:
+        print(f'{phase}: starting ({args.run_id})', flush=True)
+        with (output / f'{phase}.log').open('wb') as log:
+            process = subprocess.run(command, cwd=BOOTSTRAP, stdout=log, stderr=subprocess.STDOUT)
+        results.append({'phase': phase, 'command': command, 'exitCode': process.returncode})
+        unchanged = all(sha(ROOT / p) == h for p, h in locks.items())
+        print(f'{phase}: exit {process.returncode}; locks unchanged={unchanged}', flush=True)
+        if process.returncode or not unchanged:
+            exit_code = process.returncode or 1
+            break
+    trx = output / 'TestResults/baseline.trx'
+    cases = []
+    counters = {}
+    if trx.exists():
+        xml = ET.parse(trx)
+        ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+        definitions = {p.attrib['id']: p.find('t:TestMethod', ns).attrib for p in xml.findall('.//t:UnitTest', ns)}
+        cases = [{'testName': t.attrib['testName'], 'outcome': t.attrib['outcome'],
+                  'className': definitions[t.attrib['testId']]['className'],
+                  'methodName': definitions[t.attrib['testId']]['name']}
+                 for t in xml.findall('.//t:UnitTestResult', ns)]
+        counters = xml.find('.//t:Counters', ns).attrib
+    if not cases or any(c['outcome'] != 'Passed' for c in cases) or len(cases) < 97:
+        exit_code = exit_code or 1
+    after = inputs()
+    if before != after:
+        exit_code = exit_code or 1
+    (output / 'inputs.json').write_text(json.dumps({'before': before, 'unchanged': before == after,
+        'changes': {p: {'before': before.get(p), 'after': after.get(p)} for p in sorted(before.keys() | after.keys())
+                    if before.get(p) != after.get(p)}}, ensure_ascii=False, indent=2) + '\n')
+    revision = subprocess.run(['git', 'rev-parse', '--verify', 'HEAD'], cwd=ROOT, text=True, capture_output=True)
+    result = {'taskId': args.task, 'caseId': 'independent-prototype-baseline', 'runId': args.run_id,
+              'profileId': 'managed-tests-only', 'status': 'PASS' if not exit_code else 'FAIL',
+              'expected': 'locked restore, zero-warning build, all prototype tests pass; locks unchanged',
+              'actual': {'phases': results, 'counters': counters, 'tests': cases, 'codeAndContentInputsUnchanged': before == after},
+              'startedAt': start, 'finishedAt': now(),
+              'environment': {'architecture': subprocess.check_output(['uname', '-m']).decode().strip(),
+                              'macOS': subprocess.check_output(['sw_vers', '-productVersion']).decode().strip(),
+                              'sdk': subprocess.check_output(['dotnet', '--version'], cwd=BOOTSTRAP).decode().strip(),
+                              'configuration': 'Debug', 'targetHead': revision.stdout.strip() if revision.returncode == 0 else 'UNBORN; all changes uncommitted'},
+              'artifactHashes': {'locksBefore': locks,
+                                 'logsAndTrx': {str(p.relative_to(ROOT)): sha(p) for p in output.rglob('*') if p.is_file()}},
+              'evidencePaths': [str(output.relative_to(ROOT))]}
+    (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
+    print(json.dumps({'status': result['status'], 'tests': counters, 'output': str(output.relative_to(ROOT))}, ensure_ascii=False), flush=True)
+    return exit_code
+
+
+if __name__ == '__main__':
+    sys.exit(main())

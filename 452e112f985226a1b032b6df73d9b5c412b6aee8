@@ -1,0 +1,22 @@
+using System.Collections.ObjectModel;
+
+namespace FlashMacOS.Application.Configuration;
+
+public enum SettingAvailability { StoredPendingIntegration, UnsupportedOnMacOS, Available }
+
+public sealed record SettingCapability(string Field, SettingAvailability Availability, string Reason);
+
+public static class SettingsCapabilities
+{
+    public static IReadOnlyList<SettingCapability> Current { get; } = new ReadOnlyCollection<SettingCapability>(
+    [
+        new("ProxySettings", SettingAvailability.UnsupportedOnMacOS, "Windows CEF proxy configuration is retained; it is not a WKWebView proxy implementation."),
+        new("FakeFlashVersionSetting", SettingAvailability.UnsupportedOnMacOS, "Retained legacy plugin version; the fixed Ruffle runtime does not become this version."),
+        new("DisableGpuAccelerationWPF", SettingAvailability.UnsupportedOnMacOS, "WPF has no macOS implementation."),
+        new("UserAgentSetting", SettingAvailability.StoredPendingIntegration, "Custom browser UA integration is validated in W01/U02."),
+        new("Language", SettingAvailability.StoredPendingIntegration, "Five-language UI application is validated in U02/U04."),
+        new("Theme", SettingAvailability.StoredPendingIntegration, "Theme and system-theme application are validated in U01/U02."),
+        new("WindowSizeInfo", SettingAvailability.StoredPendingIntegration, "Screen-aware window restoration is validated in U02."),
+        new("BrowserPreferences", SettingAvailability.StoredPendingIntegration, "Browser shortcuts, zoom and navigation policies are validated in W01/U02."),
+    ]);
+}

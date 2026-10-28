@@ -1,0 +1,123 @@
+using System.Globalization;
+
+namespace FlashMacOS.Application.Sol;
+
+public enum SolConversionPolicy { NativeTypes, PreserveWithAmf3Envelope }
+public sealed record SolConversionIssue(string Code, string Location, string Message, bool IsLoss);
+public sealed record SolConversionPlan(SolDocument Source, SolDocument? Candidate, IReadOnlyList<SolConversionIssue> Issues)
+{ public bool CanApply => Candidate is not null; }
+public sealed record ApplySolConversion(SolConversionPlan Plan) : ISolEdit
+{
+    public SolDocument Apply(SolDocument source)
+    {
+        if (!ReferenceEquals(Plan.Source, source)) throw new SolEditConflictException("The conversion preview belongs to an older document.");
+        return Plan.Candidate ?? throw new InvalidOperationException("The conversion has unresolved loss and cannot be applied.");
+    }
+}
+
+public sealed class SolEncodingConversion(ISolCodec codec)
+{
+    public ValueTask<SolConversionPlan> AnalyzeAsync(SolDocument source, SolEncoding target,
+        SolConversionPolicy policy = SolConversionPolicy.NativeTypes, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (!Enum.IsDefined(target)) throw new ArgumentOutOfRangeException(nameof(target));
+        if (!Enum.IsDefined(policy)) throw new ArgumentOutOfRangeException(nameof(policy));
+        return new(Task.Run(() => Analyze(source, target, policy, cancellationToken), cancellationToken));
+    }
+    private SolConversionPlan Analyze(SolDocument source, SolEncoding target, SolConversionPolicy policy, CancellationToken cancellationToken)
+    {
+        var issues = new List<SolConversionIssue>(); var hasLoss = false; var omitted = 0;
+        void Issue(string code, string location, string message, bool loss = false)
+        { hasLoss |= loss; if (issues.Count < 1024) issues.Add(new(code, location, message, loss)); else omitted++; }
+        SolConversionPlan Finish(SolDocument? candidate)
+        {
+            if (omitted != 0) issues.Add(new("AdditionalIssues", "document", omitted.ToString(CultureInfo.InvariantCulture) + " additional conversion notices are summarized.", hasLoss));
+            return new(source, hasLoss ? null : candidate, issues.AsReadOnly());
+        }
+        try { codec.Encode(source, cancellationToken: cancellationToken); }
+        catch (AmfFormatException error) { Issue(error.Code, "document", error.Message, true); return Finish(null); }
+        if (source.Encoding == target) return Finish(source);
+        if (target == SolEncoding.Amf0 && policy == SolConversionPolicy.PreserveWithAmf3Envelope)
+        {
+            Issue("EmbeddedAmf3", "document", "Values retain AMF3 inside AVM+ envelopes; readers must support the AMF0 AMF3 extension.");
+            return Verify(new(source.Name, target, new AmfGraph(source.Graph.Entries.Select(entry => new AmfProperty(entry.Name, new AmfAvmPlus(entry.Value))), source.Graph.Nodes.Values, cancellationToken)));
+        }
+        var reachable = new HashSet<AmfNodeId>(); var uses = new Dictionary<AmfNodeId, int>();
+        var pending = new Stack<AmfValue>(source.Graph.Entries.Select(entry => entry.Value));
+        while (pending.TryPop(out var value))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (value is AmfAvmPlus avm) pending.Push(avm.Value);
+            if (value is not AmfReference reference) continue;
+            uses[reference.Target] = uses.GetValueOrDefault(reference.Target) + 1;
+            if (reachable.Add(reference.Target)) foreach (var child in source.Graph.Nodes[reference.Target].Children) pending.Push(child);
+        }
+        AmfValue ConvertValue(AmfValue value, string location)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (value is AmfAvmPlus avm)
+            {
+                if (target == SolEncoding.Amf3) return ConvertValue(avm.Value, location);
+                Issue("EmbeddedAmf3", location, "An AMF3 envelope cannot be flattened into native AMF0 automatically.", true); return value;
+            }
+            if (value is AmfInteger integer && (target == SolEncoding.Amf0 || integer.Value is < -268435456 or > 268435455))
+            { Issue("IntegerAsNumber", location, "Integer becomes an exactly representable IEEE-754 Number."); return new AmfNumber(integer.Value); }
+            return value;
+        }
+        IReadOnlyList<AmfProperty> ConvertProperties(IReadOnlyList<AmfProperty> properties, string location) =>
+            properties.Select((entry, index) => new AmfProperty(entry.Name, ConvertValue(entry.Value, location + "/" + index.ToString(CultureInfo.InvariantCulture)))).ToArray();
+        IReadOnlyList<AmfValue> ConvertValues(IReadOnlyList<AmfValue> values, string location) =>
+            values.Select((value, index) => ConvertValue(value, location + "/" + index.ToString(CultureInfo.InvariantCulture))).ToArray();
+        var nodes = new List<AmfNode>();
+        foreach (var id in reachable)
+        {
+            cancellationToken.ThrowIfCancellationRequested(); var node = source.Graph.Nodes[id]; var location = "node/" + id.Value.ToString(CultureInfo.InvariantCulture);
+            switch (node)
+            {
+                case AmfObjectNode item:
+                    if (target == SolEncoding.Amf0 && (item.Traits.IsExternalizable || !item.Traits.IsDynamic || item.Traits.SealedNames.Count != 0))
+                    { Issue("ClassTraits", location, "Native AMF0 cannot retain these sealed or externalizable traits.", true); nodes.Add(node); break; }
+                    var objectKind = target == SolEncoding.Amf3 ? AmfObjectKind.Amf3Object : item.Traits.ClassName.Length == 0 ? AmfObjectKind.Amf0Object : AmfObjectKind.Amf0TypedObject;
+                    if (target == SolEncoding.Amf3 && item.Properties.Any(property => property.Name.Length == 0)) Issue("EmptyProperty", location, "AMF3 uses an empty dynamic name as its terminator.", true);
+                    nodes.Add(new AmfObjectNode(id, item.Traits, ConvertValues(item.SealedValues, location), ConvertProperties(item.Properties, location),
+                        item.ExternalData is null ? null : ConvertValue(item.ExternalData, location), objectKind, item.ExternalCodecId));
+                    break;
+                case AmfArrayNode array:
+                    if (target == SolEncoding.Amf0 && array.Dense.Count != 0 && array.Associative.Count != 0)
+                    { Issue("MixedArrayShape", location, "The separate dense and associative portions cannot both retain their exact shape in native AMF0; use an AMF3 envelope.", true); nodes.Add(node); break; }
+                    if (target == SolEncoding.Amf3 && array.Associative.Any(property => property.Name.Length == 0)) Issue("EmptyAssociativeName", location, "AMF3 uses an empty associative name as its terminator.", true);
+                    var arrayKind = target == SolEncoding.Amf3 ? AmfArrayKind.Amf3Mixed : array.Associative.Count == 0 ? AmfArrayKind.Amf0Strict : AmfArrayKind.Amf0Ecma;
+                    if (array.DeclaredAssociativeCount.HasValue) Issue("AdvisoryArrayCount", location, "The AMF0 advisory count has no AMF3 field; values and order are retained.");
+                    nodes.Add(new AmfArrayNode(id, arrayKind, ConvertValues(array.Dense, location), ConvertProperties(array.Associative, location),
+                        arrayKind == AmfArrayKind.Amf0Ecma ? (uint)array.Associative.Count : null));
+                    break;
+                case AmfDateNode date:
+                    if (target == SolEncoding.Amf0 && uses[id] > 1) Issue("SharedDate", location, "Native AMF0 has no Date object references.", true);
+                    if (target == SolEncoding.Amf3 && date.ReservedAmf0Timezone.HasValue) Issue("ReservedTimezone", location, "The unused AMF0 timezone field is omitted; raw milliseconds are retained.");
+                    nodes.Add(new AmfDateNode(id, date.Milliseconds, target == SolEncoding.Amf0 ? (short)0 : null)); break;
+                case AmfXmlNode xml:
+                    if (target == SolEncoding.Amf0 && (!xml.IsDocument || uses[id] > 1)) Issue("XmlTypeOrIdentity", location, "Native AMF0 cannot retain this XML type or shared XML identity.", true);
+                    nodes.Add(node); break;
+                default:
+                    if (target == SolEncoding.Amf0) Issue("NoNativeAmf0Type", location, "This ByteArray/Vector/Dictionary requires an AMF3 envelope.", true);
+                    nodes.Add(node); break;
+            }
+        }
+        if (hasLoss) return Finish(null);
+        return Verify(new(source.Name, target, new AmfGraph(ConvertProperties(source.Graph.Entries, "entries"), nodes, cancellationToken)));
+
+        SolConversionPlan Verify(SolDocument candidate)
+        {
+            try
+            {
+                var encoded = codec.Encode(candidate, cancellationToken: cancellationToken);
+                var decoded = codec.Decode(encoded, cancellationToken: cancellationToken);
+                if (!AmfGraphEquality.Equivalent(candidate.Graph, decoded.Graph, cancellationToken))
+                    Issue("SemanticMismatch", "document", "The proposed conversion cannot retain its complete typed graph on the wire.", true);
+            }
+            catch (AmfFormatException error) { Issue(error.Code, "document", error.Message, true); }
+            return Finish(candidate);
+        }
+    }
+}

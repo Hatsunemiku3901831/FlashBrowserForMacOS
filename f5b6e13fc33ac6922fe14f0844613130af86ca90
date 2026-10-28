@@ -1,0 +1,88 @@
+using System.Globalization;
+using System.Text.Json;
+using FlashMacOS.Application.Flash;
+
+namespace FlashMacOS.Flash.Ruffle.Runtime;
+
+public sealed class RuffleScriptBuilder : IRuffleScriptBuilder
+{
+    public string CaptureSaves()
+    {
+        return """
+            (() => {
+              const saves = {};
+              const looksLikeSol = value => {
+                if (typeof value !== "string" || value.length < 24) return false;
+                try {
+                  const bytes = atob(value.slice(0, 24));
+                  return bytes.charCodeAt(0) === 0 && bytes.charCodeAt(1) === 191;
+                } catch (_) { return false; }
+              };
+              for (let index = 0; index < localStorage.length; index++) {
+                const key = localStorage.key(index);
+                const value = key === null ? null : localStorage.getItem(key);
+                if (key !== null && looksLikeSol(value)) saves[key] = value;
+              }
+              window.__cefFlashBrowserPost?.({
+                type: "savesSnapshot",
+                data: JSON.stringify(saves)
+              });
+            })();
+            """;
+    }
+
+    public string ReplaceSave(string key, string base64)
+    {
+        return $$"""
+            (() => {
+              const updateStorage = () => localStorage.setItem({{JsonSerializer.Serialize(key)}}, {{JsonSerializer.Serialize(base64)}});
+              if (window.__cefFlashBrowserPlayerApi) {
+                void window.__cefFlashBrowserPlayerApi.reload(updateStorage);
+              } else updateStorage();
+              return true;
+            })();
+            """;
+    }
+
+    public string DeleteSave(string key)
+    {
+        return $$"""
+            (() => {
+              const updateStorage = () => localStorage.removeItem({{JsonSerializer.Serialize(key)}});
+              if (window.__cefFlashBrowserPlayerApi) {
+                void window.__cefFlashBrowserPlayerApi.reload(updateStorage);
+              } else updateStorage();
+              return true;
+            })();
+            """;
+    }
+
+    public string Control(PlayerCommand command, double volume = 1)
+    {
+        var expression = command switch
+        {
+            PlayerCommand.Pause => "api.suspend()",
+            PlayerCommand.Resume => "api.resume()",
+            PlayerCommand.Reload => "api.reload()",
+            PlayerCommand.Fullscreen => "api.requestFullscreen()",
+            PlayerCommand.Volume => $"api.volume = {Math.Clamp(volume, 0d, 1d).ToString("R", CultureInfo.InvariantCulture)}",
+            _ => throw new ArgumentOutOfRangeException(nameof(command)),
+        };
+        return BuildSerializablePlayerCommand(expression);
+    }
+
+    private static string BuildSerializablePlayerCommand(string commandExpression)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(commandExpression);
+        return $$"""
+            (() => {
+              const api = window.__cefFlashBrowserPlayerApi;
+              if (api) {
+                void ({{commandExpression}});
+              }
+              return true;
+            })();
+            """;
+    }
+
+}

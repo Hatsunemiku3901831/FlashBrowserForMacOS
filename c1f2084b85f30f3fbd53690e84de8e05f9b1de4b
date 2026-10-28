@@ -1,0 +1,177 @@
+# macOS vNext 工程规范
+
+状态：强制执行
+
+适用范围：`spike/macos-host/` 及其后续正式 vNext 工程
+
+目标平台：Apple Silicon（`osx-arm64`）
+
+本文规定 macOS vNext 的架构、编码、性能、安全、测试和发布约束。它不复制阶段任务；范围、里程碑和交付差距以 [`../../../Docs/macos-porting-plan.zh-CN.md`](../../../Docs/macos-porting-plan.zh-CN.md) 为准。跨层契约和稳定变量分别以 [`interfaces.zh-CN.md`](interfaces.zh-CN.md) 与 [`variables.zh-CN.md`](variables.zh-CN.md) 为准。
+
+本文中的“必须”“禁止”“不得”是合并与交付门禁，不是建议。
+
+## 1. 平台与范围
+
+- macOS 产品只支持 Apple Silicon ARM64，唯一 Runtime Identifier 是 `osx-arm64`。
+- 不开发、不构建、不测试、不打包、不发布 macOS Intel/x64，也不为其保留新条件分支或兼容抽象。
+- Windows Legacy 仍按原有 x86/x64 规则维护；macOS ARM-only 决策不得反向删减 Windows 能力。
+- `spike/macos-host` 当前是 Gate 0/vNext 演进基线。迁入正式目录前必须保持端口和测试可追踪，不做无依据重写。
+- `Directory.Build.props` 的 `RuntimeIdentifiers` 是 NuGet 发布图的工程来源，只允许 `osx-arm64`；lock file 必须同时支持普通开发 restore 和该发布图。
+- 打包必须先 locked restore、再 `publish --no-restore`，并验证 publish 前后 lock file 不变；组包时必须裁掉依赖通用 Mach-O 中的非 ARM64 slice。
+
+## 2. 文档与决策层级
+
+1. 仓库根 [`../../../AGENTS.md`](../../../AGENTS.md) 定义全仓通用规则和一级路由。
+2. [`../AGENTS.md`](../AGENTS.md) 定义 macOS 子树硬性路由。
+3. macOS 移植方案定义目标、阶段、工作量、风险和交付口径。
+4. 接口文档、变量文档和本文分别定义契约、稳定登记和工程约束。
+5. ADR 记录单项不可逆或高成本技术决策；Gate 报告只记录证据，不替代规范。
+
+代码与文档冲突时，先以可复现的代码/测试事实判断现状，再在同一变更中修复错误一侧。不得用“文档以后再补”完成任务。
+
+## 3. 架构边界
+
+### 3.1 模块职责
+
+| 层 | 可以包含 | 禁止包含 |
+|---|---|---|
+| Core/Domain | SOL/AMF 模型与算法、导航规则、业务状态 | Avalonia、WKWebView、AppKit、文件对话框、平台路径。 |
+| Application | 用例、端口、协调器、业务错误 | 原生控件、窗口句柄、静态全局服务。 |
+| Infrastructure | 原子文件、JSON store、本地内容服务、路径实现 | UI 状态和 View 生命周期。 |
+| Desktop/Platform | Avalonia View、WKWebView 适配、macOS 注入、对话框 | 重复实现 Core 业务规则。 |
+| Composition root | 构造、注入、启动、确定性释放 | 业务分支、持久化格式解析。 |
+
+### 3.2 依赖规则
+
+- 依赖只能指向更稳定的内层抽象；Core 不能反向引用 Desktop。
+- 新平台能力先定义最小端口，再实现适配器；端口按业务能力命名，不按第三方库命名。
+- ViewModel 只持有数据、命令和端口，不持有 `Window`、`NativeWebView`、`NSView`、`IPlatformHandle` 或文件对话框。
+- 适配器之间通过用例/协调器合作，禁止静态 service locator 和跨层全局单例。
+- 共享算法优先复用 Legacy 中可验证的纯 C# 源码和 fixture；包含 WPF、CefSharp、Win32 或 C++/CLI 边界的代码只能提炼行为，不能直接污染 Core。
+- 为第三方 API 建立薄适配层；业务层不得散布 Avalonia/WebView/Ruffle 专有类型。
+
+## 4. 接口、状态与错误
+
+- 所有跨层能力必须登记在接口文档；稳定字段和值必须登记在变量文档。
+- 构造函数注入必需依赖；可选行为用显式策略对象或可空回调，禁止运行时到处取全局状态。
+- 领域状态使用不可变 record/value object；禁止用裸 `object`、字典或魔法字符串表达稳定领域类型。
+- 空值、取消、超时、格式错误和资源不存在必须有不同语义。
+- 不得用 `catch (Exception) {}`、默认值或 UI 提示替代错误传播。异步事件边界的错误通过 `Faulted` 和结构化日志报告。
+- 新事件必须明确发布线程、订阅所有者、取消订阅位置和背压策略。
+- 破坏 bridge、持久化或用户路径兼容性的变更必须有 ADR、迁移、备份和回退。
+
+## 5. 异步、线程与生命周期
+
+- UI 线程只执行控件访问和短小状态提交；网络、散列、目录扫描、大文件解析和持久化不得同步阻塞 UI。
+- 所有可能长时间运行的公开异步 API 接收 `CancellationToken` 并向下传递。
+- 不使用 `.Result`、`.Wait()`、无界 `Task.Run` 或无上限并发来规避异步设计。
+- `async void` 仅允许真实 UI/框架事件处理器，并在边界捕获、报告异常。
+- WebView 操作集中在浏览器适配器封送；Core 不调用 Dispatcher。
+- 长生命周期对象实现 `IDisposable`/`IAsyncDisposable`，释放幂等，事件订阅成对解除。
+- Composition root 明确拥有后台队列、HTTP host、WebView session、协调器和日志 writer；关闭时先停止入口，再排空/取消工作，最后释放基础设施。
+- channel、队列和缓存必须有容量、溢出策略和监控，不允许无界增长。
+
+## 6. 性能规范
+
+性能优化以 Apple Silicon 真机数据为准，不以 Intel、模拟环境或主观体验代替。
+
+- 启动、首次 WebView ready、document-start 注入、首个 SWF 可交互、常驻内存、后台 CPU、存档导入/导出和大文件下载是核心指标。
+- 性能改动必须记录设备、macOS 版本、构建配置、样本、测量方法及改动前后数据。
+- 优先减少 I/O、分配、重复解析和 UI 线程工作；没有 profile 证据不得引入对象池、复杂缓存或并行化。
+- 大文件采用流式读取和有界 buffer；不得为了便利整文件复制，SOL 校验确需完整内容时必须先执行大小上限。
+- 轮询在页面不可见时必须降频或停止；新增周期任务必须支持释放和取消。
+- Ruffle 资产只在启动/版本变化时校验，结果缓存必须以内容或版本为失效依据。
+- ReadyToRun、裁剪、AOT 等发布选项必须先验证 Avalonia、NativeWebView、反射和 Objective-C 绑定兼容性，不能用功能退化换取体积或启动数据。
+
+正式性能阈值在 M6 基线阶段落定；阈值未批准前不得伪造数字作为 Gate。
+
+## 7. 文件、数据与迁移
+
+- 用户数据只写入 `IAppPaths` 提供的 Application Support/Cache/Logs，运行时不得写 app bundle 或源码目录。
+- 设置、收藏夹、SOL 和导出文件采用同目录临时文件、flush、原子替换；必要时保留可识别备份。
+- 写入前先验证大小、格式、目标路径和剩余空间错误；失败不得损坏旧文件。
+- 迁移必须幂等、可预检、可记录、可回退，保留未知字段或明确阻止不兼容降级。
+- 读取旧数据失败时保留原文件并报告可操作错误，禁止创建空文件覆盖。
+- 路径使用 `Path.Combine`/路径服务和规范化绝对路径；loopback 文件访问还必须拒绝目录穿越与符号链接逃逸。
+- 不把随机端口、进程 ID、临时 token 或机器绝对路径作为永久数据主键。
+
+## 8. 浏览器、脚本与本地服务安全
+
+- 本地内容服务只绑定 `127.0.0.1` 随机端口，每会话使用密码学随机 token；所有内容入口都必须鉴权。
+- 资源文件只允许 manifest/登记白名单；路径验证必须在 URL 解码和规范化后进行。
+- 本地页面设置最小 CSP、正确 MIME、Range 和禁止缓存/缓存策略；不得因调试便利放宽到任意文件读取。
+- JavaScript bridge 只接收已登记消息类型和字段；对大小、URI、Base64/SOL 格式做宿主侧二次验证。
+- 用户字符串嵌入脚本前必须 JSON 序列化，禁止模板直接插入。
+- 下载继承 WebView Cookie，但只写用户明确选择的目标，使用原子替换并支持取消；不得自动执行下载文件。
+- Release 的 DevTools、开发 entitlement 和诊断 fixture 必须有明确关闭/剔除策略。
+- Ruffle 固定版本和哈希，不在运行时静默加载 CDN 或自动更新。
+- 日志禁止包含会话 token、Cookie、bridge Base64、签名/公证凭据和不必要的完整用户路径。
+
+## 9. UI 与可访问性
+
+- View 只处理展示、原生宿主和 UI 生命周期；可测试状态转换下沉到 ViewModel/用例。
+- 命令必须防重复执行、反映进行中状态并支持取消；错误提示可操作且不泄露敏感细节。
+- 菜单、快捷键、焦点、全屏、文件选择和窗口激活使用 macOS 惯例，并在 Apple Silicon 真机验证。
+- 所有用户可见字符串进入本地化资源；不得在业务层硬编码 UI 文案。
+- 新界面至少验证键盘操作、VoiceOver 可读名称、浅/深色和缩放布局。
+- UI 自动化不替代底层用例单测，底层单测也不替代真实 WKWebView/macOS 集成验证。
+
+## 10. 依赖与资产
+
+- 第三方依赖必须解决明确问题，固定精确版本，提交 lock file，并记录官方来源与许可证。
+- 引入前检查维护状态、Apple Silicon 支持、包体积、原生库、签名、公证和数据行为。
+- 禁止同时引入功能重叠的框架，或为简单纯函数增加大型依赖。
+- 升级 Avalonia、NativeWebView、Ruffle、.NET SDK 或 Kestrel 行为时单独提交兼容性验证，不与无关功能混合。
+- `Assets/Ruffle` 等 vendor 资产不得手工修改；只能通过可审计升级流程替换并更新 manifest/hash。
+
+## 11. 测试门禁
+
+| 变更类型 | 最低验证 |
+|---|---|
+| Core 纯逻辑 | 正常、边界、错误和 Legacy fixture 的单元测试。 |
+| 端口/模型 | 实现契约测试、调用方编译、空值/取消/异常测试。 |
+| bridge/document-start | 生成脚本断言、消息反序列化、真实 WKWebView 诊断页。 |
+| loopback/文件 | 鉴权、路径穿越、符号链接、Range、MIME、CSP、取消与原子失败测试。 |
+| 持久化/schema | round-trip、损坏输入、上限、并发、旧版本迁移与失败不覆盖。 |
+| UI/原生集成 | Apple Silicon 真机启动、导航、popup、下载、文件对话框、全屏、退出。 |
+| 性能 | 相同设备和 workload 的前后数据，Release 构建。 |
+| 打包/发布 | `osx-arm64` clean publish、签名校验、Gatekeeper、公证与干净机器 smoke。 |
+
+通用命令以 [`../README.md`](../README.md) 和实际工程文件为准。不得通过 `--no-build` 掩盖未完成构建，也不得跳过失败项目制造绿色结果。文档-only 变更至少检查链接、路由、Markdown 和工作区；可以不重跑产品测试，但必须明确说明。
+
+## 12. ARM64 发布门禁
+
+正式候选版必须同时满足：
+
+- 只产生 `osx-arm64` `.app`，包中 Mach-O 架构检查无 x86_64 依赖；
+- Release、self-contained 和最终选定的 ReadyToRun/AOT 策略经过真机验证；
+- 使用 Developer ID Application 由内到外签名，Hardened Runtime entitlement 最小化；
+- 完成 Apple notarization、staple、`codesign --verify --deep --strict`、`spctl` 和隔离属性启动验证；
+- 在受支持的最低/最高 macOS 版本及至少两代 Apple Silicon 设备 smoke；
+- 安装、升级、用户数据迁移、异常退出恢复和卸载残留行为有记录；
+- 版本、bundle ID、User-Agent 和诊断信息来自单一版本源；
+- 不含 Gate 0 fixture、开发 entitlement、调试入口或私密凭据。
+
+## 13. 文档同步矩阵
+
+| 改动 | 必须同步 |
+|---|---|
+| 目标、里程碑、工作量、支持范围 | macOS 移植方案 |
+| 端口、模型、事件、bridge 语义、生命周期 | 接口文档 + 调用方/契约测试 |
+| 环境变量、常量、路径、schema、route、Cookie、bundle/版本 | 变量文档 + 对应测试/打包配置 |
+| 架构、线程、性能、安全、测试或发布规则 | 本文；例外需 ADR |
+| 浏览器后端等高成本决策 | ADR + 移植方案结论 |
+| 已执行 Gate 的事实和证据 | 对应 Gate results，不回写为规范 |
+
+## 14. 完成标准
+
+macOS vNext 变更只有在以下条件全部满足时完成：
+
+1. 需求实现完整，未把诊断原型能力冒充产品能力。
+2. 依赖方向、端口所有权和生命周期没有恶化。
+3. 相关自动化测试和 Apple Silicon 真机验证已执行；未执行项准确说明。
+4. 用户数据、签名、安全和失败恢复得到保护。
+5. 性能结论有数据，没有无依据的复杂度。
+6. 只涉及 `osx-arm64`，未新增或恢复 Intel/x64 范围。
+7. 接口、变量、规范、ADR、计划或 Gate 证据按同步矩阵更新。
+8. 工作区没有无关格式化、生成物、凭据或被覆盖的用户改动。
