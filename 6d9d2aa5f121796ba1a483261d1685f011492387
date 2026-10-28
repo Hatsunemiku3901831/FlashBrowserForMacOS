@@ -1,0 +1,19 @@
+{
+  "taskId": "W01",
+  "caseId": "background-ax-fullscreen",
+  "runId": "browser-native-20261028-04",
+  "status": "FAIL",
+  "expected": "Page enters fullscreen from this attempted automation step",
+  "actual": "Native page returned TypeError: Cannot request fullscreen in a hidden document. CUA connection had pipe-close/noWindowsAvailable and stale sheet screenshots. Reload/AX retry also rejected. No code/budget/browser checks were weakened.",
+  "diagnosis": "Foreground/user-gesture precondition was not established for the AX-only step; connection/state contribution is an inference. The identical package later entered fullscreen from a real foreground coordinate click in a fresh process. The initial attempt remains failed, not relabeled.",
+  "replacementEvidence": [
+    "artifacts/evidence/W01/browser-native-restart-20261028-01/fullscreen-fresh-process.png",
+    "artifacts/evidence/W01/browser-native-restart-20261028-01/fullscreen-fresh-process.txt",
+    "artifacts/evidence/W01/browser-native-restart-20261028-01/same-document-pushstate.png"
+  ],
+  "evidencePaths": [
+    "artifacts/evidence/W01/browser-native-20261028-04/fullscreen-enter.png",
+    "artifacts/evidence/W01/browser-native-20261028-04/fullscreen-enter.txt",
+    "artifacts/evidence/W01/browser-native-20261028-04/after-resume-fullscreen.png"
+  ]
+}

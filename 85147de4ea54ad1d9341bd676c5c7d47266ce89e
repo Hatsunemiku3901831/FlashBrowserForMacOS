@@ -1,0 +1,86 @@
+# W01：WKWebView 产品化验收
+
+W01 在本机 Apple M1 Pro / macOS 26.5.1 / ARM64 真实应用会话完成验收。当前仅完成此任务，产品仍未完成；按用户最新要求，完成后暂停，不启动 W02。逐项结果见 [人工与原生清单](native-checklist.json)，完整输入、来源、失败和证据 SHA 见 acceptance-index.json。
+
+## 实现
+
+- 增加浏览器能力端口、导航错误模型和 BrowserWorkspace。网页与本地播放器保留两个独立、长期附着的原生 surface 和稳定持久 store，各自保留历史；切换不重新挂载控件。
+- 保留 Web 原 A03 v1 GUID，LocalPlayer 使用单独版本化算法。旧共享区留在 Web，不隐式复制 Cookie。完整旧数据迁移仍属于 W04/M02。
+- 固定 Avalonia.Controls.WebView 12.0.1 的托管公开 API 不覆盖可信 frame 来源和部分能力。新增项目自有 ARC 动态库，只包装 Apple 公开 WKWebView/WKNavigationDelegate/WKUIDelegate/WKFindConfiguration API；原生句柄不进入 ViewModel。
+- 主 frame 的开始、重定向、完成、失败、URL/title/history/loading 来自原生。子 frame 不推进主页面世代。新的同文档历史用例覆盖 pushState/back/forward，修复没有新 navigation-start 时 loading 悬挂的问题。
+- 原生消息先校验 WKScriptMessage.frameInfo/securityOrigin，再进入原有 v1 envelope 与 document/run ID 门禁。独立注册名为 flashMacOSNativeBridgeV1，保留第三方原注册，关闭只移除自己拥有的资源。
+- 实现原生查找、pageZoom、自定义/恢复 UA、打印面板与 PDF、alert/confirm/prompt、受控 isInspectable、未知 scheme 拦截及 WK 焦点下的标准退出。脚本/查找/PDF 等等待有界，关闭取消并排空。
+- MainWindowViewModel 只使用端口，加入查找、缩放、UA、打印和检查入口。初始浏览偏好接入 A04；完整设置/收藏界面及持久化操作仍待 U02。
+- 维护 `--case browser` 的确定性真实 WK 验证，增加专用 Test profile 跨进程复用。证据目录始终使用新 run ID，不覆盖历史。
+
+固定 JS/WASM、104 份资产、13 份依赖锁及依赖版本均未修改。Apple 开发工具只在编译自有动态库时需要；self-contained app 运行不需要 SDK、原项目或系统 .NET。
+
+## 同一输入与产物
+
+最终包：`artifacts/dev-packages/browser-package-20261028-04/FlashMacOS.app`。
+
+可复核归档：`artifacts/evidence/W01/browser-package-20261028-04/FlashMacOS-development.zip`，SHA-256：
+
+```text
+de519a77ef5cc78e230ff3670de445a6a1eba381a876e754813f0e6868bfeb23
+```
+
+372 份正式输入与最终 Release 回归完全一致。19 个 Mach-O 全部 ARM64；开发包严格签名检查通过。运行前后 app 全部文件与归档逐字节一致。此为开发签名及本机使用证据，不是 Developer ID、公证或最终发行包验收。
+
+```sh
+sh scripts/verify.sh --task W01 --run-id browser-final-managed-20261028-01 \
+  --configuration Release --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+python3 scripts/package-development.py --task W01 --run-id browser-package-20261028-04 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+python3 scripts/run-native.py --task W01 --package-task W01 --run-id browser-native-20261028-04 \
+  --package-run browser-package-20261028-04 --case browser --inspect-page --capture-count 6 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+python3 scripts/run-native.py --task W01 --package-task W01 --run-id browser-native-restart-20261028-01 \
+  --package-run browser-package-20261028-04 --reuse-test-profile browser-native-20261028-04 \
+  --case browser --inspect-page --capture-count 6 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+python3 scripts/run-native.py --task W01 --package-task W01 --run-id browser-mole-native-20261028-01 \
+  --package-run browser-package-20261028-04 --url http://mole.61.com/ --inspect-page --capture-count 30 \
+  --deny-read /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser
+```
+
+这些是已执行命令。再次执行必须改为新的 run ID；不要用旧 ID 覆盖证据。正式构建和运行禁止读取 reference、bootstrap、原仓库，原生运行 PATH 仅系统目录，DOTNET_ROOT 未设置。
+
+## 验收结果
+
+| 范围 | 输入及预期 | 实际与证据 |
+|---|---|---|
+| 托管和工具 | 五测试工程、锁定构建、原型 107 逐名保留 | Release 与此前 Debug 均 420 托管+21 工具 PASS；最终 Release run 退出 0，无跳过；原型计数不是 GUI 验收 |
+| 两真实 surface | Ready、用途隔离及重启 | 两进程各 12/12 PASS；第二进程改端口，写入前已分别读到 Web=web、Local=local |
+| 导航与错误 | back/forward/reload/stop、主地址/标题、同文档历史、错误恢复 | 自动断言与人工 toolbar 均通过；真正中止连接得到 NSURLErrorDomain/-1005，后续导航正常 |
+| 注入、CSP、frame | nonce 脚本前已有注入标记；frame 伪造 main 不越权 | 两进程通过；原生 frameInfo 标为子 frame，journal 拒绝；子 frame 点击 Next 后主地址仍为 /browser/main |
+| 查找、缩放、UA | 命中/不命中/大小写/反向，渲染变化及请求头 | 命中结果精确；1.5 倍缩放 viewport 845→563；UA 同时匹配 HTTP 与 navigator，随后恢复默认 |
+| PDF 与打印 | 产生真正 PDF；真实打印面板可取消 | 两份 PDF 的渲染文本均由 pdftotext 独立读出；打印 sheet 有预览，取消后页面继续工作；未声称物理打印 |
+| JS 对话框 | alert、confirm yes/no、prompt Unicode/cancel | 实际 sheet 与页面返回值均吻合；Unicode 使用 AX setValue，不代表输入法验证 |
+| 全屏、焦点、用途切换 | 前台真实点击，Escape 后恢复；本地 SWF 和网页互换 | 实际全屏截图与主窗口恢复已保存；本地 Hello trace 正确，返回网页继续工作 |
+| 检查与协议 | 默认不可检查、显式 true/false；未知 scheme 不启动 OS | 两 store 默认 false，Web 真值回读 true→false；未知协议生成 blocked 原生事件，页面保留且没有系统启动器 |
+| 关闭、取消 | 操作取消后继续使用，关闭排空且实际销毁 | 三次 native-focus Quit 退出 0、failures=0、每次两个 adapter destroyed；两进程 precancel 后脚本仍返回 4 |
+| 摩尔庄园 | 官方入口→开始→账号/密码/登录按钮可见 | 本轮 package04 实际显示登录 UI；账号框点击后 Command-Q 通过；没有输入或提交凭据 |
+
+总汇门禁为 `artifacts/evidence/W01/final-native-20261028-01/result.json`。整个闭合 profile 原件副本在该目录的 `profiles/`，包括失败的前三轮，不仅保存结论。所有测试、开发包、原生进程及冻结脚本均退出 0；该结论不覆盖保留下来的早期失败 run。
+
+第一进程 PID 33184 从 04:39:54 至 10:08:50 UTC 保留后正常退出；期间包含主动中断和可能挂起时间，**不能据此宣称 Q02 的持续负载/长期运行预算已过**。后两个进程为 PID 52620、52997，均正常退出。
+
+新的登录截图：[mole-login-native.png](mole-login-native.png)，SHA-256 `0a68d13db16cd744f389a4266ab046411d8dc85621b05e64a25af9c71866c81b`。仅预加载 Login.swf 或停留“开始”画面不算本项通过。
+
+## 失败、修复及不能外推的部分
+
+1. 首包隐藏 Local surface，Avalonia 没有建立其 native adapter，Ready 超时。两个 surface 先完成 Ready 再切换可见性，最终两进程通过。
+2. 次轮历史断言在状态未稳定时过早读取；端口 9 也未产生所需原生错误。保留失败，等待真实导航完成，并用站点主动断连接验证 NSError；不把空白页当错误通过。
+3. 第三轮虽然原生 11 项通过，人工操作发现同文档返回卡住以及长会话关闭 Objective-C abort。保留完整 ips 和 process.log；增加第 12 项同文档用例，修复 loading 状态。
+4. 初版替换库持有的脚本消息名。第三轮关闭栈在库的 removeScriptMessageHandlerForName 收到非字符串对象；内部所有权原因是推断。最终独立命名，不移除或替换原注册；同包三次真实关闭完成，没有靠强杀或吞异常获得通过。见 ADR 0002。
+5. 之前对 isInspectable 误期待页面右键 Inspect。公开方式是 Safari Develop。当前属性默认/切换回读及提示正确；本机没有开启 Develop，没有改 Safari 设置，也没有验证 Inspector 窗口工作流。
+6. 第四轮 AX-only 全屏在隐藏文档被拒绝，同时 CUA 出现 pipe-close/noWindowsAvailable/旧 sheet 截图。原始尝试仍是 FAIL。相同包在新进程前台实际点击全屏成功，Escape 恢复；不要把后台 AX press 等同于前台用户激活，也不要把旧截图当当前窗口。见 fourth-native-attempt.json。
+
+前三轮说明文件为本目录 first/second/third-native-failure.json，原始 run 均保留。编译分析器失败也未删除。中文 IME 重复事件仍未解决，U04 必须复验；全量 P02 正式宿主兼容回归在 W03。完整下载/popup 语义在 W02，实际存档迁移在 W04/M02。当前 UI 仍为开发外壳。
+
+## 原数据与暂停
+
+冻结复核包含原仓库 332 业务文件、HEAD、dirty 状态、四个旧数据根、104 固定资产和 13 个依赖锁。结果分别保存 source-preserved.json、legacy-data-preserved.json 及 acceptance-index.json。没有在原仓库开发、构建、运行或清理，没有提交、推送或发布。
+
+用户已要求 W01 完成后暂停。下一任务保持 W02 TODO；恢复前先读根 HANDOFF.md、任务表与实施方案 W02，不自动继续。

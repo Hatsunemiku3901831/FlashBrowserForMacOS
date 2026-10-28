@@ -1,0 +1,17 @@
+{
+  "status": "FAIL",
+  "run": "browser-native-20261028-01",
+  "actual": "Hidden LocalPlayer WKWebView did not create adapter; Ready timed out. Normal close exited 0; that exit does not pass the content checks. Cmd-Q with HTML focus did not quit; retained for correction.",
+  "corrections": [
+    "Keep both surfaces visible through Ready, then route visibility.",
+    "Make Quit a direct native application menu item and route Command-Q from actual WK first responder through a scoped AppKit local event monitor to the composition root."
+  ],
+  "evidence": {
+    "artifacts/evidence/W01/browser-native-20261028-01/process.log": "ef5021175dbe212b5830978edc4e6a9be346ba186443b5d8ff09efa4684cee6f",
+    "artifacts/evidence/W01/browser-native-20261028-01/codesign-before-launch.log": "8d2fbbff1bf1501b32696bef41fcfa1f3a61a795b9d70aa44399a7317b8e8d37",
+    "artifacts/evidence/W01/browser-native-20261028-01/process-result.json": "e366a1fead4ad4e07fb46af333e77d0efe3c01fb4f90391478c21a00a4a39ad2",
+    "artifacts/evidence/W01/browser-native-20261028-01/focus-before-quit.png": "5277452596859a991b35d6f3ab32eacab9a593f596faed69e0692aa97f852a4b",
+    "artifacts/evidence/W01/browser-native-20261028-01/denied-reads.sb": "cd24c58986665ea8ec78d8d49c960e5276ed2c8455465951295c531390735f36",
+    "artifacts/evidence/W01/browser-native-20261028-01/launch.json": "af58d85b31d30a047b9ba498120bec79c69164935db97d1d05164e74dc755f40"
+  }
+}

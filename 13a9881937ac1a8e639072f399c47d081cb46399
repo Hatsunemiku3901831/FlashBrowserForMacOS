@@ -1,0 +1,159 @@
+{
+  "status": "FAIL",
+  "run": "browser-native-20261028-02",
+  "auto": [
+    {
+      "status": "FAIL",
+      "failures": 2,
+      "process": 22594,
+      "environment": {
+        "os": "Unix 26.5.1",
+        "architecture": "Arm64",
+        "runtime": ".NET 10.0.9"
+      },
+      "site": "http://127.0.0.1:56515/3ccfc4f935935a57d738525b9a86b3f8fe96f84889be59c71e9bb328952dde45/browser/main",
+      "checks": [
+        {
+          "name": "both-purpose-ready",
+          "expected": "Two real retained WKWebViews complete Ready",
+          "status": "PASS",
+          "actual": {
+            "ready": true
+          },
+          "elapsedMs": 0.2901
+        },
+        {
+          "name": "document-start-and-strict-csp",
+          "expected": "User script exists before nonce-authorized page script",
+          "status": "PASS",
+          "actual": "{\"before\":true,\"frames\":2}",
+          "elapsedMs": 1.8682
+        },
+        {
+          "name": "cookie-purpose-isolation-and-restart",
+          "expected": "Same-origin Web and Local cookies isolated; retained across a second process",
+          "status": "PASS",
+          "actual": {
+            "restart": false,
+            "beforeWeb": "",
+            "beforeLocal": "",
+            "afterWeb": "W01-Shared=web",
+            "afterLocal": "W01-Shared=local"
+          },
+          "elapsedMs": 10.7338
+        },
+        {
+          "name": "native-find",
+          "expected": "Native find reports hit, missing text, case and backwards",
+          "status": "PASS",
+          "actual": {
+            "hit": true,
+            "absent": false,
+            "wrongCase": false,
+            "backwards": true
+          },
+          "elapsedMs": 13.2199
+        },
+        {
+          "name": "native-zoom",
+          "expected": "WK page zoom changes rendered viewport and resets",
+          "status": "PASS",
+          "actual": {
+            "before": "845",
+            "after": "563",
+            "reset": 1
+          },
+          "elapsedMs": 154.2312
+        },
+        {
+          "name": "user-agent-header-and-javascript",
+          "expected": "Explicit UA matches network request and navigator; default restored",
+          "status": "PASS",
+          "actual": {
+            "initial": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) FlashMacOS/0.1.0",
+            "js": "FlashMacOS-W01/1.0",
+            "header": "FlashMacOS-W01/1.0",
+            "restored": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) FlashMacOS/0.1.0"
+          },
+          "elapsedMs": 114.1292
+        },
+        {
+          "name": "native-pdf-export",
+          "expected": "Native PDF bytes are actually produced",
+          "status": "PASS",
+          "actual": {
+            "path": "/Users/umisonoda/PycharmProjects/flash/flashMacOS/artifacts/profiles/browser-native-20261028-02/browser-verification/20261028T032005751Z-22594-0cb5d9959c0c4fc3be2ccc19a0237733.pdf",
+            "bytes": 33408,
+            "sha256": "9722641e827a8ce0baa244a091d8de959df244ad051d2da89a382d30c5442cfd"
+          },
+          "elapsedMs": 16.0703
+        },
+        {
+          "name": "history-and-reload",
+          "expected": "Main-frame address/title, back, forward, fresh document ID on reload",
+          "status": "FAIL",
+          "error": "System.IO.InvalidDataException: {\"Address\":\"http://127.0.0.1:56515/3ccfc4f935935a57d738525b9a86b3f8fe96f84889be59c71e9bb328952dde45/browser/main\",\"Title\":\"W01 Browser next\",\"IsLoading\":false,\"CanGoBack\":true,\"CanGoForward\":false,\"NavigationSequence\":4,\"NavigationId\":\"bbcb5f17182b5a08b85b5d305b0735b9\",\"Error\":null}\n   at FlashMacOS.Browser.WebKit.Diagnostics.BrowserNativeVerification.<>c__DisplayClass1_0.<<RunAsync>b__12>d.MoveNext()\n--- End of stack trace from previous location ---\n   at FlashMacOS.Browser.WebKit.Diagnostics.BrowserNativeVerification.<>c__DisplayClass1_1.<<RunAsync>g__Check|0>d.MoveNext()",
+          "elapsedMs": 62.6944
+        },
+        {
+          "name": "error-and-recovery",
+          "expected": "Failed navigation exposes domain/code and clears loading; next page succeeds",
+          "status": "FAIL",
+          "error": "System.Threading.Tasks.TaskCanceledException: A task was canceled.\n   at FlashMacOS.Browser.WebKit.Diagnostics.BrowserNativeVerification.Until(Func`1 condition, CancellationToken token)\n   at FlashMacOS.Browser.WebKit.Diagnostics.BrowserNativeVerification.<>c__DisplayClass1_0.<<RunAsync>b__13>d.MoveNext()\n--- End of stack trace from previous location ---\n   at FlashMacOS.Browser.WebKit.Diagnostics.BrowserNativeVerification.<>c__DisplayClass1_1.<<RunAsync>g__Check|0>d.MoveNext()",
+          "elapsedMs": 15009.933
+        },
+        {
+          "name": "stop-and-recovery",
+          "expected": "Stop clears loading and subsequent navigation succeeds",
+          "status": "PASS",
+          "actual": {
+            "recovered": {
+              "Address": "http://127.0.0.1:56515/3ccfc4f935935a57d738525b9a86b3f8fe96f84889be59c71e9bb328952dde45/browser/main",
+              "Title": "W01 Browser main",
+              "IsLoading": false,
+              "CanGoBack": true,
+              "CanGoForward": false,
+              "NavigationSequence": 8,
+              "NavigationId": "04cacb23f283d254b9e153c2dea3f7a3",
+              "Error": null
+            }
+          },
+          "elapsedMs": 80.5339
+        },
+        {
+          "name": "cancel-without-ui-hang",
+          "expected": "Precancelled native operations cancel and the next script still executes",
+          "status": "PASS",
+          "actual": {
+            "canceledObserved": true,
+            "result": "4"
+          },
+          "elapsedMs": 1.5499
+        }
+      ],
+      "manual": "Print sheet/dialog buttons/fullscreen/focus/unknown scheme require CUA evidence; not inferred from these checks"
+    }
+  ],
+  "manualObservations": [
+    "Actual alert sheet OK returned alert=closed.",
+    "Actual print sheet opened and cancel returned to page.",
+    "HTML input focused with native focus quit, Command-Q exited 0; composition.stopped failures=0."
+  ],
+  "remainingFailures": [
+    "History wait observed old title/history while native back URL had just changed.",
+    "Restricted port 9 produced about:blank instead of the expected NSError; retain failure and add deterministic aborted-response endpoint, do not infer error acceptance."
+  ],
+  "evidence": {
+    "artifacts/evidence/W01/browser-native-20261028-02/alert-sheet.png": "16e547bb3f1285c92ddf29348573b11f43b496017edca03dcaa093d635f08adf",
+    "artifacts/evidence/W01/browser-native-20261028-02/print-sheet.txt": "9292baadf8cdc9126f2352c10162bcb4ef1dd53c540f71653e4859a7f6f86e2f",
+    "artifacts/evidence/W01/browser-native-20261028-02/process.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "artifacts/evidence/W01/browser-native-20261028-02/alert-sheet.txt": "23af59fe66883cd364c72fca55693759c8f6a4594f0a5c450e3586f6a261bda4",
+    "artifacts/evidence/W01/browser-native-20261028-02/print-sheet.png": "ba421e7070a0080f6519fa2ad17114691875aba587f295f8fdc072be7b194e02",
+    "artifacts/evidence/W01/browser-native-20261028-02/codesign-before-launch.log": "adc0a6dcf76efd4fe54ec85bb5e11e93e806532640fab218879ac1593a18e1a3",
+    "artifacts/evidence/W01/browser-native-20261028-02/process-result.json": "f6a2df2ed501c5ae1c73e6771ffd2068162ae6e1fd68937b0eb0625249d90efc",
+    "artifacts/evidence/W01/browser-native-20261028-02/focus-quit.txt": "9b3ee62221a48abaefc24cd8e4845334038a4a4158db9a8d116c2dbb199530d7",
+    "artifacts/evidence/W01/browser-native-20261028-02/native-pdf.txt": "334c72246e11ed01880692c3198855ca8e07fbf01fff0c5da2de2940b9db46b4",
+    "artifacts/evidence/W01/browser-native-20261028-02/denied-reads.sb": "cd24c58986665ea8ec78d8d49c960e5276ed2c8455465951295c531390735f36",
+    "artifacts/evidence/W01/browser-native-20261028-02/launch.json": "7f76cc5494e3111d3fed1df7da42341cd0ee04acdf62a3337a17b0dd61c02b8e"
+  }
+}

@@ -1,0 +1,173 @@
+{
+  "task": "W01",
+  "status": "PASS",
+  "cases": [
+    {
+      "id": "navigation",
+      "expected": "Main-frame back/forward/reload/stop/error and recovery with actual title/address/loading history; include pushState same-document back/forward without stuck loading",
+      "status": "PASS",
+      "actual": "Two processes each passed all native navigation checks; actual toolbar pushState/back/forward shows Reload with correct address. The prior same-document failure is retained.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/final-native-20261028-01/result.json",
+        "artifacts/evidence/W01/browser-native-restart-20261028-01/same-document-back.txt",
+        "artifacts/evidence/W01/browser-native-restart-20261028-01/same-document-forward.txt"
+      ]
+    },
+    {
+      "id": "message-source",
+      "expected": "Same/cross-origin iframe forged isMainFrame=true rejected using native frameInfo; iframe navigation never changes main address",
+      "status": "PASS",
+      "actual": "Native frameInfo marked every forged W01_FORGED_SUBFRAME as non-main, both origins rejected in journal; actual child Next changed child URL only, main address remained /browser/main.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/final-native-20261028-01/result.json",
+        "artifacts/evidence/W01/browser-native-20261028-04/iframe-navigation-keeps-main-address.txt",
+        "artifacts/evidence/W01/browser-native-20261028-04/before-window-focus-retry.txt"
+      ]
+    },
+    {
+      "id": "document-start",
+      "expected": "Native user script present before strict nonce-CSP inline detector",
+      "status": "PASS",
+      "actual": "Strict nonce-CSP detector observed both document-start markers before page script in both real processes.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/final-native-20261028-01/result.json"
+      ]
+    },
+    {
+      "id": "purpose-cookie-first",
+      "expected": "Same-origin cookies differ in real Web/LocalPlayer WKWebsiteDataStores",
+      "status": "PASS",
+      "actual": "First process read empty stores, then Web=web and Local=local on the same origin.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/final-native-20261028-01/result.json"
+      ]
+    },
+    {
+      "id": "purpose-cookie-restart",
+      "expected": "Second process restores both purpose cookies; identifiers stable",
+      "status": "PASS",
+      "actual": "Second PID restored Web=web and Local=local before writing; identifiers identical after port change.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/final-native-20261028-01/result.json"
+      ]
+    },
+    {
+      "id": "find-zoom-ua",
+      "expected": "Native find hit/miss/case/direction; actual rendered pageZoom and UA headers/navigator",
+      "status": "PASS",
+      "actual": "Native find hit/miss/case/backwards passed; page viewport 845 to 563 at 1.5x; navigator and HTTP request UA matched and default restored.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/final-native-20261028-01/result.json"
+      ]
+    },
+    {
+      "id": "pdf",
+      "expected": "Native export produces readable PDF with expected rendered text",
+      "status": "PASS",
+      "actual": "Two real native PDF files produced; pdftotext recovered title and LocateNeedleK7, SHA preserved.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/final-native-20261028-01/result.json",
+        "artifacts/evidence/W01/final-native-20261028-01/pdf-text-33184.txt"
+      ]
+    },
+    {
+      "id": "print-sheet",
+      "expected": "Open real native print UI and cancel; app remains usable",
+      "status": "PASS",
+      "actual": "Real native sheet and rendered preview opened, Cancel returned to usable browser; no physical print claimed.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/browser-native-20261028-04/print-sheet.png",
+        "artifacts/evidence/W01/browser-native-20261028-04/print-sheet.txt",
+        "artifacts/evidence/W01/browser-native-20261028-04/print-cancel.txt"
+      ]
+    },
+    {
+      "id": "js-alert-confirm-prompt",
+      "expected": "Native sheets produce actual alert close/confirm yes+no/prompt typed+cancel results",
+      "status": "PASS",
+      "actual": "Alert closed; confirm true/false; prompt returned Unicode via AX setValue and null after cancel. This is not an IME test.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/browser-native-20261028-04/alert-result.txt",
+        "artifacts/evidence/W01/browser-native-20261028-04/confirm-ok.txt",
+        "artifacts/evidence/W01/browser-native-20261028-04/confirm-cancel.txt",
+        "artifacts/evidence/W01/browser-native-20261028-04/prompt-unicode-result.txt",
+        "artifacts/evidence/W01/browser-native-20261028-04/prompt-null-result.txt"
+      ]
+    },
+    {
+      "id": "fullscreen-focus",
+      "expected": "Real fullscreen entry/exit and WebView input focus; native Quit works with Flash field focus",
+      "status": "PASS",
+      "actual": "Foreground actual page click entered fullscreen; Escape restored host and controls. Mole account field was clicked before native-focused Command-Q; native Kind 11, exit 0 and both adapters destroyed.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/browser-native-restart-20261028-01/fullscreen-fresh-process.png",
+        "artifacts/evidence/W01/browser-native-restart-20261028-01/same-document-pushstate.png",
+        "artifacts/evidence/W01/browser-mole-native-20261028-01/mole-login-field-focused.png",
+        "artifacts/evidence/W01/browser-mole-native-20261028-01/process-result.json",
+        "artifacts/evidence/W01/final-native-20261028-01/result.json"
+      ]
+    },
+    {
+      "id": "unknown-protocol",
+      "expected": "Click unknown scheme without OS launcher or unintended window",
+      "status": "PASS",
+      "actual": "Unknown link yielded native blocked event, stayed on main URL and no OS launcher/popup appeared.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/browser-native-20261028-04/unknown-protocol-blocked.txt",
+        "artifacts/evidence/W01/final-native-20261028-01/result.json"
+      ]
+    },
+    {
+      "id": "inspection",
+      "expected": "Public isInspectable is false by default, reads back true/false on explicit control; UI accurately describes Safari Develop; Inspector window workflow not claimed on this environment",
+      "status": "PASS",
+      "initialExpected": "Off by default; explicit isInspectable gives inspect context item; can turn off",
+      "initialObservation": "FAIL_EXPECTATION_INVALID: no context item, official API exposes Safari Develop instead; see third-native-failure.json",
+      "actual": "Both stores default false; explicit Web toggle read back true then false in native Kind 12. UI says Safari Develop. Full Inspector window remains unverified.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/browser-native-20261028-04/inspection-on.txt",
+        "artifacts/evidence/W01/browser-native-20261028-04/inspection-off.txt",
+        "artifacts/evidence/W01/final-native-20261028-01/result.json"
+      ]
+    },
+    {
+      "id": "cancellation",
+      "expected": "Precancel and close drain native waiters; no UI hang",
+      "status": "PASS",
+      "actual": "Precancel observed and subsequent script returned 4 in both processes; three native-focused closes drained/destroyed two adapters each with failures=0.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/final-native-20261028-01/result.json"
+      ]
+    },
+    {
+      "id": "independence",
+      "expected": "Same self-contained ARM64 package/source hashes, strict signature, no source/reference/bootstrap/system dotnet; repeated delayed native teardown without Objective-C abort",
+      "status": "PASS",
+      "actual": "Final package04 equals archive before and after all three native sessions; strict signature and 19 ARM64 Mach-O pass; package/final Release inputs identical. All source/reference/bootstrap reads denied and no system dotnet.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/final-native-20261028-01/result.json",
+        "artifacts/evidence/W01/browser-package-20261028-04/result.json"
+      ]
+    },
+    {
+      "id": "target-mole",
+      "expected": "New package opens official Mole entry through visible login UI; no credential submission",
+      "status": "PASS",
+      "actual": "Fresh package04 opened official http://mole.61.com/, waited for resource loading, clicked visible Start and showed empty account/password/login UI. No credential entry/submission.",
+      "evidencePaths": [
+        "artifacts/evidence/W01/browser-mole-native-20261028-01/official-load-progress.png",
+        "artifacts/evidence/W01/browser-mole-native-20261028-01/official-start-click.png",
+        "artifacts/evidence/W01/browser-mole-native-20261028-01/mole-login-field-focused.png",
+        "docs/evidence/W01/2026-10-28/mole-login-native.png"
+      ]
+    }
+  ],
+  "reviewedAt": "2026-10-28",
+  "environment": "Apple M1 Pro, arm64, macOS 26.5.1, .NET 10.0.9 self-contained; package browser-package-20261028-04",
+  "limitations": [
+    "Safari Inspector window workflow unverified; default/controlled native property is verified",
+    "Earlier background AX-only fullscreen rejected hidden document; fresh foreground actual gesture passed on the identical package; raw failures retained",
+    "Long wall-clock idle includes interruption/suspension and is not Q02 sustained workload acceptance",
+    "Full product compatibility, UI, localization/IME and release gates remain pending"
+  ]
+}
