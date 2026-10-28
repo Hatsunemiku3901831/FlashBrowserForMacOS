@@ -1,0 +1,9 @@
+# FlashMacOS 导入原型
+
+这是 P01 的可执行工作副本，来源原字节保存在根目录 reference/legacy。新任务调度以根目录 AGENTS.md、实施方案和状态表为准。
+
+根目录运行 `python3 scripts/verify-bootstrap.py --run-id <唯一运行名>`。
+
+GUI 必须显式设置 `FLASHMACOS_TEST_PROFILE` 为独立目录绝对路径；未设置时退出 3。参见根目录 README.md 与 docs/contracts/prototype-profile.zh-CN.md。
+
+原始包、Ruffle 与 fixture 固定不变，当前 102 项测试不等于完整产品验收。脚本 package-macos.sh 仅在本副本 artifacts 中生成 osx-arm64 开发包，不具备正式发行结论。

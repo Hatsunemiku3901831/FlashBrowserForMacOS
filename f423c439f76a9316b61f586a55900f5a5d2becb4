@@ -1,0 +1,76 @@
+#!/bin/zsh
+
+set -euo pipefail
+
+script_dir=${0:A:h}
+project_root=${script_dir:h}
+configuration=${CONFIGURATION:-Release}
+runtime_id=${1:-osx-arm64}
+identity=${CODE_SIGN_IDENTITY:--}
+
+case "$runtime_id" in
+  osx-arm64) ;;
+  *)
+    print -u2 "Unsupported runtime identifier: $runtime_id"
+    exit 2
+    ;;
+esac
+
+project="$project_root/src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj"
+publish_dir="$project_root/artifacts/publish/$runtime_id"
+artifact_dir="$project_root/artifacts/$runtime_id"
+bundle="$artifact_dir/CefFlashBrowser.app"
+contents="$bundle/Contents"
+
+dotnet restore "$project" --locked-mode
+
+rm -rf "$publish_dir" "$bundle"
+mkdir -p "$publish_dir" "$contents/MacOS" "$contents/Resources"
+
+dotnet publish "$project" \
+  --configuration "$configuration" \
+  --runtime "$runtime_id" \
+  --self-contained true \
+  --no-restore \
+  --output "$publish_dir" \
+  -p:PublishReadyToRun=true \
+  -p:PublishSingleFile=false \
+  -p:PublishTrimmed=false
+
+# Some managed dependencies ship universal native libraries. Thin them while
+# assembling the bundle so the supported artifact contains ARM64 slices only.
+ditto --arch arm64 "$publish_dir" "$contents/MacOS"
+ditto "$contents/MacOS/Assets" "$contents/Resources/Assets"
+ditto "$contents/MacOS/CompatibilityFixtures" "$contents/Resources/CompatibilityFixtures"
+rm -rf "$contents/MacOS/Assets"
+rm -rf "$contents/MacOS/CompatibilityFixtures"
+find "$contents/MacOS" -type f -name '*.pdb' -delete
+cp "$project_root/packaging/macos/Info.plist" "$contents/Info.plist"
+chmod +x "$contents/MacOS/CefFlashBrowser.MacOS.Spike.Desktop"
+plutil -lint "$contents/Info.plist"
+main_executable="$contents/MacOS/CefFlashBrowser.MacOS.Spike.Desktop"
+
+sign_args=(--force --sign "$identity")
+if [[ "$identity" == "-" ]]; then
+  sign_args+=(--timestamp=none)
+  entitlements="$project_root/packaging/macos/CefFlashBrowser.development.entitlements"
+else
+  sign_args+=(--timestamp)
+  entitlements="$project_root/packaging/macos/CefFlashBrowser.entitlements"
+fi
+
+while IFS= read -r -d $'\0' candidate; do
+  if [[ "$candidate" == "$main_executable" ]]; then
+    continue
+  fi
+
+  codesign "${sign_args[@]}" "$candidate"
+done < <(find "$contents/MacOS" -type f -print0)
+
+codesign "${sign_args[@]}" \
+  --options runtime \
+  --entitlements "$entitlements" \
+  "$bundle"
+codesign --verify --deep --strict --verbose=1 "$bundle"
+
+print "$bundle"

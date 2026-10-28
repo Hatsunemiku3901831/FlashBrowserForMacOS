@@ -1,0 +1,237 @@
+using System.Collections.ObjectModel;
+using System.Text.Json;
+using CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Persistence;
+using CefFlashBrowser.MacOS.Spike.Core.Sol;
+
+namespace CefFlashBrowser.MacOS.Spike.Core.Flash.Storage;
+
+public sealed record RuffleSaveEntry(
+    string Key,
+    string Base64Data,
+    string SolName,
+    SolEncoding Encoding,
+    int ByteLength,
+    DateTimeOffset UpdatedAt);
+
+public interface IRuffleSaveStore
+{
+    ValueTask<IReadOnlyList<RuffleSaveEntry>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    ValueTask<RuffleSaveEntry> UpsertAsync(
+        string key,
+        string base64Data,
+        CancellationToken cancellationToken = default);
+
+    ValueTask<bool> RemoveAsync(string key, CancellationToken cancellationToken = default);
+}
+
+public sealed class JsonRuffleSaveStore : IRuffleSaveStore, IDisposable
+{
+    private const int CurrentSchemaVersion = 1;
+    private const int MaxSaveBytes = 64 * 1024 * 1024;
+    private const long MaxStoreBytes = 256L * 1024 * 1024;
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true,
+    };
+
+    private readonly string _path;
+    private readonly SemaphoreSlim _mutex = new(1, 1);
+    private Dictionary<string, PersistedSave>? _saves;
+
+    public JsonRuffleSaveStore(string path)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        _path = Path.GetFullPath(path);
+    }
+
+    public async ValueTask<IReadOnlyList<RuffleSaveEntry>> GetAllAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await _mutex.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
+            return new ReadOnlyCollection<RuffleSaveEntry>(
+                _saves!
+                    .Select(pair => ToEntry(pair.Key, pair.Value))
+                    .OrderBy(entry => entry.Key, StringComparer.Ordinal)
+                    .ToList());
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+    }
+
+    public async ValueTask<RuffleSaveEntry> UpsertAsync(
+        string key,
+        string base64Data,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentException.ThrowIfNullOrWhiteSpace(base64Data);
+
+        var bytes = DecodeAndValidate(base64Data);
+        var header = SolFileInspector.ReadHeader(bytes);
+        var persisted = new PersistedSave(base64Data, DateTimeOffset.UtcNow);
+
+        await _mutex.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
+            _saves![key] = persisted;
+            await SaveAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+
+        return new RuffleSaveEntry(
+            key,
+            base64Data,
+            header.Name,
+            header.Encoding,
+            header.FileLength,
+            persisted.UpdatedAt);
+    }
+
+    public async ValueTask<bool> RemoveAsync(string key, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+
+        await _mutex.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await EnsureLoadedAsync(cancellationToken).ConfigureAwait(false);
+            if (!_saves!.Remove(key))
+            {
+                return false;
+            }
+
+            await SaveAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        finally
+        {
+            _mutex.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        _mutex.Dispose();
+    }
+
+    private async ValueTask EnsureLoadedAsync(CancellationToken cancellationToken)
+    {
+        if (_saves is not null)
+        {
+            return;
+        }
+
+        if (!File.Exists(_path))
+        {
+            _saves = new Dictionary<string, PersistedSave>(StringComparer.Ordinal);
+            return;
+        }
+
+        var fileInfo = new FileInfo(_path);
+        if (fileInfo.Length > MaxStoreBytes)
+        {
+            throw new InvalidDataException($"The Ruffle save store exceeds {MaxStoreBytes} bytes.");
+        }
+
+        await using var stream = new FileStream(
+            _path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 64 * 1024,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        var document = await JsonSerializer.DeserializeAsync<SaveStoreDocument>(
+                stream,
+                JsonOptions,
+                cancellationToken)
+            .ConfigureAwait(false)
+            ?? throw new InvalidDataException("The Ruffle save store root is null.");
+
+        if (document.SchemaVersion != CurrentSchemaVersion)
+        {
+            throw new InvalidDataException(
+                $"Unsupported Ruffle save store schema: {document.SchemaVersion}.");
+        }
+
+        _saves = new Dictionary<string, PersistedSave>(StringComparer.Ordinal);
+        foreach (var pair in document.Saves)
+        {
+            _ = DecodeAndValidate(pair.Value.Base64Data);
+            _saves.Add(pair.Key, pair.Value);
+        }
+    }
+
+    private async ValueTask SaveAsync(CancellationToken cancellationToken)
+    {
+        var document = new SaveStoreDocument(
+            CurrentSchemaVersion,
+            new SortedDictionary<string, PersistedSave>(_saves!, StringComparer.Ordinal));
+
+        await AtomicFileWriter.WriteAsync(
+                _path,
+                async (stream, token) =>
+                {
+                    await JsonSerializer.SerializeAsync(stream, document, JsonOptions, token)
+                        .ConfigureAwait(false);
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static RuffleSaveEntry ToEntry(string key, PersistedSave save)
+    {
+        var bytes = DecodeAndValidate(save.Base64Data);
+        var header = SolFileInspector.ReadHeader(bytes);
+        return new RuffleSaveEntry(
+            key,
+            save.Base64Data,
+            header.Name,
+            header.Encoding,
+            header.FileLength,
+            save.UpdatedAt);
+    }
+
+    private static byte[] DecodeAndValidate(string base64Data)
+    {
+        var maximumEncodedLength = ((MaxSaveBytes + 2L) / 3L) * 4L;
+        if (base64Data.Length > maximumEncodedLength)
+        {
+            throw new InvalidDataException($"The Ruffle save exceeds {MaxSaveBytes} bytes.");
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(base64Data);
+        }
+        catch (FormatException exception)
+        {
+            throw new InvalidDataException("The Ruffle save is not valid Base64.", exception);
+        }
+
+        if (bytes.Length > MaxSaveBytes)
+        {
+            throw new InvalidDataException($"The Ruffle save exceeds {MaxSaveBytes} bytes.");
+        }
+
+        _ = SolFileInspector.ReadHeader(bytes);
+        return bytes;
+    }
+
+    private sealed record SaveStoreDocument(
+        int SchemaVersion,
+        SortedDictionary<string, PersistedSave> Saves);
+
+    private sealed record PersistedSave(string Base64Data, DateTimeOffset UpdatedAt);
+}

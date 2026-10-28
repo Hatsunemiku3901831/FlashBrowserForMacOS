@@ -1,0 +1,23 @@
+namespace CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting;
+
+public sealed record LocalSwfSource(
+    string Id,
+    string FilePath,
+    Uri PlayerUri,
+    Uri SwfUri,
+    string StoragePrefix);
+
+public interface ILocalContentHost : IAsyncDisposable
+{
+    Uri? BaseUri { get; }
+
+    Uri? DiagnosticsUri { get; }
+
+    Uri? RufflePublicPath { get; }
+
+    ValueTask StartAsync(CancellationToken cancellationToken = default);
+
+    ValueTask<LocalSwfSource> RegisterSwfAsync(
+        string filePath,
+        CancellationToken cancellationToken = default);
+}

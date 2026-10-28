@@ -1,0 +1,6 @@
+<Project>
+  <Target Name="ValidateFlashMacOSArchitecture" BeforeTargets="_IsProjectRestoreSupported;CollectPackageReferences;_GenerateRestoreGraph;_GenerateRestoreGraphProjectEntry;_GenerateProjectRestoreGraph;Restore;PrepareForBuild;Publish"
+          Condition="('$(RuntimeIdentifier)' != '' and '$(RuntimeIdentifier)' != 'osx-arm64') or ('$(RuntimeIdentifiers)' != '' and '$(RuntimeIdentifiers)' != 'osx-arm64')">
+    <Error Code="FM0001" Text="FlashMacOS only supports osx-arm64." />
+  </Target>
+</Project>

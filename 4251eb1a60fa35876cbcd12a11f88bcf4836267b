@@ -1,0 +1,45 @@
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using CefFlashBrowser.MacOS.Spike.Desktop.Composition;
+
+namespace CefFlashBrowser.MacOS.Spike.Desktop;
+
+public sealed partial class App : Application, IDisposable
+{
+    private CompositionRoot? _compositionRoot;
+
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    public override void OnFrameworkInitializationCompleted()
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            _compositionRoot = new CompositionRoot(desktop.Args ?? []);
+            desktop.MainWindow = _compositionRoot.CreateMainWindow();
+            desktop.Exit += OnDesktopExit;
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs args)
+    {
+        if (sender is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.Exit -= OnDesktopExit;
+        }
+
+        Dispose();
+    }
+
+    public void Dispose()
+    {
+        var root = Interlocked.Exchange(ref _compositionRoot, null);
+        root?.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        GC.SuppressFinalize(this);
+    }
+}

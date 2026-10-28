@@ -1,0 +1,83 @@
+# FlashMacOS
+
+面向 Apple Silicon ARM64 的 macOS Flash 浏览器与 SOL 存档管理器。方案固定为 .NET 10、Avalonia、WKWebView、自托管 Ruffle 和纯 C# SOL 编解码。
+
+最终交付只依赖本项目即可构建和运行。原 CefFlashBrowser 仅提供资源与参考；发行 app 自带 .NET 与固定资源，不需要原项目目录、原工程、原应用数据或系统 .NET。此项需通过最终独立构建与安装验收，当前开发进度如下。
+
+项目正在按[实施方案](docs/implementation-plan.zh-CN.md)开发。来源已冻结，G0 原型可行性、正式工程迁移及生命周期验收已通过。正式 ARM64 应用已独立运行本地 SWF、重载、popup 和摩尔庄园登录页，并保存真实嵌入式 WKWebView 证据。目前不是完整产品，也没有通过正式签名、公证或发行验收。可用功能和受阻项以[任务状态](docs/task-status.zh-CN.md)及逐任务证据为准。
+
+## 快速接手
+
+依次阅读 [AGENTS.md](AGENTS.md)、[启动说明](START-HERE.zh-CN.md)、[实施方案](docs/implementation-plan.zh-CN.md)、[任务状态](docs/task-status.zh-CN.md)，再看 [HRNESS.md](HRNESS.md) 的结构与运行入口。W02 下载/popup 与 W03 Ruffle 产品化已验收；当前按用户要求完成交接，不自动启动 W04/U01。详细交接见 [HANDOFF.md](HANDOFF.md) 与 [HANDOFF2.md](HANDOFF2.md)。
+
+来源快照位于 `reference/legacy/`，导入清单为 [source-import.json](docs/provenance/source-import.json)。正式 `FlashMacOS.slnx` 已建立，包含八个产品模块和五个测试工程，构建只读取本仓库正式源码与固定资产。
+
+## 正式开发入口
+
+需 Apple Silicon macOS、.NET SDK 10.0.301、Apple 开发工具和 macOS SDK（编译项目自有的 ARM64 WebKit 适配库）、Python 3.11+ 和 Node.js（工具回归使用）。在根目录或其他工作目录执行：
+
+```sh
+sh /path/to/flashMacOS/scripts/verify.sh --run-id my-formal-01
+```
+
+此入口执行依赖边界、104 份固定资产 hash、locked restore、构建、五个测试工程和工具回归。默认 Debug，可加 `--configuration Release`；每次使用新的 run ID。macOS 上自动禁止读取本项目的 reference/bootstrap；加 `--deny-read /path/to/CefFlashBrowser` 可同时禁止读取原仓库。当前正式工程 462 项托管测试、22 项工具回归通过；它们不代替真实桌面和最终发行验收。
+
+正式 GUI 可以直接启动。Debug 默认使用独立 Development 数据，Release 默认使用 Product 数据；需要隔离测试时再设置专用绝对路径：
+
+```sh
+dotnet run --project src/FlashMacOS.Desktop
+# 可选隔离测试
+FLASHMACOS_TEST_PROFILE="$(pwd)/artifacts/profiles/formal-manual-01" dotnet run --project src/FlashMacOS.Desktop
+```
+
+开发用 self-contained 应用可由 `scripts/package-development.py --task W01 --run-id my-package-01` 创建，再用 `scripts/run-native.py --task W01 --package-task W01 --run-id my-native-01 --package-run my-package-01 --url http://mole.61.com/` 启动。两者均拒绝复用输出目录；后者核对整包、创建隔离 profile，并等待正常退出。它们是本机开发入口，完整发行打包由 Q03 实施。W01 新包已在摩尔庄园账号框焦点下验证 Command-Q 正常退出，完整历史失败及修复见 [W01 报告](docs/evidence/W01/2026-10-28/report.md)。中文 IME 重复事件仍待 U04。
+
+## 来源核验
+
+以下操作默认只预览，不复制：
+
+```sh
+python3 scripts/import-source.py --source /path/to/CefFlashBrowser
+python3 -m unittest discover -s tests/tooling -v
+```
+
+初次导入可加 `--apply`；已有快照不同会报告冲突并保留原文件。同一来源重复导入保持快照和 manifest 不变。源路径属于导入配置，不参与应用构建。
+
+## 开发边界
+
+只交付 `osx-arm64`。产品用户数据、测试 profile 和构建产物分别管理，不触及 CefFlashBrowser 旧数据。源码与证据保留来源许可；Ruffle 的固定 JS/WASM 不手改。
+
+## 独立原型
+
+需 Apple Silicon macOS 和 .NET SDK 10.0.301。根目录执行（每次使用新的 run ID）：
+
+```sh
+python3 scripts/verify-bootstrap.py --run-id my-baseline-01
+```
+
+该入口执行 locked restore、Debug build/test，保存每阶段退出码、锁 hash、TRX 和逐名称结果。当前回归为 107/107（原始 97、隔离 5、固定内容服务 5）、0 跳过、0 构建警告/错误。输出位于 `artifacts/evidence/P01/<run-id>/`。
+
+运行 GUI 前必须指定[隔离 profile](docs/contracts/prototype-profile.zh-CN.md)：
+
+```sh
+export FLASHMACOS_TEST_PROFILE="$(pwd)/artifacts/profiles/manual-smoke"
+dotnet run --project bootstrap/legacy/spike/macos-host/src/CefFlashBrowser.MacOS.Spike.Desktop
+```
+
+原型可以打开本地 SWF、展示诊断页和捕获/导入/导出原始 SOL。摩尔庄园官方入口至登录界面已在真实 ARM64 WKWebView 复验并保存截图。冻结原型没有内容级编辑；正式 SOL 核心已实现，实际编辑器、正式设置/收藏界面及完整 UI 与发布仍待相应任务。开发签名 app 只用于本机验证。
+
+bootstrap 已冻结为历史回归入口；后续实现只维护正式 src。本轮未执行提交、推送或发布，尚无完成发行验收的产品包。
+
+产品身份、版本和 UA 统一来自 [Product.props](Product.props)，普通 Release 应用不要求设置环境变量。数据位于 `~/Library/Application Support/local.flashmacos.app/profiles/default`，cache/logs 使用独立 Library 子目录；Developer/Test 不混用 Product 数据。候选提交、备份恢复、冲突及日志边界见 [存储契约](docs/contracts/storage.zh-CN.md) 和 [变量契约](docs/contracts/variables.zh-CN.md)。
+
+设置与收藏夹的 v2 仓储和用例已实现，完整保留旧字段、未知元数据、收藏顺序和重复项，失败不提前发布内存；W01 已应用浏览器 UA、搜索和缩放能力，完整设置/收藏界面与偏好持久化接入仍待 U02。契约与字段表见 [configuration.zh-CN.md](docs/contracts/configuration.zh-CN.md)。
+
+SOL 核心已实现 AMF0/AMF3 全标准类型、引用/循环、完整 SOL 容器和编辑事务。五份原样本均做完整类型内容核对；支持候选编辑、撤销重做、另存为、冲突、备份与原件恢复，未知内容只读并保留原字节。格式转换先报告损失，必要时可明确保留 AMF3 封套。实际桌面编辑器接入仍是 U03，S05 的畸形输入、覆盖率与核心读写性能门禁已通过，实际 UI 树和整体性能仍待 U03/Q02，当前不声称完整产品完成。见 [SOL 编辑契约](docs/contracts/sol-editor.zh-CN.md)、[AMF 契约](docs/contracts/amf-codec.zh-CN.md) 和 [支持矩阵](docs/codec-support-matrix.json)。
+
+SOL 质量复验入口为 `scripts/check-sol-quality.py`；需先完成 Release 验证并安装固定开发工具。三个受限进程共验证 120,000 个突变和 384 个生成图，Domain.Sol/codec 分支覆盖率分别为 98.79%/91.13%。10 MiB 实测及全部失败记录见 [S05 报告](docs/evidence/S05/2026-10-28/report.md)、[质量契约](docs/contracts/sol-quality.zh-CN.md)。
+
+W01 已将网页与本地播放器分为两个稳定的持久 WebKit 数据区，支持真实导航/错误/同文档历史、原生查找/缩放/UA/打印/PDF、JS 弹窗、全屏与受控检查能力。两进程各 12 项原生检查、人工操作、本地 SWF 切换和新的摩尔庄园登录截图均有证据；Safari Inspector 窗口流程仍未验证。测试入口为 `run-native.py --case browser`；跨进程复验可用新的 run ID 加 `--reuse-test-profile <旧 Test run ID>`，不能复用旧证据目录。详见 [浏览器契约](docs/contracts/browser.zh-CN.md)。
+
+W02 已通过原生 WKDownload 的 25 项检查、50 次 popup 循环及真实保存/替换/取消/Basic sheet/下载中关闭验收；文件内容 hash 与原目标保护均核对。AppKit 暂留最近最多两个已关窗口的系统缓存已有内存图与不累积循环证据，托管 popup 和 WK adapter 全部释放。详见 [W02 报告](docs/evidence/W02/2026-10-28/report.md)。
+
+W03 已通过可靠控制完成/失败、runId 状态、静态/动态/frame 标签、离线本地及相对资源、前后台扫描与关闭清理。最终同输入 Debug/Release 462+22；正式宿主 10 项播放器与 23 项核心语料、键鼠/ExternalInterface/原生像素/摩尔庄园全部重测。`package-development.py --product-resources` 可生成物理无测试资产的包，实际启动/打开用户 SWF、断外网及缺失/损坏错误均已验收。详见 [W03 报告](docs/evidence/W03/2026-10-29/report.md) 和 [播放器契约](docs/contracts/ruffle-player.zh-CN.md)。

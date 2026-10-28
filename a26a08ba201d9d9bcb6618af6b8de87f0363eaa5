@@ -1,0 +1,25 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)Product.props" />
+  <PropertyGroup>
+    <Version>$(ProductVersion)</Version>
+    <ApplicationTitle>$(ProductName)</ApplicationTitle>
+    <ApplicationId>$(ProductBundleId)</ApplicationId>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <!-- Keep development builds portable while locking the only supported publish graph. -->
+    <RuntimeIdentifiers>osx-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="ProductName" Value="$(ProductName)" />
+    <AssemblyMetadata Include="ProductBundleId" Value="$(ProductBundleId)" />
+    <AssemblyMetadata Include="ProductVersion" Value="$(ProductVersion)" />
+    <AssemblyMetadata Include="ProductBuild" Value="$(ProductBuild)" />
+    <AssemblyMetadata Include="ProductMinimumMacOS" Value="$(ProductMinimumMacOS)" />
+  </ItemGroup>
+</Project>

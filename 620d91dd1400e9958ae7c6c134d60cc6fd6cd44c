@@ -1,0 +1,287 @@
+/* Project-authored P02 runner; upstream fixtures and Ruffle assets remain unchanged. */
+(() => {
+  "use strict";
+  const config = globalThis.__p02Config;
+  const output = document.getElementById("result");
+  const status = document.getElementById("status");
+  const instructions = document.getElementById("instructions");
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const runId = crypto.randomUUID();
+  let currentRunId = runId;
+  const results = [];
+  const nativeInputs=[];
+  if (config.caseId === "keyboard-input") for (const type of ["keydown","keypress","keyup","beforeinput","input","compositionstart","compositionend"])
+    document.addEventListener(type,event=>{
+      if(nativeInputs.length<256) nativeInputs.push({type:event.type,key:event.key,code:event.code,keyCode:event.keyCode,
+        charCode:event.charCode,isTrusted:event.isTrusted,repeat:event.repeat,inputType:event.inputType,data:event.data,
+        target:event.target?.tagName,at:performance.now()});
+    },true);
+  for (const level of ["warn","error"]) {
+    const original=console[level].bind(console);
+    console[level]=(...args)=>{
+      const record={level,caseId:config.caseId,runId:currentRunId,at:new Date().toISOString(),arguments:args.map(v=>typeof v==="string"?v:String(v))};
+      globalThis.__cefFlashBrowserPost({type:"compatibilityConsole",key:"p02/console",message:level,data:JSON.stringify(record)});
+      return original(...args);
+    };
+  }
+  const normalize = values => values.map(String).join("\n").replace(/\r/g, "").replace(/\n+$/, "");
+  const publish = (caseId, passed, expected, actual, startedAt) => {
+    const result = { taskId: "P02", fixtureId: caseId, caseId, runId: currentRunId,
+      status: passed ? "PASS" : "FAIL", expected, actual, startedAt,
+      finishedAt: new Date().toISOString(), environment: { runtime: "Ruffle 0.4.1", url: location.href },
+      artifactHashes: {}, evidencePaths: [] };
+    results.push(result);
+    output.textContent += JSON.stringify(result, null, 2) + "\n";
+    globalThis.__cefFlashBrowserPost({ type: "compatibilityResult", key: `p02/${caseId}/${runId}`,
+      message: result.status, data: JSON.stringify(result) });
+    return result;
+  };
+  const waitFor = async (condition, timeout = 7000) => {
+    const end = performance.now() + timeout;
+    while (!condition()) {
+      if (performance.now() >= end) throw new Error("Fixed case timed out");
+      await sleep(20);
+    }
+  };
+  const traceSubset = (traces, expected) => expected.every(line => normalize(traces).includes(line));
+  let player;
+  let api;
+  let reloadHello;
+  let audioEvents = [];
+  let networkSummary = null;
+  let audioGesture;
+  const audioTaps = [];
+  const nativeConnect = AudioNode.prototype.connect;
+  const tapsByContext = new WeakMap();
+  AudioNode.prototype.connect = function(destination, ...rest) {
+    const result = Reflect.apply(nativeConnect, this, [destination, ...rest]);
+    if (destination === this.context.destination) {
+      let tap = tapsByContext.get(this.context);
+      if (!tap) {
+        const analyser = this.context.createAnalyser(); analyser.fftSize = 4096;
+        const silence = this.context.createGain(); silence.gain.value = 0;
+        Reflect.apply(nativeConnect, analyser, [silence]);
+        Reflect.apply(nativeConnect, silence, [this.context.destination]);
+        tap = {context:this.context,analyser,silence,sources:new WeakSet(),runId:currentRunId};
+        tapsByContext.set(this.context,tap);audioTaps.push(tap);
+      }
+      if (!tap.sources.has(this)) { tap.sources.add(this);Reflect.apply(nativeConnect,this,[tap.analyser]); }
+    }
+    return result;
+  };
+  const captureAudio = () => {
+    const tap = audioTaps.filter(t => t.runId === currentRunId && t.context.state === "running").at(-1);
+    if (!tap) throw new Error("No running WebAudio output tap; a native user gesture is required");
+    const samples = new Float32Array(tap.analyser.fftSize);
+    tap.analyser.getFloatTimeDomainData(samples);
+    let energy=0;const crossings=[];
+    for(let i=0;i<samples.length;i++){energy+=samples[i]*samples[i];if(i>0&&samples[i-1]<=0&&samples[i]>0)crossings.push(i);}
+    const frequency=crossings.length>1 ? tap.context.sampleRate*(crossings.length-1)/(crossings.at(-1)-crossings[0]) : 0;
+    return {sampleRate:tap.context.sampleRate,contextState:tap.context.state,rms:Math.sqrt(energy/samples.length),frequencyHz:frequency,samples:[...samples]};
+  };
+  document.getElementById("reload").hidden = config.caseId !== "hello-world";
+  const load = async fixtureId => {
+    if (player) { api.suspend(); player.remove(); }
+    player = RufflePlayer.newest().createPlayer();
+    player.id = "p02-player";
+    document.getElementById("player").replaceChildren(player);
+    api = player.ruffle(1);
+    const traces = [];
+    const times = [];
+    const observer = value => { traces.push(String(value)); times.push(performance.now()); };
+    const bind = () => { api.traceObserver = observer; player.traceObserver = observer; };
+    player.addEventListener("loadedmetadata", bind, { once: true });
+    bind();
+    const options = { url: `${config.baseUrl}${config.token}/assets/${fixtureId}/test.swf`,
+      base: `${config.baseUrl}${config.token}/assets/${fixtureId}/`,
+      autoplay: "on", unmuteOverlay: "visible", allowScriptAccess: true, upgradeToHttps: false };
+    if (["bitmap-clone","bitmap-fillrect"].includes(fixtureId)) options.quality = "low"; // Match the frozen upstream image oracles.
+    if (fixtureId === "project-network") {
+      await fetch(`${config.baseUrl}${config.token}/network/allowed/cookie`);
+      networkSummary = null;
+      window.P02NetworkResult = value => { networkSummary = JSON.parse(value); return true; };
+      options.base = `${config.baseUrl}${config.token}/network/allowed/`;
+      options.parameters = {primaryBase:`${config.baseUrl}${config.token}/network/`,secondaryBase:`${config.secondOrigin}${config.token}/network/`};
+    }
+    if (fixtureId === "project-audio") {
+      audioEvents = [];
+      window.P02AudioResult = (kind, value) => { audioEvents.push({kind,payload:JSON.parse(value)});return true; };
+    }
+    await api.load(options);
+    bind();
+    return { traces, times };
+  };
+  const runFixture = async fixtureId => {
+    const started = new Date().toISOString();
+    currentRunId = crypto.randomUUID();
+    const expected = config.expected[fixtureId];
+    let capture;
+    try {
+      status.textContent = "RUNNING " + fixtureId;
+      capture = await load(fixtureId);
+      const { traces, times } = capture;
+      if (fixtureId === "project-network") {
+        await waitFor(() => typeof player.p02NetworkStart === "function");
+        if (api.callExternalInterface("p02NetworkStart") !== true) throw new Error("Network fixture did not start");
+        await waitFor(() => networkSummary !== null && traces.includes("P02_NETWORK_COMPLETE"), 25000);
+        for (const item of networkSummary.cases)
+          publish(item.caseId, item.status === "PASS", item.expected, { ...item.actual, url:item.url }, started);
+        const required = ["as3-relative","as3-absolute","as3-redirect","as3-cookie","as3-missing","as3-cross-origin-allowed","as3-cross-origin-denied"];
+        return publish(fixtureId, networkSummary.cases.length === required.length && networkSummary.cases.every((item,index) => item.caseId === required[index] && item.status === "PASS"), "Seven AS3 URLLoader transport cases",
+          { ...networkSummary, traces,serverObservations:await (await fetch(`/${config.token}/network-observations`)).json() }, started);
+      }
+      if (fixtureId === "project-audio") {
+        await waitFor(() => audioEvents.some(e => e.kind === "loaded") && audioEvents.some(e => e.kind === "expected-load-error"));
+        const loaded = audioEvents.find(e => e.kind === "loaded").payload;
+        publish("audio-load-and-failure", loaded.bytesLoaded === loaded.bytesTotal && loaded.bytesTotal > 1000 && loaded.length >= 2900 && loaded.length <= 3300,
+          {toneHz:440,seconds:3,missingResource:"IOError"}, {events:audioEvents,traces}, started);
+        document.getElementById("audio").textContent = "Run 440 Hz audio capture with a native click";
+        instructions.textContent = "Click the Flash unmute overlay if shown, then the audio capture button. This captures the actual WebAudio output signal without using a microphone.";
+        return await new Promise((resolve,reject) => {
+          const timeout=setTimeout(()=>reject(new Error("Native audio gesture was not supplied")),120000);
+          audioGesture=async event=>{
+            clearTimeout(timeout);audioGesture=null;
+            try {
+              const activeTaps=audioTaps.filter(t=>t.runId===currentRunId && t.context.state!=="closed");
+              if (!activeTaps.length) throw new Error("No active WebAudio destination tap");
+              await Promise.all(activeTaps.map(t=>t.context.resume()));
+              api.resume();
+              publish("audio-user-gesture",event.isTrusted && activeTaps.every(t=>t.context.state==="running"),"Trusted native input resumes the WebAudio context",{isTrusted:event.isTrusted,contexts:activeTaps.map(t=>t.context.state)},started);
+              const command=(name,value=0.25)=>JSON.parse(api.callExternalInterface("p02AudioCommand",name,value));
+              const played=command("play");await sleep(250);const moving=command("state");
+              const paused=command("pause");await sleep(140);const still=command("state");
+              const resumed=command("resume");await sleep(150);const resumedMoving=command("state");
+              const muted=command("mute");const quiet=command("volume",0.1);command("pause");
+              const apiPassed=played.channel&&moving.position>50&&paused.savedPosition>50&&paused.savedPosition===still.savedPosition&&
+                resumed.channel&&resumedMoving.position>=resumed.savedPosition&&muted.volume===0&&Math.abs(quiet.volume-0.1)<0.00001;
+              publish("audio-control-apis",apiPassed,"play/advance, pause/resume, mute and volume retain their state",{played,moving,paused,still,resumed,resumedMoving,muted,quiet},started);
+              command("volume",0.25);command("play");await sleep(350);const full=captureAudio();
+              command("mute");await sleep(350);const silent=captureAudio();
+              command("volume",0.1);await sleep(350);const low=captureAudio();command("pause");
+              const ratio=low.rms/full.rms;
+              const passed=full.rms>0.005&&full.frequencyHz>=425&&full.frequencyHz<=455&&silent.rms<0.0001&&ratio>=0.25&&ratio<=0.6;
+              resolve(publish("audio-output-capture",passed,{toneHz:440,frequencyToleranceHz:[425,455],signalRmsMin:0.005,muteRmsMax:0.0001,volumeRatioRange:[0.25,0.6]},
+                {full,silent,low,volumeRatio:ratio,scope:"PCM captured at the real WebAudio destination input, before hardware mixing; no microphone or API-only inference"},started));
+            } catch(error){reject(error);}
+          };
+        });
+      }
+      if (fixtureId === "hello-world") {
+        reloadHello = async () => {
+          currentRunId = crypto.randomUUID();
+          const reloadStarted = new Date().toISOString();
+          traces.length = 0; times.length = 0;
+          const bind = () => { api.traceObserver = player.traceObserver = value => { traces.push(String(value)); times.push(performance.now()); }; };
+          player.addEventListener("loadedmetadata", bind, { once: true });
+          try {
+            await api.reload(); bind();
+            await waitFor(() => traces.length > 0); await sleep(180);
+            const result = publish("hello-world-player-reload", normalize(traces) === "Hello world!", ["Hello world!"], {traces}, reloadStarted);
+            status.textContent = result.status + " — fixed Hello World player reload";
+          } catch(error) { publish("hello-world-player-reload", false, ["Hello world!"], {traces,error:String(error)}, reloadStarted); }
+        };
+      }
+      if (fixtureId === "keyboard-input") {
+        instructions.textContent = "Click the Flash text field, then press a and Enter. Native input is required.";
+        const oracle = ["onKeyDown", "event.charCode = 97", "event.keyCode = 65", "", "onKeyUp", "event.charCode = 97", "event.keyCode = 65", "", "onKeyDown", "event.charCode = 13", "event.keyCode = 13", "", "onKeyUp", "event.charCode = 13", "event.keyCode = 13", ""];
+        await waitFor(() => traces.filter(t => t === "onKeyUp").length >= 2, 120000);
+        const actual = traces.filter(t => t !== "Hello from Flash!");
+        return publish(fixtureId, normalize(actual) === normalize(oracle), oracle, { traces, nativeInputs, source: "upstream keyboard_input/test.ts, a and Enter subset" }, started);
+      }
+      if (fixtureId === "programmatic-events") {
+        await waitFor(() => traces.includes("Loaded!"));
+        player.focus();
+        player.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",code:"ArrowRight",keyCode:39,bubbles:true}));
+        await waitFor(() => traces.includes("onKeyDown(0,39)"));
+        await sleep(180);
+        const oracle=["Loaded!","onKeyDown(0,39)"];
+        return publish(fixtureId,normalize(traces)===normalize(oracle),oracle,
+          {traces,scope:"upstream programmatic_events/test.ts, player focus plus site-generated ArrowRight subset; not native keyboard acceptance"},started);
+      }
+      if (fixtureId === "mouse-click") {
+        instructions.textContent = "Click once inside the leftmost red A square. Native input is required.";
+        await waitFor(() => traces.some(t => t.startsWith("Event click at A:")), 120000);
+        const prefixes = ["Event mouseDown at A.sprite:", "Event mouseDown at A:", "Event mouseUp at A.sprite:", "Event mouseUp at A:", "Event mouseUp at stage:", "Event click at A.sprite:", "Event click at A:"];
+        const oracle = prefixes.map(prefix => expected.find(line => line.startsWith(prefix)));
+        return publish(fixtureId, oracle.every(Boolean) && normalize(traces) === normalize(oracle), oracle,
+          { traces, source: "upstream mouse_click_events/output.txt, first left click at A only" }, started);
+      }
+      if (fixtureId === "url-loader") {
+        await waitFor(() => traces.some(t => t.startsWith("Loaded using constructor:")));
+        const oracle = expected.filter(t => t.startsWith("Loaded text:") || t.startsWith("Loaded binary") || t.startsWith("IOErrorEvent.IO_ERROR:") || t.startsWith("Loaded using constructor:"));
+        return publish(fixtureId, traceSubset(traces, oracle) && !traces.some(t => t.startsWith("ERROR:")), oracle,
+          { traces, scope: "relative text/binary success, missing resource failure, constructor load; HTTP event details are recorded without assuming the upstream virtual HTTP transport" }, started);
+      }
+      await waitFor(() => traces.length >= expected.length);
+      await sleep(180);
+      let passed = normalize(traces) === normalize(expected);
+      const actual = { traces, elapsedTraceMilliseconds: times.length > 1 ? times.at(-1) - times[0] : 0 };
+      if (fixtureId === "timer-events") {
+        actual.timerIntervalMilliseconds = times[1] - times[0];
+        actual.toleranceMilliseconds = [40, 1000];
+        passed = passed && actual.timerIntervalMilliseconds >= 40 && actual.timerIntervalMilliseconds <= 1000;
+      }
+      if (["bitmap-clone","bitmap-fillrect"].includes(fixtureId)) {
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        const canvas = player.shadowRoot?.querySelector("canvas");
+        if (canvas) {
+          actual.canvasDimensions = [canvas.width, canvas.height];
+          actual.rendererBufferCaptureIsNotCompositorEvidence = true;
+          try { actual.rendererPng = canvas.toDataURL("image/png"); } catch (e) { actual.rendererCaptureError = String(e); }
+        }
+      }
+      return publish(fixtureId, passed, expected, actual, started);
+    } catch (error) {
+      return publish(fixtureId, false, expected, { traces: capture?.traces || [], error: String(error),stack:error?.stack,
+        ...(fixtureId === "project-audio" ? {audioEvents,taps:audioTaps.map(t=>({runId:t.runId,state:t.context.state,sampleRate:t.context.sampleRate}))} : {}),
+        ...(fixtureId === "project-network" ? {networkSummary,serverObservations:await (await fetch(`/${config.token}/network-observations`)).json()} : {}) }, started);
+    }
+  };
+  const runBrowserNetwork = async () => {
+    currentRunId = crypto.randomUUID();
+    const started = new Date().toISOString();
+    const primary = `${config.baseUrl}${config.token}/network/`;
+    const secondary = `${config.secondOrigin}${config.token}/network/`;
+    const actual = {};
+    try {
+      actual.relative = await (await fetch(`/${config.token}/network/allowed/data.txt`)).text();
+      actual.absolute = await (await fetch(secondary + "allowed/data.txt")).text();
+      const redirected = await fetch(primary + "redirect/data.bin");
+      actual.redirect = { redirected: redirected.redirected, url: redirected.url, bytes: [...new Uint8Array(await redirected.arrayBuffer())] };
+      actual.missing = (await fetch(primary + "allowed/missing.bin")).status;
+      actual.cookieSeed = (await fetch(primary + "allowed/cookie")).status;
+      actual.cookie = (await fetch(primary + "cookie/data.txt", { credentials: "include" })).status;
+      actual.allowPolicy = await (await fetch(secondary + "allowed/crossdomain.xml")).text();
+      try { await fetch(secondary + "denied/data.txt"); actual.crossOriginDenied = false; }
+      catch (_) { actual.crossOriginDenied = true; }
+      const passed = actual.relative === "Hello, world!\n" && actual.absolute === actual.relative &&
+        actual.redirect.redirected && JSON.stringify(actual.redirect.bytes) === "[1,2,3,4]" && actual.missing === 404 &&
+        actual.cookieSeed === 200 && actual.cookie === 200 && actual.crossOriginDenied && actual.allowPolicy.includes("allow-access-from");
+      return publish("browser-network", passed, {text:"Hello, world!\n",bytes:[1,2,3,4],cookie:200,missing:404,corsDenied:true},
+        { ...actual, scope: "WKWebView fetch transport and policy resource reachability; this does not assert AS3 absolute requests or Flash policy enforcement" }, started);
+    } catch (error) { return publish("browser-network", false, "fixed two-origin network matrix", { ...actual, error: String(error) }, started); }
+  };
+  document.getElementById("audio").onclick = event => {
+    if(audioGesture){audioGesture(event);return;}
+    api?.resume();
+    const context = api?.audioContext;
+    if (context?.resume) context.resume();
+    instructions.textContent = "Audio gesture dispatched. An output capture or explicit listening record is still required.";
+  };
+  document.getElementById("reload").onclick = () => reloadHello?.();
+  window.addEventListener("pagehide", () => { if (api) api.traceObserver = null; if (player) player.traceObserver = null;
+    AudioNode.prototype.connect=nativeConnect;for(const tap of audioTaps){tap.analyser.disconnect();tap.silence.disconnect();} }, { once: true });
+  (async () => {
+    try {
+      if (!RufflePlayer?.newest) {
+        const script = document.createElement("script"); script.src = config.publicPath + "ruffle.js";
+        document.head.appendChild(script); await waitFor(() => RufflePlayer?.newest);
+      }
+      if (config.caseId === "suite") {
+        for (const fixture of ["hello-world", "bitmap-clone", "bitmap-fillrect", "bitmap-pixels", "programmatic-events", "timer-events", "timer-finished", "sound-play", "sound-stop", "url-loader", "project-network", "project-audio"]) await runFixture(fixture);
+        await runBrowserNetwork();
+      } else await runFixture(config.caseId);
+      status.textContent = results.every(r => r.status === "PASS") ? "PASS — recorded cases only" : "FAIL — inspect complete results";
+    } catch (error) { publish("runner", false, "initialized fixed runtime", String(error), new Date().toISOString()); status.textContent = "FAIL"; }
+  })();
+})();

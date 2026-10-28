@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/CefFlashBrowser.MacOS.Spike.Core/CefFlashBrowser.MacOS.Spike.Core.csproj" />
+  <Project Path="src/CefFlashBrowser.MacOS.Spike.Desktop/CefFlashBrowser.MacOS.Spike.Desktop.csproj" />
+  <Project Path="tests/CefFlashBrowser.MacOS.Spike.Tests/CefFlashBrowser.MacOS.Spike.Tests.csproj" />
+</Solution>

@@ -1,0 +1,15 @@
+<Solution>
+  <Project Path="src/FlashMacOS.Domain/FlashMacOS.Domain.csproj" />
+  <Project Path="src/FlashMacOS.Application/FlashMacOS.Application.csproj" />
+  <Project Path="src/FlashMacOS.Sol.Managed/FlashMacOS.Sol.Managed.csproj" />
+  <Project Path="src/FlashMacOS.Infrastructure/FlashMacOS.Infrastructure.csproj" />
+  <Project Path="src/FlashMacOS.Flash.Ruffle/FlashMacOS.Flash.Ruffle.csproj" />
+  <Project Path="src/FlashMacOS.Browser.WebKit/FlashMacOS.Browser.WebKit.csproj" />
+  <Project Path="src/FlashMacOS.Platform.MacOS/FlashMacOS.Platform.MacOS.csproj" />
+  <Project Path="src/FlashMacOS.Desktop/FlashMacOS.Desktop.csproj" />
+  <Project Path="tests/FlashMacOS.Domain.Tests/FlashMacOS.Domain.Tests.csproj" />
+  <Project Path="tests/FlashMacOS.Application.Tests/FlashMacOS.Application.Tests.csproj" />
+  <Project Path="tests/FlashMacOS.Sol.Managed.Tests/FlashMacOS.Sol.Managed.Tests.csproj" />
+  <Project Path="tests/FlashMacOS.IntegrationTests/FlashMacOS.IntegrationTests.csproj" />
+  <Project Path="tests/FlashMacOS.Desktop.Tests/FlashMacOS.Desktop.Tests.csproj" />
+</Solution>

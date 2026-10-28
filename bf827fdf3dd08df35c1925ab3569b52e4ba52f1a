@@ -1,0 +1,115 @@
+using System.Globalization;
+using System.Net;
+
+namespace CefFlashBrowser.MacOS.Spike.Core.Application.Navigation;
+
+public enum SearchEngine
+{
+    Baidu,
+    Google,
+    Bing,
+    Sogou,
+    So360,
+    DuckDuckGo,
+    Yandex,
+    Bilibili,
+    Game4399,
+}
+
+public static class NavigationResolver
+{
+    public static Uri Resolve(string input, SearchEngine searchEngine = SearchEngine.Bing)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(input);
+
+        var value = input.Trim();
+        if (TryCreateWebAddress(value, out var address))
+        {
+            return address;
+        }
+
+        return new Uri(GetSearchUrl(searchEngine, value), UriKind.Absolute);
+    }
+
+    public static bool LooksLikeWebAddress(string? input)
+    {
+        return !string.IsNullOrWhiteSpace(input) && TryCreateWebAddress(input.Trim(), out _);
+    }
+
+    public static bool IsLocalFileWithExtension(string? path, string extension)
+    {
+        if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(extension))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Path.GetExtension(path).Equals(extension, StringComparison.OrdinalIgnoreCase)
+                && File.Exists(path);
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException)
+        {
+            return false;
+        }
+    }
+
+    public static string GetSearchUrl(SearchEngine engine, string keyword)
+    {
+        ArgumentNullException.ThrowIfNull(keyword);
+        var encoded = WebUtility.UrlEncode(keyword);
+
+        return engine switch
+        {
+            SearchEngine.Baidu => $"https://www.baidu.com/s?wd={encoded}",
+            SearchEngine.Google => $"https://www.google.com/search?q={encoded}",
+            SearchEngine.Bing => $"https://www.bing.com/search?q={encoded}",
+            SearchEngine.Sogou => $"https://www.sogou.com/web?query={encoded}",
+            SearchEngine.So360 => $"https://www.so.com/s?&q={encoded}",
+            SearchEngine.DuckDuckGo => $"https://duckduckgo.com/?q={encoded}",
+            SearchEngine.Yandex => $"https://yandex.com/search/?text={encoded}",
+            SearchEngine.Bilibili => $"https://search.bilibili.com/all?keyword={encoded}",
+            SearchEngine.Game4399 => $"https://so2.4399.com/search/search.php?k={encoded}",
+            _ => throw new ArgumentOutOfRangeException(nameof(engine), engine, "Unknown search engine."),
+        };
+    }
+
+    private static bool TryCreateWebAddress(string value, out Uri address)
+    {
+        address = null!;
+
+        if (value.All(char.IsDigit)
+            || double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+        {
+            return false;
+        }
+
+        if (value.Contains("://", StringComparison.Ordinal)
+            && Uri.TryCreate(value, UriKind.Absolute, out var absolute)
+            && absolute.Scheme is not "file")
+        {
+            address = absolute;
+            return true;
+        }
+
+        if (!Uri.TryCreate("http://" + value, UriKind.Absolute, out var candidate))
+        {
+            return false;
+        }
+
+        if (candidate.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || IPAddress.TryParse(candidate.Host, out _))
+        {
+            address = candidate;
+            return true;
+        }
+
+        if (!candidate.Host.Contains('.'))
+        {
+            return false;
+        }
+
+        address = candidate;
+        return true;
+    }
+}

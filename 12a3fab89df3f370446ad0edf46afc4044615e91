@@ -1,0 +1,36 @@
+# FlashMacOS 持续交接与导航
+
+更新：2026-10-29，Australia/Sydney。**本文件长期维护：保留压缩后的原交接内容，在此基础上持续更新简略交接和导航；当前详细交接见 [HANDOFF2.md](HANDOFF2.md)。** 任务定义以[实施方案](docs/implementation-plan.zh-CN.md)为准，详细执行状态只维护在[状态表](docs/task-status.zh-CN.md)。
+
+## 原交接压缩基线
+
+以下由原 HANDOFF.md 压缩保留，后续更新应继续合并维护，不能整份替换为单轮摘要。
+
+**目标与边界。** 本项目独立构建、运行，面向 Apple Silicon，仅交付 osx-arm64；采用 .NET 10、Avalonia、WKWebView、固定自托管 Ruffle 0.4.1 和纯 C# SOL。目标游戏为摩尔庄园官方入口至可见空账号/密码登录界面，未包含提交凭据或登录后玩法，赛尔号已撤销。完整产品仍须通过全部发布门禁。
+
+工作目录为 `/Users/umisonoda/PycharmProjects/flash/flashMacOS`；`/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser` 只读，不在其中构建、运行或执行 Git 写操作。正式构建/运行禁读原仓库、reference、bootstrap；来源审计可以只读。保留用户既有修改、原始失败和证据，固定第三方资产/golden/锁不手改，未经明确授权不提交、推送或发布。Domain/Application/适配层边界、明确资源所有权和候选状态/原子磁盘提交继续有效。
+
+**既有验收。** P00 冻结真实未提交工作树（296 个导入白名单文件），后续审计覆盖 332 个业务文件/HEAD/dirty；P01—P03 建立 107 项原型回归、固定 Flash 语料与 G0。A01—A04 建立八个正式模块、五测试工程、13 锁、统一生命周期、稳定双用途存储身份和设置/收藏事务。S01—S05 完成 AMF0/AMF3 引用/循环、完整 SOL 图及编辑事务、五份原样本完整内容、12 万受限突变和核心性能；G2 只指存档核心，不代表桌面编辑器或整体发行。
+
+W01 已完成主 frame 导航/错误/同文档历史、可信消息、查找/缩放/UA/打印/PDF、对话框/全屏、Flash 焦点 Quit 和两个稳定用途 WebKit store。其最终 420+21、package04、两进程各 12 原生项及新摩尔庄园登录有独立证据，见 [W01 报告](docs/evidence/W01/2026-10-28/report.md)。不得以旧测试、旧截图或较长驻留代替新任务实机验收和 Q02 长期负载。
+
+**继续保留的经验与限制。** 两个 surface 先 Ready 再切换可见性；只注销自己持有的 handler，不能替换第三方注册。GUI 必须使用真实嵌入式 WKWebView；退出后用进程结果/日志核验，向死 app 请求 getApp/getAXState 可能重新启动它。验证期间正式输入不可改变，失败记录不覆盖。中文 IME 重复事件、同步 ExternalInterface 重入、Flash 策略解释器和 Safari Inspector 独立窗口仍未解决/未支持/未验收，不能因普通 ASCII 或属性回读通过而一并算通过。完整 UI、数据迁移、干净账户/设备系统矩阵和签名公证仍待后续。
+
+历史完整原文与细节位于[交接备份目录](docs/handoffs/2026-10-29-w02-w03/)及各任务 docs/evidence；artifacts 被 Git 忽略，搬机必须一起保存原始证据。
+
+## 本轮简略交接：W02 / W03
+
+用户指定的 **W02 下载/popup、W03 Ruffle 产品化均已完成并验收**，Project.md 与状态表同步。现在共 **16 项 DONE**；本轮到此交接，W04/U01 未开始，不自动继续。
+
+- **W02：**同输入 Debug/Release 454+21；最终 package13 原生 25/25、50 popup 循环及人工保存/替换/取消/Basic/下载中关闭通过。旧窗口壳疑问已定位为 AppKit 最近最多两个已关窗口的有界缓存，不累积；托管 popup 与 adapter 所有权释放。详见 [W02 报告](docs/evidence/W02/2026-10-28/report.md)。window.opener 和跨窗口下载列表仍不支持/待 U02。
+- **W03：**同输入 Debug/Release **462+22**，392 份正式输入与两个最终包一致；播放器 10/10、核心 23/23、29 组正式矩阵通过。可靠控制完成/失败、静动态/frame、真实键鼠/音频/全屏/缩放、原生像素、摩尔庄园登录、纯产品资源、离线和缺失/损坏明确错误均复验。详见 [W03 报告](docs/evidence/W03/2026-10-29/report.md)。IME FAIL 原件仍交 U04，未扩大为全 Flash 兼容。
+
+当前是真实 M1 Pro / macOS 26.5.1，SDK 10.0.301，可以直接构建运行；旧 Linux VM 描述已失效。目标 main 现场 HEAD 为 `05c89d2726c4fbcdeb914bf659e99f0433679d3a`，有既有提交和 dirty，全部保留，旧 unborn 描述不再适用。本轮未执行提交/推送/发布；原来源/旧数据保持，当前无本任务 app/runner 运行。
+
+## 接手导航与以后维护
+
+1. 从本文件进入 **[HANDOFF2.md 详细交接](HANDOFF2.md)**，查看最终包/run、源码地图、原始失败、限制与命令；再核查状态表、Git 现场和冻结索引。
+2. 恢复后的首个可执行任务是 **W04**：新存档身份/隔离/实时写回/迁移。`docs/provenance/W04-before.json` 已冻结；先读实施方案 6.3/W04 与现有 store/observer/bridge/SOL 事务，再置 IN_PROGRESS。U01 也已具备依赖，本轮未开启。
+3. **以后每次交接持续维护本文件：先备份 HANDOFF.md 和 HANDOFF2.md，再压缩合并本文件已有正文，保留目标/边界、已验收基线、关键限制及导航；覆盖 HANDOFF2.md 为当前详细交接，最后在压缩后的本文件基础上更新简略交接和引导。不得只保留最新一轮，也不得把压缩后的原文仅移到 HANDOFF2.md。**
+
+本轮原文备份、无损 gzip、历史摘要及更新顺序/SHA 核验见[交接审计](docs/evidence/W03/2026-10-29/handoff-audit.json)。

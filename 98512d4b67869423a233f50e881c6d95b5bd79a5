@@ -1,0 +1,10 @@
+<Project>
+  <!-- Single source for managed identity, user agent and bundle generation. -->
+  <PropertyGroup>
+    <ProductName>FlashMacOS</ProductName>
+    <ProductBundleId>local.flashmacos.app</ProductBundleId>
+    <ProductVersion>0.1.0</ProductVersion>
+    <ProductBuild>1</ProductBuild>
+    <ProductMinimumMacOS>15.0</ProductMinimumMacOS>
+  </PropertyGroup>
+</Project>

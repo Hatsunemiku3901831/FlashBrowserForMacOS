@@ -1,0 +1,70 @@
+using System.Buffers.Binary;
+using System.Text;
+
+namespace CefFlashBrowser.MacOS.Spike.Core.Sol;
+
+public enum SolEncoding : uint
+{
+    Amf0 = 0,
+    Amf3 = 3,
+}
+
+public sealed record SolFileHeader(string Name, SolEncoding Encoding, int FileLength);
+
+public static class SolFileInspector
+{
+    private static ReadOnlySpan<byte> Magic => [0x00, 0xBF];
+
+    private static ReadOnlySpan<byte> Constant => [0x54, 0x43, 0x53, 0x4F, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00];
+
+    public static SolFileHeader ReadHeader(ReadOnlySpan<byte> source)
+    {
+        if (source.Length < 22)
+        {
+            throw new InvalidDataException("The SOL file is too small.");
+        }
+
+        if (!source[..Magic.Length].SequenceEqual(Magic))
+        {
+            throw new InvalidDataException("The SOL magic value is invalid.");
+        }
+
+        var declaredLength = checked((int)BinaryPrimitives.ReadUInt32BigEndian(source.Slice(2, 4)));
+        if (declaredLength != source.Length - 6)
+        {
+            throw new InvalidDataException("The SOL chunk length does not match the file length.");
+        }
+
+        if (!source.Slice(6, Constant.Length).SequenceEqual(Constant))
+        {
+            throw new InvalidDataException("The SOL header constant is invalid.");
+        }
+
+        var nameLength = BinaryPrimitives.ReadUInt16BigEndian(source.Slice(16, 2));
+        var versionOffset = checked(18 + nameLength);
+        if (versionOffset + sizeof(uint) > source.Length)
+        {
+            throw new InvalidDataException("The SOL name extends beyond the file.");
+        }
+
+        string name;
+        try
+        {
+            name = new UTF8Encoding(false, true).GetString(source.Slice(18, nameLength));
+        }
+        catch (DecoderFallbackException exception)
+        {
+            throw new InvalidDataException("The SOL name is not valid UTF-8.", exception);
+        }
+
+        var rawEncoding = BinaryPrimitives.ReadUInt32BigEndian(source.Slice(versionOffset, sizeof(uint)));
+        var encoding = rawEncoding switch
+        {
+            0 => SolEncoding.Amf0,
+            3 => SolEncoding.Amf3,
+            _ => throw new InvalidDataException($"Unsupported SOL encoding version: {rawEncoding}."),
+        };
+
+        return new SolFileHeader(name, encoding, source.Length);
+    }
+}

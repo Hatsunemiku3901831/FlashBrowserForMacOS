@@ -1,0 +1,58 @@
+namespace CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+
+public sealed record BrowserState(
+    Uri? Address,
+    string Title,
+    bool IsLoading,
+    bool CanGoBack,
+    bool CanGoForward)
+{
+    public static BrowserState Empty { get; } = new(null, "CefFlashBrowser", false, false, false);
+}
+
+public sealed record BrowserDownloadRequest(Uri Address, string? SuggestedFileName);
+
+public sealed record WebBridgeMessage(
+    string Type,
+    string? Key = null,
+    string? Data = null,
+    string? Url = null,
+    string? FileName = null,
+    string? Message = null,
+    bool? RuffleAvailable = null,
+    int? FlashElementCount = null,
+    double? DocumentStartMilliseconds = null);
+
+public interface IBrowserSession : IAsyncDisposable
+{
+    BrowserState State { get; }
+
+    Task Ready { get; }
+
+    event Action<BrowserState>? StateChanged;
+
+    event Action<Uri>? PopupRequested;
+
+    event Action<BrowserDownloadRequest>? DownloadRequested;
+
+    event Action<WebBridgeMessage>? BridgeMessageReceived;
+
+    event Action<Exception>? Faulted;
+
+    ValueTask NavigateAsync(Uri address, CancellationToken cancellationToken = default);
+
+    ValueTask GoBackAsync(CancellationToken cancellationToken = default);
+
+    ValueTask GoForwardAsync(CancellationToken cancellationToken = default);
+
+    ValueTask ReloadAsync(CancellationToken cancellationToken = default);
+
+    ValueTask StopAsync(CancellationToken cancellationToken = default);
+
+    ValueTask<string?> ExecuteScriptAsync(string script, CancellationToken cancellationToken = default);
+
+    ValueTask DownloadAsync(
+        BrowserDownloadRequest request,
+        string destinationPath,
+        CancellationToken cancellationToken = default);
+}

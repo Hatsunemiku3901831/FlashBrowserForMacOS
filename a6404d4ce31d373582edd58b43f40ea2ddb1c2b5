@@ -1,0 +1,87 @@
+using System.Text.Json;
+
+namespace CefFlashBrowser.MacOS.Spike.Core.Application.Browser;
+
+public static class WebBridgeProtocol
+{
+    private const int MaximumContextLength = 2_048;
+
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    public static WebBridgeMessage Parse(string? body)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            throw CreateInvalidMessageException();
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw CreateInvalidMessageException();
+            }
+
+            var message = document.RootElement.Deserialize<WebBridgeMessage>(JsonOptions)
+                ?? throw CreateInvalidMessageException();
+            Validate(message);
+            return message;
+        }
+        catch (Exception exception) when (exception is JsonException or NotSupportedException)
+        {
+            // Do not retain the source exception: serializer diagnostics can include protocol
+            // details that must never flow into the journal through this boundary.
+            throw CreateInvalidMessageException();
+        }
+    }
+
+    public static string Describe(WebBridgeMessage message)
+    {
+        ArgumentNullException.ThrowIfNull(message);
+        ArgumentException.ThrowIfNullOrWhiteSpace(message.Type);
+
+        var context = message.Message ?? message.Key;
+        if (string.IsNullOrEmpty(context))
+        {
+            return message.Type;
+        }
+
+        return context.Length <= MaximumContextLength
+            ? $"{message.Type}: {context}"
+            : $"{message.Type}: {context[..MaximumContextLength]}…";
+    }
+
+    private static void Validate(WebBridgeMessage message)
+    {
+        if (string.IsNullOrWhiteSpace(message.Type))
+        {
+            throw CreateInvalidMessageException();
+        }
+
+        var isValid = message.Type switch
+        {
+            "saveChanged" => !string.IsNullOrWhiteSpace(message.Key) && message.Data is not null,
+            "saveDeleted" => !string.IsNullOrWhiteSpace(message.Key),
+            "savesSnapshot" => message.Data is not null,
+            "trace" => message.Message is not null,
+            "playerReady" => true,
+            "diagnostics" => message.RuffleAvailable is not null
+                && message.FlashElementCount is not null
+                && message.DocumentStartMilliseconds is not null,
+            "bridgeError" => message.Message is not null,
+            "downloadRequested" => !string.IsNullOrWhiteSpace(message.Url),
+            "compatibilityResult" => !string.IsNullOrWhiteSpace(message.Key)
+                && !string.IsNullOrWhiteSpace(message.Message)
+                && message.Data is not null,
+            _ => true,
+        };
+        if (!isValid)
+        {
+            throw CreateInvalidMessageException();
+        }
+    }
+
+    private static JsonException CreateInvalidMessageException() =>
+        new("The web bridge message is invalid.");
+}

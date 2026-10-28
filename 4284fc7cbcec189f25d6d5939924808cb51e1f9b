@@ -1,0 +1,57 @@
+using System.Security.Cryptography;
+
+namespace CefFlashBrowser.MacOS.Spike.Core.Flash.Ruffle;
+
+public static class RuffleAssetManifest
+{
+    public const string Version = "0.4.1";
+    public const string ArchiveUrl =
+        "https://github.com/ruffle-rs/ruffle/releases/download/v0.4.1/ruffle-0.4.1-web-selfhosted.zip";
+    public const string ArchiveSha256 = "d33c135beea75c83183da1938a49ee3f08c2f7a2eb2ae8f3ce43de842412aae6";
+
+    public static IReadOnlyDictionary<string, string> RuntimeFiles { get; } =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["ruffle.js"] = "8593f2d1f7cc39f2000c02813bed664bfb0594dee15c3e8e18ca9f0c201081f2",
+            ["core.ruffle.831c4f4a93befb9e84af.js"] = "16214a9d1cc55219ee196fcd2bab9d303a6985567cbfe8ffc891eebacfd4cd29",
+            ["core.ruffle.0875e44536e955474b0c.js"] = "28fa24cd43c3d91899f92a5beedde63c58753b63850ed4b16484c14791625f7a",
+            ["1ef41ff58c9763bed027.wasm"] = "cd0a675924f4f40a8e1e7e16f8e7fe2105d13edfb2fd650dc42aaeac1e92143a",
+            ["63468f5322aed2e768a8.wasm"] = "381c459563278d830db728beb8e8f1bdeedb390d50b3c6b16bd6e4af6c2ed016",
+            ["LICENSE_APACHE"] = "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a",
+            ["LICENSE_MIT"] = "4de9338a7879c68e911742a7d691f0797ff1ef8d8a6fb978b0c711e258fe959c",
+            ["package.json"] = "097043e1bfb0a094c77411912690245eee966ae1cb672128307f299ad743d90d",
+        };
+
+    public static async ValueTask ValidateAsync(
+        string assetDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(assetDirectory);
+        var root = Path.GetFullPath(assetDirectory);
+
+        foreach (var asset in RuntimeFiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var path = Path.Combine(root, asset.Key);
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException($"Required Ruffle {Version} asset is missing.", path);
+            }
+
+            await using var stream = new FileStream(
+                path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 128 * 1024,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+            var hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
+            var actual = Convert.ToHexStringLower(hash);
+            if (!actual.Equals(asset.Value, StringComparison.Ordinal))
+            {
+                throw new InvalidDataException(
+                    $"Ruffle asset hash mismatch for '{asset.Key}'. Expected {asset.Value}, got {actual}.");
+            }
+        }
+    }
+}

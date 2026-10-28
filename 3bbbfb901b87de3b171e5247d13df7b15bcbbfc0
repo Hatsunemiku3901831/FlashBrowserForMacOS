@@ -1,0 +1,24 @@
+/* Project-authored compatibility for the observed mole.61.com SWFObject 1.5 install gate. */
+(() => {
+  "use strict";
+  if (location.hostname !== "mole.61.com") return;
+  const dc = window.deconcept || {};
+  let constructor = dc.SWFObject;
+  const adapt = target => typeof target !== "function" ? target : new Proxy(target, {
+    construct(original, args, newTarget) {
+      const instance = Reflect.construct(original, args, newTarget);
+      if (window.RufflePlayer?.newest && typeof instance.checkUpgrade === "function") {
+        // Keep the site's SWF/parameters and the actual Ruffle identity. Only the
+        // obsolete native-plugin installation screen is irrelevant to this runtime.
+        instance.checkUpgrade = () => false;
+        window.__cefFlashBrowserPost?.({type:"siteCompatibility", key:"mole/obsolete-install-screen/v1",
+          message:"Ruffle active; retained the original SWFObject movie instead of the native Flash install screen"});
+      }
+      return instance;
+    }
+  });
+  Object.defineProperty(dc, "SWFObject", { configurable: true, enumerable: true,
+    get: () => constructor, set: value => { constructor = adapt(value); } });
+  if (constructor) constructor = adapt(constructor);
+  window.deconcept = dc;
+})();

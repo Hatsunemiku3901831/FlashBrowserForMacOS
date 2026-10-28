@@ -1,0 +1,258 @@
+using System.Net;
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting;
+
+/// <summary>P02-only fixed offline corpus. It is not a general proxy or a product content server.</summary>
+public sealed class CompatibilityContentHost : IAsyncDisposable
+{
+    private readonly string _root;
+    private readonly string _token = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
+    private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly Dictionary<string, string> _files = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string[]> _expected = new(StringComparer.Ordinal);
+    private readonly ConcurrentQueue<object> _networkObservations = new();
+    private WebApplication? _primary;
+    private WebApplication? _secondary;
+    private Uri? _rufflePublicPath;
+    private bool _disposed;
+
+    public CompatibilityContentHost(string fixtureRoot)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fixtureRoot);
+        _root = Path.GetFullPath(fixtureRoot);
+    }
+
+    public Uri? BaseUri { get; private set; }
+    public Uri? SecondOrigin { get; private set; }
+    public Uri? SuiteUri => BaseUri is null ? null : new Uri(BaseUri, $"{_token}/case/suite");
+
+    public Uri GetCaseUri(string caseId)
+    {
+        if (BaseUri is null) throw new InvalidOperationException("Start the fixed corpus first.");
+        if (caseId != "suite" && !_expected.ContainsKey(caseId)) throw new ArgumentException("Unknown fixed fixture.", nameof(caseId));
+        return new Uri(BaseUri, $"{_token}/case/{caseId}");
+    }
+
+    public async ValueTask StartAsync(Uri rufflePublicPath, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(rufflePublicPath);
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_primary is not null) return;
+            _rufflePublicPath = rufflePublicPath;
+            await ValidateFixturesAsync(cancellationToken).ConfigureAwait(false);
+            var second = CreateApplication();
+            var primary = CreateApplication();
+            try
+            {
+                ConfigureCommon(second);
+                ConfigureCommon(primary);
+                MapNetwork(second);
+                MapNetwork(primary);
+                MapCorpus(primary);
+                await second.StartAsync(cancellationToken).ConfigureAwait(false);
+                SecondOrigin = AddressOf(second);
+                await primary.StartAsync(cancellationToken).ConfigureAwait(false);
+                BaseUri = AddressOf(primary);
+                _secondary = second;
+                _primary = primary;
+            }
+            catch
+            {
+                await primary.DisposeAsync().ConfigureAwait(false);
+                await second.DisposeAsync().ConfigureAwait(false);
+                BaseUri = SecondOrigin = null;
+                throw;
+            }
+        }
+        finally { _gate.Release(); }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_disposed) return;
+            _disposed = true;
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            try
+            {
+                if (_primary is not null) await _primary.StopAsync(timeout.Token).ConfigureAwait(false);
+                if (_secondary is not null) await _secondary.StopAsync(timeout.Token).ConfigureAwait(false);
+            }
+            finally
+            {
+                if (_primary is not null) await _primary.DisposeAsync().ConfigureAwait(false);
+                if (_secondary is not null) await _secondary.DisposeAsync().ConfigureAwait(false);
+                _primary = _secondary = null;
+                BaseUri = SecondOrigin = null;
+            }
+        }
+        finally { _gate.Release(); }
+    }
+
+    private async ValueTask ValidateFixturesAsync(CancellationToken token)
+    {
+        _files.Clear();
+        _expected.Clear();
+        await ReadManifestAsync(_root, token).ConfigureAwait(false);
+        var projectFixtures = Path.Combine(Path.GetDirectoryName(_root)!, "p02-project");
+        if (Directory.Exists(projectFixtures)) await ReadManifestAsync(projectFixtures, token).ConfigureAwait(false);
+    }
+
+    private async ValueTask ReadManifestAsync(string root, CancellationToken token)
+    {
+        using var json = JsonDocument.Parse(await File.ReadAllBytesAsync(Path.Combine(root, "manifest.json"), token).ConfigureAwait(false));
+        foreach (var file in json.RootElement.GetProperty("files").EnumerateArray())
+        {
+            var relative = file.GetProperty("relativePath").GetString()!;
+            var path = PathSafety.ResolveRegularFile(root, relative)
+                ?? throw new InvalidDataException($"Missing or unsafe fixed fixture: {relative}");
+            await using var stream = File.OpenRead(path);
+            var hash = Convert.ToHexStringLower(await SHA256.HashDataAsync(stream, token).ConfigureAwait(false));
+            if (!hash.Equals(file.GetProperty("sha256").GetString(), StringComparison.Ordinal))
+                throw new InvalidDataException($"Fixed fixture hash mismatch: {relative}");
+            _files.Add(relative, path);
+        }
+
+        foreach (var fixture in json.RootElement.GetProperty("fixtures").EnumerateObject())
+        {
+            var relative = fixture.Name + "/output.txt";
+            var expected = _files.TryGetValue(relative, out var output)
+                ? (await File.ReadAllTextAsync(output, token).ConfigureAwait(false)).Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd('\n').Split('\n')
+                : [];
+            if (expected.Length == 1 && expected[0].Length == 0) expected = [];
+            _expected.Add(fixture.Name, expected);
+        }
+    }
+
+    private static WebApplication CreateApplication()
+    {
+        var builder = WebApplication.CreateSlimBuilder();
+        builder.Logging.ClearProviders();
+        builder.WebHost.ConfigureKestrel(options => { options.Listen(IPAddress.Loopback, 0); options.AddServerHeader = false; });
+        return builder.Build();
+    }
+
+    private static Uri AddressOf(WebApplication application) => new(
+        application.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single().TrimEnd('/') + '/');
+
+    private void ConfigureCommon(WebApplication app)
+    {
+        app.Use(async (context, next) =>
+        {
+            if (context.Connection.RemoteIpAddress is null || !IPAddress.IsLoopback(context.Connection.RemoteIpAddress) ||
+                !context.Request.Host.Host.Equals("127.0.0.1", StringComparison.Ordinal))
+            {
+                context.Response.StatusCode = 404;
+                return;
+            }
+            context.Response.Headers.XContentTypeOptions = "nosniff";
+            context.Response.Headers.CacheControl = "no-store";
+            context.Response.Headers["Referrer-Policy"] = "no-referrer";
+            if (context.Request.Path.StartsWithSegments($"/{_token}/network"))
+            {
+                if (_networkObservations.Count >= 512) { context.Response.StatusCode = 429; return; }
+                _networkObservations.Enqueue(new { at = DateTimeOffset.UtcNow, method = context.Request.Method,
+                    host = context.Request.Host.Value, path = context.Request.Path.Value,
+                    headers = context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray(), StringComparer.OrdinalIgnoreCase) });
+            }
+            await next(context).ConfigureAwait(false);
+        });
+    }
+
+    private void MapCorpus(WebApplication app)
+    {
+        app.MapGet($"/{_token}/network-observations", () => Results.Json(_networkObservations.ToArray()));
+        app.MapGet($"/{_token}/case/{{caseId}}", (string caseId, HttpContext context) =>
+        {
+            if (caseId != "suite" && !_expected.ContainsKey(caseId)) return Results.NotFound();
+            var origin = _rufflePublicPath!.GetLeftPart(UriPartial.Authority);
+            // Pinned Ruffle implements ExternalInterface.call using Function. This permission
+            // belongs only to these fixed loopback test documents, never external pages.
+            context.Response.Headers.ContentSecurityPolicy = $"default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' {origin}; connect-src 'self' {origin} {SecondOrigin!.GetLeftPart(UriPartial.Authority)}; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'";
+            var config = JsonSerializer.Serialize(new
+            {
+                caseId, token = _token, baseUrl = BaseUri!.AbsoluteUri, secondOrigin = SecondOrigin!.AbsoluteUri,
+                publicPath = _rufflePublicPath.AbsoluteUri, expected = _expected,
+            });
+            var bootstrap = Ruffle.RuffleDocumentStartScriptBuilder.BuildPageBootstrap(_rufflePublicPath);
+            return Results.Content($$"""
+                <!doctype html><html><head><meta charset="utf-8"><title>P02 fixed compatibility corpus</title>
+                <style>body{font:15px system-ui;background:#eef2f6;color:#122030;margin:18px}ruffle-player{display:block;width:550px;height:400px;background:white}pre{white-space:pre-wrap}button{padding:10px;margin:4px}#status{font-weight:bold}</style>
+                <script>{{bootstrap}}globalThis.__p02Config={{config}};</script></head>
+                <body><h1>P02 — fixed Ruffle 0.4.1 corpus</h1><div id="status">RUNNING</div>
+                <p id="instructions"></p><div id="player"></div><button id="audio">Resume audio with a real gesture</button>
+                <button id="reload">Reload fixed Hello World</button>
+                <pre id="result"></pre><script src="/{{_token}}/runner.js"></script></body></html>
+                """, "text/html; charset=utf-8");
+        });
+        app.MapGet($"/{_token}/runner.js", () =>
+        {
+            var stream = typeof(CompatibilityContentHost).Assembly.GetManifestResourceStream(
+                "CefFlashBrowser.MacOS.Spike.Core.Flash.Hosting.CompatibilityRunner.js")!;
+            return Results.Stream(stream, "text/javascript; charset=utf-8");
+        });
+        app.MapGet($"/{_token}/assets/{{fixture}}/{{name}}", (string fixture, string name) =>
+            _files.TryGetValue(fixture + '/' + name, out var path)
+                ? Results.File(path, Mime(path), enableRangeProcessing: true) : Results.NotFound());
+    }
+
+    private void MapNetwork(WebApplication app)
+    {
+        app.MapMethods($"/{_token}/network/{{mode}}/{{name}}", ["OPTIONS"], (HttpContext context) =>
+        {
+            if (BaseUri is null || context.Request.RouteValues["mode"]?.ToString() == "denied" ||
+                context.Request.Headers.Origin != BaseUri.GetLeftPart(UriPartial.Authority)) return Results.StatusCode(403);
+            context.Response.Headers.AccessControlAllowOrigin = BaseUri.GetLeftPart(UriPartial.Authority);
+            context.Response.Headers.AccessControlAllowCredentials = "true";
+            context.Response.Headers.AccessControlAllowMethods = "GET, OPTIONS";
+            context.Response.Headers.AccessControlAllowHeaders = "Content-Type";
+            return Results.NoContent();
+        });
+        app.MapGet($"/{_token}/network/{{mode}}/{{name}}", (string mode, string name, HttpContext context) =>
+        {
+            if (BaseUri is null || SecondOrigin is null) return Results.StatusCode(503);
+            var caller = BaseUri.GetLeftPart(UriPartial.Authority);
+            if (mode != "denied" && context.Request.Headers.Origin == caller)
+            {
+                context.Response.Headers.AccessControlAllowOrigin = caller;
+                context.Response.Headers.AccessControlAllowCredentials = "true";
+                context.Response.Headers.Vary = "Origin";
+            }
+            if (name == "cookie")
+            {
+                context.Response.Cookies.Append("P02-Cookie", "fixed-value", new CookieOptions { HttpOnly = true, SameSite = SameSiteMode.Strict, Path = '/' + _token + '/' });
+                return Results.Text("cookie-set");
+            }
+            if (name == "crossdomain.xml")
+                return Results.Text(mode == "denied" ? "<?xml version=\"1.0\"?><cross-domain-policy/>" :
+                    "<?xml version=\"1.0\"?><cross-domain-policy><allow-access-from domain=\"127.0.0.1\" secure=\"false\"/></cross-domain-policy>", "application/xml");
+            if (mode == "redirect") return Results.Redirect(new Uri(SecondOrigin, $"{_token}/network/allowed/{name}").AbsoluteUri);
+            if (mode == "cookie" && context.Request.Cookies["P02-Cookie"] != "fixed-value") return Results.Unauthorized();
+            if (name == "data.txt") return Results.Text("Hello, world!\n", "text/plain; charset=utf-8");
+            if (name == "data.bin") return Results.Bytes([1, 2, 3, 4], "application/octet-stream");
+            return Results.NotFound();
+        });
+    }
+
+    private static string Mime(string path) => Path.GetExtension(path) switch
+    {
+        ".swf" => "application/x-shockwave-flash", ".png" => "image/png", ".mp3" => "audio/mpeg",
+        ".txt" => "text/plain; charset=utf-8", ".bin" => "application/octet-stream", _ => "application/octet-stream",
+    };
+}

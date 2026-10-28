@@ -1,0 +1,46 @@
+# FlashMacOS 新仓库启动说明
+
+本包用于在独立仓库中实现 Apple Silicon macOS 原生 Flash 浏览器与 SOL 存档管理器。技术路线固定为 .NET 10、Avalonia、WKWebView、自托管 Ruffle 和纯 C# SOL 编解码。开发智能体只需本包、可访问的原仓库和 Apple Silicon 开发机即可开始；无需原聊天记录。
+
+## 放置位置
+
+将本目录的全部内容复制到新仓库根目录，保持以下层级：
+
+```text
+/Users/umisonoda/PycharmProjects/flash/flashMacOS/
+  AGENTS.md
+  START-HERE.zh-CN.md
+  docs/
+    implementation-plan.zh-CN.md
+    task-status.zh-CN.md
+    source-baseline.json
+```
+
+原仓库实际路径为 `/Users/umisonoda/PycharmProjects/flash/CefFlashBrowser`。用户口述的 `PyCharmprojects`、`cefflashbrowser` 与磁盘大小写不同，应以实际路径为准。其他机器通过 P00 记录自己的源路径，构建文件不得依赖本机绝对路径。
+
+本包只有任务文档和来源清单，不包含应用源码、Ruffle 资产或游戏文件。P00 将从原工作树导入所需内容；仅有 GitHub 远程仓库不足以恢复本机尚未提交的 macOS 原型。
+
+## 阅读顺序
+
+1. 阅读 [AGENTS.md](AGENTS.md)，理解仓库边界和工作纪律。
+2. 阅读 [完整实施方案](docs/implementation-plan.zh-CN.md) 的目标、基线、导入规则、架构、契约、任务和验收章节。
+3. 阅读 [任务状态](docs/task-status.zh-CN.md)，执行首个依赖已满足的任务。
+4. 按 P00 验证 [来源清单](docs/source-baseline.json)，建立新仓库自己的来源快照。
+
+复制文档后，P00 是第一个任务。不要直接对原仓库执行旧的 H0.3B2；本项目将在导入后的工作副本中完成它，再继续整个产品迁移。
+
+## 给开发智能体的启动指令
+
+在新仓库打开会话后，可直接发送：
+
+> 请阅读根目录 AGENTS.md、START-HERE.zh-CN.md、docs/implementation-plan.zh-CN.md 和 docs/task-status.zh-CN.md，按方案一完成 FlashMacOS。原仓库 /Users/umisonoda/PycharmProjects/flash/CefFlashBrowser 作为只读来源。先从 P00 验证并导入包含未提交文件的来源快照，再复现原型基线。按依赖顺序实现任务、执行测试并持续更新状态与证据，完成一个任务后继续下一个可执行任务。只交付 Apple Silicon ARM64。不要在原仓库开发，不要把已有原型或历史测试当成新仓库验收。缺少真实设备、目标内容或发布凭据时，记录具体受阻项并继续其他独立任务；不得把受阻项标为通过。不要提交、推送或对外发布，除非我另行要求。
+
+## 连接原仓库的含义
+
+默认采用“本地只读来源 + 文件级冻结快照 + 可选 Git 历史 remote”。新仓库拥有自己的源码、依赖锁、构建、测试和发布流程；完成导入后，构建不依赖原目录存在。
+
+Git remote 只提供已提交历史。原仓库 `spike/` 与 macOS 总体计划目前尚未提交，不能用 clone、fetch、submodule 或 worktree 代替工作树快照。详细操作、幂等规则及断开原仓库后的验证在实施方案 P00、P01、Q01 中。
+
+## 本包的完成口径
+
+文档准备完成不等于产品完成。状态表初始全部为 TODO。原仓库曾通过的 97 项测试仅作为导入回归基线；新仓库必须产生自己的构建、真机和发布证据。

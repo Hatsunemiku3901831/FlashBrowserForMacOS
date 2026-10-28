@@ -1,0 +1,21 @@
+/* Project-owned local-player storage boundary. Never modifies the pinned runtime. */
+globalThis.__cefFlashBrowserReloadWithStorage = async (player, api, updateStorage) => {
+  if (updateStorage !== undefined && typeof updateStorage !== "function")
+    throw new TypeError("A storage mutation must be a function");
+  const volume = api.volume;
+  const playing = api.isPlaying;
+  if (updateStorage) {
+    const parent = player.parentNode;
+    const next = player.nextSibling;
+    if (!parent) throw new Error("The local player is no longer attached");
+    api.suspend();
+    // Ruffle's synchronous disconnectedCallback destroys the old instance and
+    // flushes its cached SharedObjects. Apply the candidate only after that.
+    player.remove();
+    try { updateStorage(); }
+    finally { parent.insertBefore(player, next); }
+  }
+  await api.reload();
+  api.volume = volume;
+  if (!playing) api.suspend();
+};

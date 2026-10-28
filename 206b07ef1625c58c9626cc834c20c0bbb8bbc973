@@ -1,0 +1,46 @@
+namespace CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Persistence;
+
+public static class AtomicFileWriter
+{
+    public static async ValueTask WriteAsync(
+        string destinationPath,
+        Func<Stream, CancellationToken, ValueTask> write,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+        ArgumentNullException.ThrowIfNull(write);
+
+        var directory = Path.GetDirectoryName(Path.GetFullPath(destinationPath))
+            ?? throw new InvalidOperationException("The destination directory could not be resolved.");
+        Directory.CreateDirectory(directory);
+
+        var temporaryPath = Path.Combine(
+            directory,
+            $".{Path.GetFileName(destinationPath)}.{Guid.NewGuid():N}.tmp");
+
+        try
+        {
+            await using (var stream = new FileStream(
+                temporaryPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 64 * 1024,
+                FileOptions.Asynchronous | FileOptions.WriteThrough))
+            {
+                await write(stream, cancellationToken).ConfigureAwait(false);
+                await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                stream.Flush(flushToDisk: true);
+            }
+
+            File.Move(temporaryPath, destinationPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+        }
+    }
+}

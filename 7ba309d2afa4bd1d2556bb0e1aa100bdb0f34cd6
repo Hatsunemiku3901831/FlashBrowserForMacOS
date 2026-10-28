@@ -1,0 +1,60 @@
+# Gate 0 Flash fixtures
+
+`shared-object-avm1.swf` and `RuffleTest.sol` are copied from the Ruffle v0.4.1
+test suite:
+
+- Source: <https://github.com/ruffle-rs/ruffle/tree/v0.4.1/tests/tests/swfs/avm1/shared_object>
+- Upstream SWF name: `test.swf`
+- SWF SHA-256: `1a215bd4d1f1b6833267216650d8b1db94b42b9f72fb6489e18a65c229411b7c`
+- SOL SHA-256: `f680967f67a440d153d63cfd00c89ece1c0770d79531d51003afa3131758b978`
+- License: Apache-2.0 or MIT, matching the upstream Ruffle repository
+
+The AVM1 fixture writes a `RuffleTest` SharedObject on its first run and reads it
+on its second run. This makes the fixture deterministic evidence for the macOS
+WKWebView/Ruffle persistence bridge.
+
+## AVM2 hello world
+
+`avm2-hello-world/Test.as`, `test.swf`, `output.txt`, and `test.toml` are copied
+unchanged from the Ruffle v0.4.1 test suite:
+
+- Source: <https://github.com/ruffle-rs/ruffle/tree/v0.4.1/tests/tests/swfs/avm2/hello_world>
+- Tag: `v0.4.1`
+- Upstream path: `tests/tests/swfs/avm2/hello_world`
+- License: Apache-2.0 or MIT, matching the upstream Ruffle repository
+- Expected normalized trace: `Hello world!`
+
+| File | Bytes | SHA-256 |
+|---|---:|---|
+| `Test.as` | 60 | `b1e6df855bac06b5a5c05f12545b5bf10b762aaa2fc72f7444889bc98caf7d5e` |
+| `output.txt` | 13 | `0ba904eae8773b70c75333db4de2f3ac45a8ad4ddba1b242f0b3cfc199391dd8` |
+| `test.swf` | 580 | `708376b9dc73c9329517e8e74bf479388e04f2689b111c004129adf38802bf17` |
+| `test.toml` | 15 | `fe734646f8be2bbcf0b290423d22f56f5831da49c402e33fd85308432e3e9afd` |
+
+This fixture proves only that the pinned Ruffle Web runtime can execute this
+specific AVM2/AS3 movie and deliver its deterministic trace through the current
+WKWebView host bridge. It is not a general AS3 compatibility claim.
+
+## AVM2 ExternalInterface
+
+`avm2-external-interface/Test.as`, `index.html`, `test.fla`, `test.swf`, and
+`test.ts` are copied unchanged from the Ruffle v0.4.1 integration suite:
+
+- Source: <https://github.com/ruffle-rs/ruffle/tree/v0.4.1/web/packages/selfhosted/test/integration_tests/external_interface>
+- Tag: `v0.4.1`
+- Commit: `a1ac4ce8647352ad03044031cad0454a636427b8`
+- Upstream path: `web/packages/selfhosted/test/integration_tests/external_interface`
+- License: Apache-2.0 or MIT, matching the upstream Ruffle repository
+
+| File | Bytes | SHA-256 |
+|---|---:|---|
+| `Test.as` | 5,715 | `d37ef61f2739cb1a5c6ee796eb4a069745dd32a2dd936833999d829b65c3265d` |
+| `index.html` | 1,906 | `e969b960cb5cdbda4e90ec8756b7181efe78e089780fc1aede7d47acf7ed99e0` |
+| `test.fla` | 4,804 | `1ecb2b1d8739fbeb1f64c77cb1ae5522dd0be518b16b480b796ac0e53b6e26c9` |
+| `test.swf` | 2,308 | `d5eec40fc4d22ebb930a3abfe0685306dc2326e04c43ad3e7455ed774ead92d5` |
+| `test.ts` | 11,769 | `ab81dc0bcfc7e78f35ab8153b7a9c6ee13603db89a6aae252345d6180d563894` |
+
+The project-authored loopback runner verifies only the fixed Gate 0 subset:
+availability, JS-to-AS3 return values, delayed AS3-to-JS callbacks, and one
+structured value round trip. The upstream synchronous reentrant JS method test
+remains outside this gate because it is explicitly skipped upstream.

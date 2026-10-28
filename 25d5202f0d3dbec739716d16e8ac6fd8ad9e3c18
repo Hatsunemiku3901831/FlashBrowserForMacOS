@@ -1,0 +1,16 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="CefFlashBrowser.MacOS.Spike.Desktop.App"
+             RequestedThemeVariant="Default">
+  <Application.Styles>
+    <FluentTheme />
+    <Style Selector="Button.toolbar">
+      <Setter Property="MinWidth" Value="42" />
+      <Setter Property="MinHeight" Value="34" />
+      <Setter Property="Padding" Value="10,5" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundLowBrush}" />
+    </Style>
+  </Application.Styles>
+</Application>

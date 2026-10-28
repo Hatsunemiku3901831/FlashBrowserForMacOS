@@ -1,0 +1,109 @@
+#!/bin/zsh
+
+set -euo pipefail
+
+script_dir=${0:A:h}
+project_root=${script_dir:h}
+solution="$project_root/CefFlashBrowser.MacOS.Spike.slnx"
+package_script="$script_dir/package-macos.sh"
+bundle="$project_root/artifacts/osx-arm64/CefFlashBrowser.app"
+main_executable="$bundle/Contents/MacOS/CefFlashBrowser.MacOS.Spike.Desktop"
+lock_files=(
+  "$project_root/src/CefFlashBrowser.MacOS.Spike.Core/packages.lock.json"
+  "$project_root/src/CefFlashBrowser.MacOS.Spike.Desktop/packages.lock.json"
+  "$project_root/tests/CefFlashBrowser.MacOS.Spike.Tests/packages.lock.json"
+)
+
+fail() {
+  print -u2 -- "$1"
+  exit 1
+}
+
+lock_hashes() {
+  shasum -a 256 "${lock_files[@]}"
+}
+
+assert_arm64_locks() {
+  local lock_file
+
+  for lock_file in "${lock_files[@]}"; do
+    [[ -f "$lock_file" ]] || fail "Missing NuGet lock file: $lock_file"
+    ! grep -q 'osx-x64' "$lock_file" || fail "Intel runtime graph remains in $lock_file"
+    grep -q '"net10.0/osx-arm64"' "$lock_file" || \
+      fail "ARM64 runtime graph is missing from $lock_file"
+  done
+}
+
+assert_invalid_runtime_rejected() {
+  local output
+  local exit_status
+
+  set +e
+  output=$("$package_script" osx-x64 2>&1)
+  exit_status=$?
+  set -e
+
+  [[ $exit_status -eq 2 ]] || \
+    fail "package-macos.sh accepted osx-x64 or returned $exit_status instead of 2"
+  [[ "$output" == *"Unsupported runtime identifier: osx-x64"* ]] || \
+    fail "package-macos.sh did not report the rejected runtime identifier"
+}
+
+assert_lock_hashes_unchanged() {
+  local expected=$1
+  local phase=$2
+  local actual
+
+  actual=$(lock_hashes)
+  [[ "$actual" == "$expected" ]] || fail "NuGet lock files changed during $phase"
+}
+
+assert_arm64_bundle() {
+  local candidate
+  local description
+  local macho_count=0
+
+  [[ -x "$main_executable" ]] || fail "Missing packaged executable: $main_executable"
+
+  while IFS= read -r -d $'\0' candidate; do
+    description=$(file "$candidate")
+    if [[ "$description" == *"Mach-O"* ]]; then
+      (( macho_count += 1 ))
+      [[ "$description" == *"arm64"* ]] || fail "Non-ARM64 Mach-O in bundle: $description"
+      [[ "$description" != *"x86_64"* ]] || fail "Intel slice in bundle: $description"
+    fi
+  done < <(find "$bundle/Contents" -type f -print0)
+
+  (( macho_count > 0 )) || fail "No Mach-O files found in $bundle"
+  file "$main_executable"
+  codesign --verify --deep --strict --verbose=2 "$bundle"
+}
+
+assert_arm64_locks
+assert_invalid_runtime_rejected
+
+initial_lock_hashes=$(lock_hashes)
+
+dotnet restore "$solution" --locked-mode
+assert_lock_hashes_unchanged "$initial_lock_hashes" "the first locked restore"
+
+dotnet restore "$solution" --locked-mode
+assert_lock_hashes_unchanged "$initial_lock_hashes" "the second locked restore"
+
+dotnet build "$solution" \
+  --configuration Debug \
+  --no-restore \
+  --disable-build-servers \
+  -m:1
+
+dotnet test "$solution" \
+  --configuration Debug \
+  --no-build \
+  --disable-build-servers \
+  -m:1
+
+"$package_script" osx-arm64
+assert_lock_hashes_unchanged "$initial_lock_hashes" "the ARM64 package"
+assert_arm64_bundle
+
+print "ARM64 locked restore/build/test/package baseline passed."

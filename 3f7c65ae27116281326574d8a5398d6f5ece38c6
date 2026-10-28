@@ -1,0 +1,51 @@
+namespace CefFlashBrowser.MacOS.Spike.Core.Infrastructure.Paths;
+
+public interface IAppPaths
+{
+    string ApplicationSupportDirectory { get; }
+
+    string CacheDirectory { get; }
+
+    string LogDirectory { get; }
+
+    string RuffleSaveStorePath { get; }
+
+    void EnsureCreated();
+}
+
+public sealed class MacAppPaths : IAppPaths
+{
+    public MacAppPaths(string? userHomeDirectory = null)
+    {
+        var home = userHomeDirectory;
+        if (string.IsNullOrWhiteSpace(home))
+        {
+            home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        }
+
+        if (string.IsNullOrWhiteSpace(home))
+        {
+            throw new InvalidOperationException("The user home directory could not be resolved.");
+        }
+
+        ApplicationSupportDirectory = Path.Combine(home, "Library", "Application Support", "CefFlashBrowser");
+        CacheDirectory = Path.Combine(home, "Library", "Caches", "CefFlashBrowser");
+        LogDirectory = Path.Combine(home, "Library", "Logs", "CefFlashBrowser");
+        RuffleSaveStorePath = Path.Combine(ApplicationSupportDirectory, "ruffle-saves.v1.json");
+    }
+
+    public string ApplicationSupportDirectory { get; }
+
+    public string CacheDirectory { get; }
+
+    public string LogDirectory { get; }
+
+    public string RuffleSaveStorePath { get; }
+
+    public void EnsureCreated()
+    {
+        Directory.CreateDirectory(ApplicationSupportDirectory);
+        Directory.CreateDirectory(CacheDirectory);
+        Directory.CreateDirectory(LogDirectory);
+    }
+}
