@@ -1,0 +1,10 @@
+{
+  "definedBeforeFirstLatencyCollection": true,
+  "input": "AMF0 Strict Array 900000 Number(+0), manually specified bytes",
+  "inputBytes": 8100005,
+  "warmup": 1,
+  "samplesEachReadWrite": 30,
+  "activeWorkDelayMs": 2,
+  "maximumObservedCancellationLatencyMs": 100,
+  "criterion": "Every worker must observe cancellation, not merely finish before the request; this tightens cancellation UX without changing the P03 read/save thresholds"
+}

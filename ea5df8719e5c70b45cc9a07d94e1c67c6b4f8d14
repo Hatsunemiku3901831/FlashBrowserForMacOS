@@ -1,0 +1,88 @@
+"""Collect final S05 evidence without changing product/test inputs or completed prior snapshots."""
+from pathlib import Path
+import json,hashlib
+ROOT=Path(__file__).resolve().parents[4]
+OUT=Path(__file__).parent
+BASE=ROOT/'artifacts/evidence/S05'
+release='final-managed-release-20261028-02'; debug='final-managed-debug-20261028-02'; quality='final-quality-20261028-02'
+def load(p):return json.loads(p.read_text())
+def save(p,d):p.write_text(json.dumps(d,ensure_ascii=False,indent=2)+'\n')
+def rel(p):return str(p.relative_to(ROOT))
+def sha(p):return hashlib.sha256(p.read_bytes()).hexdigest()
+r=load(BASE/release/'result.json');d=load(BASE/debug/'result.json');q=load(BASE/quality/'result.json')
+assert all(x['status']=='PASS' for x in [r,d,q])
+assert r['actual']['testCount']==d['actual']['testCount']==402
+inputs=load(BASE/release/'inputs.json')['before']
+assert inputs==load(BASE/debug/'inputs.json')['before']==q['codeInputs']
+assert all(sha(ROOT/p)==h for p,h in inputs.items())
+assert q['instrumentationRestored'] and q['inputsUnchanged']
+assert q['coverage']['fileExclusions']==[] and q['coverage']['scopeViolations']==[]
+assert all(v['branchPercent']>=90 for v in q['coverage']['modules'].values())
+m=BASE/release/'measurements';perfs=[(p,load(p)) for p in m.glob('sol-fixture-performance-*.json')]
+assert len(perfs)==5
+perfpath=next(m.glob('sol-performance-*.json'));p=load(perfpath)
+assert p['status']=='PASS' and len(p['samples'])==60 and not p['failures']
+assert p['inputSha256']=='5cdb57e61085cc9909d327f1c6a173033926e6852eae161a1b7325a156719bad'
+assert all(s['ElapsedMs']<=500 and s['AllocatedBytes']<=3*p['inputBytes'] for s in p['samples'])
+cancelpath=next(m.glob('cancellation-*.json'));c=load(cancelpath)
+assert c['status']=='PASS' and len(c['samples'])==60 and c['failures']==0
+assert all(s['canceled'] and s['latencyMs']<=100 for s in c['samples'])
+workers=[]
+for seed,run in zip(['5eed1234','9e3779b9','deadbeef'],q['runs'][:3],strict=True):
+ assert run['status']=='PASS' and run['runtimeGcLimitConfirmed']
+ raw=BASE/quality/f'fuzz-{seed}'/'raw'; f=load(next(raw.glob('fuzz-summary-*.json')));g=load(next(raw.glob('graph-property-summary-*.json')))
+ assert f['iterations']==40000 and g['cases']==128
+ workers.append({'seed':seed,'iterations':f['iterations'],'generatedGraphs':g['cases'],'elapsedSeconds':run['elapsedSeconds'],'peakAggregateRssBytes':run['peakAggregateRssBytes'],'runtimeGcLimitConfirmed':True,'evidence':rel(BASE/quality/f'fuzz-{seed}')})
+small=[{'name':v['name'],'inputBytes':v['inputBytes'],'inputSha256':v['inputSha256'],'readP95Ms':v['readP95Ms'],'saveP95Ms':v['saveP95Ms'],'evidence':rel(path)} for path,v in perfs]
+summary={'taskId':'S05','status':'PASS','managedTests':402,'toolingTests':21,'releaseRun':release,'debugRun':debug,'qualityRun':quality,'codeInputs':inputs,'coverage':q['coverage'],'boundedFuzzWorkers':workers,'smallGameProfiles':small,'tenMiB':{'evidence':rel(perfpath),'inputSha256':p['inputSha256'],'samplesEachReadSave':30,'readP95Ms':p['readP95Ms'],'saveP95Ms':p['saveP95Ms'],'maxPhaseMs':max(s['ElapsedMs'] for s in p['samples']),'maxReadAllocatedBytes':p['maximumReadAllocation'],'maxSaveAllocatedBytes':p['maximumSaveAllocation'],'budgetMs':500,'budgetAllocatedBytes':31457280},'cancellation':{'evidence':rel(cancelpath),'samples':60,'maxLatencyMs':max(s['latencyMs'] for s in c['samples']),'budgetMs':100,'allCanceled':True},'productComplete':False,'uiTreeAndRemainingPerformance':'U03/Q02 pending'}
+save(OUT/'quality-gate.json',summary)
+tool=load(BASE/'tool-bootstrap-20261028-01/result.json')
+save(ROOT/'docs/provenance/S05-test-tools.json',{'schemaVersion':1,'tool':'coverlet.console','requestedVersion':'10.1.0','actualVersion':load(BASE/'tool-bootstrap-20261028-02/result.json')['version'],'scope':'Development coverage only; no product runtime dependency or lock change','sources':tool['sources'],'toolFiles':tool['toolFiles'],'bootstrapEvidence':[rel(BASE/'tool-bootstrap-20261028-01'),rel(BASE/'tool-bootstrap-20261028-02')],'gcLimitSource':'https://learn.microsoft.com/en-us/dotnet/core/runtime-config/garbage-collector#heap-hard-limit'})
+refs=load(ROOT/'docs/provenance/S04-source-inputs.json')
+for row in refs['inputs']:
+ row['targetPaths']=['src/FlashMacOS.Sol.Managed','src/FlashMacOS.Domain/Sol','tests/FlashMacOS.Sol.Managed.Tests','tests/FlashMacOS.IntegrationTests/SolPerformanceTests.cs']
+ row['reason']='S05 retains independent Legacy/spec semantics while hardening current managed graph, codec, cancellation and performance; no original code is built or executed'
+save(ROOT/'docs/provenance/S05-source-inputs.json',refs)
+budget=load(ROOT/'docs/performance-budget.json');budget['measurementStatus']='PARTIAL_S05_CODEC_MEASURED_OTHER_Q02_BUDGETS_PENDING';budget['measurements']={'sol-10mib-read-save':summary['tenMiB'],'sol-cancellation':summary['cancellation'],'smallGameProfiles':small,'environment':{'hardwareEvidence':rel(BASE/'tool-bootstrap-20261028-01'),'configuration':'Release ARM64','framework':'.NET 10.0.9','cache':'Warm APFS file cache after 3 warmups; full managed GC outside timing'},'remaining':'Shell/UI/tree/SWF/frame/30-minute measurements remain U03/Q02; no result inferred from codec timings'};save(ROOT/'docs/performance-budget.json',budget)
+matrix=load(ROOT/'docs/codec-support-matrix.json');matrix['stage']='S01-S05 core, malformed-input, branch coverage and bounded Release performance verified; actual editor UI U03 pending';matrix['qualityGate']={'status':'PASS','evidence':rel(OUT/'quality-gate.json'),'branchCoverage':q['coverage']['modules'],'fixedSeedMutations':120000,'generatedGraphs':384,'performance':summary['tenMiB'],'cancellation':summary['cancellation'],'remainingUiAssertions':6};save(ROOT/'docs/codec-support-matrix.json',matrix)
+readme=ROOT/'README.md';s=readme.read_text().replace('384 项托管测试、18 项工具回归','402 项托管测试、21 项工具回归').replace('性能与畸形输入门禁仍是 S05','S05 的畸形输入、覆盖率与核心读写性能门禁已通过，实际 UI 树和整体性能仍待 U03/Q02');s+='\nSOL 质量复验入口为 `scripts/check-sol-quality.py`；需先完成 Release 验证并安装固定开发工具。三个受限进程共验证 120,000 个突变和 384 个生成图，Domain.Sol/codec 分支覆盖率分别为 98.79%/91.13%。10 MiB 实测及全部失败记录见 [S05 报告](docs/evidence/S05/2026-10-28/report.md)、[质量契约](docs/contracts/sol-quality.zh-CN.md)。\n';readme.write_text(s)
+h=ROOT/'HRNESS.md';s=h.read_text().replace('完整 SOL/AMF codec；格式加固和性能待 S05','完整 SOL/AMF codec、有界分段输出和取消').replace('A01—A04、S01—S04/','A01—A04、S01—S05/');s+='\nS05 质量入口为 scripts/check-sol-quality.py，固定开发工具和原始覆盖率/fuzz/性能报告位于 artifacts/evidence/S05。tests/FlashMacOS.Sol.Managed.Tests/Sol/SolFuzzTests.cs、SolCancellationTests.cs 与 IntegrationTests/SolPerformanceTests.cs 保留可复现输入和逐次记录；共享 TestEvidence 的输出可由 FLASHMACOS_TEST_EVIDENCE_DIRECTORY 指定。全量规范预期仍是 test-assets/sol-golden，生成性质样本不能替代它。质量范围及计时边界见 sol-quality.zh-CN.md；G2 通过不等于桌面编辑器或发行通过。\n';h.write_text(s)
+rows='\n'.join(f"| {v['name']} | {v['inputBytes']} | {v['readP95Ms']:.4f} | {v['saveP95Ms']:.4f} |" for v in small)
+(OUT/'report.md').write_text(f'''# S05 格式边界与性能验收
+
+结论：PASS，G2 存档核心具备进入 UI 阶段的证据；产品尚未完成。{release} 与 {debug} 均为 402 托管+21 工具通过、无跳过；正式输入一致，原仓库/reference/bootstrap 禁读。最终结果、命令、环境、退出码、逐样本和 SHA 由 quality-gate.json 与 acceptance-index.json 定位。
+
+## 覆盖、资源与取消
+
+最终 {quality} 的整个 codec 模块分支 411/451（91.13%），Domain.Sol 为 245/248（98.79%），无文件排除，各自超过预先冻结的 90%。插桩前后 DLL/PDB 已还原，inputs 不变；性能独立运行。范围防错另有三个工具负例，空/越界/单模块不达标均失败。
+
+三种固定种子各 40,000 个完整原始输入突变，并各 128 个身份图性质样例；实际 GC 512 MiB 限制确认，wall/CPU/总 RSS 预算均满足。完整输入先刷入 journal，无未处理崩溃、超时或失控分配。最终最慢 worker {max(w['elapsedSeconds'] for w in workers):.3f} 秒，最高采样进程树 RSS {max(w['peakAggregateRssBytes'] for w in workers)} 字节。不是所有可能输入的穷尽证明。
+
+大集合活动中解码和编码各 30 次取消，60 次全部取消，最慢 {summary['cancellation']['maxLatencyMs']:.4f} 毫秒，阈值 100 毫秒。预取消、模型枚举和 unsupported 扫描均有针对回归。公开图构造新增可选取消参数，所有调用仍兼容。
+
+## Release 性能
+
+M1 Pro、macOS 26.5.1、.NET 10.0.9、ARM64；硬件、电源、SDK 详情在 tool-bootstrap-20261028-01 原始日志。所有输入保存 SHA；3 轮预热后 30 轮，APFS 缓存温热，GC 在计时外，nearest-rank P95。读包含文件/hash/解析；写包含编码、冲突检查、flush、备份和替换，不计 UI 树。
+
+固定 10 MiB 独立输入 SHA `5cdb57e61085cc9909d327f1c6a173033926e6852eae161a1b7325a156719bad`：读 P95 {p['readP95Ms']:.4f} 毫秒，保存 P95 {p['saveP95Ms']:.4f} 毫秒；60 个阶段最大 {summary['tenMiB']['maxPhaseMs']:.4f} 毫秒，每轮均低于 500 毫秒。最大额外托管分配读 {p['maximumReadAllocation']}、写 {p['maximumSaveAllocation']} 字节，均低于三倍输入（31,457,280）。分配是全线程 total-allocated 差值这一保守上界，不是整进程 RSS。
+
+| 固定已有样本 | 字节 | 读 P95 ms | 保存 P95 ms |
+|---|---:|---:|---:|
+{rows}
+
+五份小/游戏样本记录全部分配和 GC，不伪造额外阈值。UI 树/冷启动/帧率/SWF 二开/长期运行属于 U03/Q02，性能预算文档仍明确部分待测。
+
+## 实际失败与修复
+
+- sol-perf-red-20261028-02：10 MiB 读分配约 3 倍、写约 6 倍，真实失败。ByteArray 改为源片段的一次自有拷贝，版本检查改为有界流式 SHA，保留两次检查和所有原子保证。
+- sol-performance-managed-20261028-01：保存仍约 4 倍，真实失败。根因是大 payload 后追加 trailer 导致连续 MemoryStream 扩容。改 64 KiB 有界池块和一次最终数组，清空归还；不修改格式或测试预算。
+- bounded-coverage-20261028-01：codec 90.91% 而 Domain 74.61%，门禁失败。补模型构造/类型/元数据/图比较边界回归，发现 Kind 相同但 CLR 类型不同会 InvalidCast、预取消优先级与扫描取消延迟，先 red 后修复。删除的验证仅为已被封闭构造和 Freeze 保证的重复检查，非放松输入边界。
+- model-cancellation-red-20261028-01 三个失败、hardened-managed-20261028-02 的测试分析器构建失败及 Coverlet 两次 runtime 根定位失败均保留。所有后续成功单独使用新 run ID，不覆盖历史失败。
+
+固定 104 个第三方资产、13 产品锁、31 独立手工规范 golden 和 Legacy 完整预期未改写。Legacy 差异沿 S01—S04 以规范和独立内容裁决；旧 Windows 二进制未作为 macOS 依赖。六个旧 UI 类型目录断言仍由 U03 承接。
+
+## 交接
+
+来源 332 业务文件/HEAD/dirty 与四个旧数据根由冻结脚本再次检查。代码、测试、脚本完整归档；无提交、推送或发布。下一项 W01：从 AvaloniaNativeWebViewSession、document-start 注入器、profile、调用方和 WebView 官方 API 读取开始，处理真实导航/查找/打印/对话框/用途隔离及既知 frame/焦点问题。
+''')
+print(json.dumps({'status':'PASS','managed':402,'tools':21,'maxCancellationMs':summary['cancellation']['maxLatencyMs'],'readP95Ms':p['readP95Ms'],'saveP95Ms':p['saveP95Ms']}))

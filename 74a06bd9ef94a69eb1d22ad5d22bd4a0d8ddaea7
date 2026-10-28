@@ -1,0 +1,12 @@
+{
+  "definedBeforeFirstCollection": true,
+  "requiredFilters": [
+    "[FlashMacOS.Sol.Managed]*",
+    "[FlashMacOS.Domain]FlashMacOS.Domain.Sol.*"
+  ],
+  "requiredBranchPercent": 90,
+  "thresholdPerModuleAndCombined": true,
+  "fileExclusions": [],
+  "performanceRuns": "Separate uninstrumented Release run; coverage test filter excludes SolPerformance solely to avoid profiler distortion, never counts that as performance acceptance",
+  "applicationEditorCoverage": "Separate integration evidence; not substituted for the complete codec/type-model scope"
+}
